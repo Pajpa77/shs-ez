@@ -26,6 +26,7 @@ const ShareAppModal = lazy(() => import('./components/ShareAppModal').then(m => 
 const SearchTeamsModal = lazy(() => import('./components/SearchTeamsModal').then(m => ({ default: m.SearchTeamsModal })));
 import { TrackingTestOverlay } from './components/TrackingTestOverlay';
 import { QuotaNotificationBanner } from './components/QuotaNotificationBanner';
+import { DroneFeedWidget } from './components/DroneFeedWidget';
 
 import { useWakeLock } from './hooks/useWakeLock';
 import { usePWAInstall } from './hooks/usePWAInstall';
@@ -39,6 +40,8 @@ import {
   Sun,
   Compass,
   Radio,
+  RadioTower,
+  Video,
   User as UserIcon,
   Shield,
   Eye,
@@ -121,6 +124,7 @@ const MainApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'admin' | 'map' | 'sectors' | 'chat' | 'responders' | 'log' | 'archive'>('map');
   const [selectedArchiveOpId, setSelectedArchiveOpId] = useState<string>('');
   const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+  const [showDroneFeed, setShowDroneFeed] = useState(false);
 
   // Apply Dark Mode
   useEffect(() => {
@@ -360,6 +364,18 @@ const MainApp: React.FC = () => {
         >
           {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
         </button>
+        {currentUser?.role === 'admin' && (
+          <>
+            <div className="w-[1px] h-4 bg-slate-300 dark:bg-slate-700/80 mx-1"></div>
+            <button
+              onClick={() => setShowDroneFeed(!showDroneFeed)}
+              className={`w-6 h-6 flex items-center justify-center rounded-full transition active:scale-90 cursor-pointer ${showDroneFeed ? 'bg-red-500 text-white' : 'bg-slate-50 dark:bg-slate-800 text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+              title="Drohnen-Feed ein/ausschalten"
+            >
+              <RadioTower className="w-3.5 h-3.5" />
+            </button>
+          </>
+        )}
       </div>
 
       {/* Top Tactical Navigation */}
@@ -713,6 +729,9 @@ const MainApp: React.FC = () => {
         isOpen={isSearchTeamsModalOpen}
         onClose={() => setIsSearchTeamsModalOpen(false)}
       />
+      {showDroneFeed && currentUser?.role === 'admin' && (
+        <DroneFeedWidget onClose={() => setShowDroneFeed(false)} />
+      )}
       </Suspense>
     </div>
   );
