@@ -948,17 +948,6 @@ export const LoginScreen: React.FC = () => {
                   </div>
                 )}
 
-                {/* Quick Guest Observer Link */}
-                <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-center">
-                  <button
-                    type="button"
-                    onClick={handleGuestObserverLogin}
-                    className="px-4 py-2 rounded-xl bg-purple-950/60 hover:bg-purple-900/80 border border-purple-700/60 text-purple-300 hover:text-white text-xs font-mono font-bold transition cursor-pointer flex items-center gap-2 shadow-sm"
-                  >
-                    <span>👁️</span>
-                    <span>Behörde / Polizei (Gast-Betrachter)</span>
-                  </button>
-                </div>
               </div>
             )}
           </div>

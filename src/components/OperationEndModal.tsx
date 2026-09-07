@@ -34,7 +34,7 @@ export const OperationEndModal: React.FC<OperationEndModalProps> = ({
   onSuccessNavigateToMap,
   onSuccessNavigateToArchive,
 }) => {
-  const { currentOperation, endOperation, currentUser, allUsers } = useRescue();
+  const { currentOperation, endOperation, currentUser, allUsers, userLocations } = useRescue();
 
   const [outcome, setOutcome] = useState<
     'person_alive' | 'person_transferred' | 'aborted' | 'person_deceased' | 'exercise_completed'
@@ -347,7 +347,7 @@ export const OperationEndModal: React.FC<OperationEndModalProps> = ({
 
             <button
               type="button"
-              onClick={() => generateOperationPDF(currentOperation, allUsers)}
+              onClick={() => generateOperationPDF(currentOperation, allUsers, userLocations)}
               disabled={isProcessing}
               className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition cursor-pointer shadow uppercase tracking-wider font-mono text-xs flex items-center gap-1.5"
             >

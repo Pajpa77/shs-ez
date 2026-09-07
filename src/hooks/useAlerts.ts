@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { RescueOperation, Finding } from '../types';
+import { SearchOperation, Finding } from '../types';
 
-export function useAlerts(currentOperation: RescueOperation | null) {
+export function useAlerts(currentOperation: SearchOperation | null) {
   const previousFindingsRef = useRef<Finding[]>([]);
   const previousStatusRef = useRef<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission>('default');

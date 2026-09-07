@@ -1,8 +1,12 @@
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
-import { RescueOperation, User } from '../types';
+import { SearchOperation, User, UserLocationState } from '../types';
+import { captureTacticalMapScreenshot } from './mapSnapshotHelper';
 
-export const generateOperationPDF = async (operation: RescueOperation, allUsers: User[], mapElementId: string = 'tactical-map-container') => {
+export const generateOperationPDF = async (
+  operation: SearchOperation, 
+  allUsers: User[], 
+  userLocations?: Record<string, UserLocationState>
+) => {
   const pdf = new jsPDF('p', 'mm', 'a4');
   
   // Header
@@ -10,9 +14,9 @@ export const generateOperationPDF = async (operation: RescueOperation, allUsers:
   pdf.text('Einsatzprotokoll', 105, 20, { align: 'center' });
   
   pdf.setFontSize(12);
-  pdf.text(`Einsatzname: ${operation.name}`, 20, 40);
-  pdf.text(`Start: ${new Date(operation.startTime).toLocaleString('de-DE')}`, 20, 48);
-  const endTime = operation.endTime ? new Date(operation.endTime).toLocaleString('de-DE') : 'Aktiv';
+  pdf.text(`Einsatzname: ${operation.title}`, 20, 40);
+  pdf.text(`Start: ${new Date(operation.createdAt).toLocaleString('de-DE')}`, 20, 48);
+  const endTime = operation.completedAt ? new Date(operation.completedAt).toLocaleString('de-DE') : 'Aktiv';
   pdf.text(`Ende: ${endTime}`, 20, 56);
   pdf.text(`Status: ${operation.status.toUpperCase()}`, 20, 64);
 
@@ -56,25 +60,21 @@ export const generateOperationPDF = async (operation: RescueOperation, allUsers:
   }
 
   // Map Snapshot
-  const mapElement = document.getElementById(mapElementId);
-  if (mapElement) {
-    try {
-      const canvas = await html2canvas(mapElement, {
-        useCORS: true,
-        allowTaint: true,
-      });
-      const imgData = canvas.toDataURL('image/jpeg', 0.8);
+  try {
+    const imgData = await captureTacticalMapScreenshot(operation, userLocations);
+    if (imgData) {
       pdf.addPage();
-      pdf.text('Kartenansicht', 105, 20, { align: 'center' });
+      pdf.setFontSize(16);
+      pdf.text('Kartenansicht (Gesamt)', 105, 20, { align: 'center' });
       // scale to fit A4
       const pdfWidth = 190;
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pdfHeight = (750 * pdfWidth) / 1200; // 1200x750 is the fallback canvas size
       pdf.addImage(imgData, 'JPEG', 10, 30, pdfWidth, pdfHeight);
-    } catch (e) {
-      console.warn('Map snapshot failed for PDF', e);
-      pdf.text('(Karten-Screenshot konnte nicht geladen werden)', 20, 30);
     }
+  } catch (e) {
+    console.warn('Map snapshot failed for PDF', e);
+    pdf.text('(Karten-Screenshot konnte nicht geladen werden)', 20, 30);
   }
 
-  pdf.save(`Einsatzprotokoll_${operation.name.replace(/\s+/g, '_')}.pdf`);
+  pdf.save(`Einsatzprotokoll_${operation.title.replace(/\s+/g, '_')}.pdf`);
 };

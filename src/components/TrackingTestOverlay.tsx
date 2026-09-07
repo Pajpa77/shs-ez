@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Timer, Camera, Save, Trash2, LogOut, CheckCircle2, Download } from 'lucide-react';
 import { useRescue } from '../context/RescueContext';
 import { captureTacticalMapScreenshot } from '../lib/mapSnapshotHelper';
+import { calculateTotalDistance } from '../lib/distanceCalc';
+import { jsPDF } from 'jspdf';
 
 export const TrackingTestOverlay: React.FC = () => {
   const { activeTrackingTest, saveTrackingTestResult, stopTrackingTest } = useRescue();
@@ -10,6 +12,31 @@ export const TrackingTestOverlay: React.FC = () => {
   const [snapshotUrl, setSnapshotUrl] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const generateTrackingPDF = (dataUrl: string, distanceMeters: number) => {
+    if (!activeTrackingTest) return;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    pdf.setFontSize(22);
+    pdf.text('Tracking-Test Pr\u00FCfprotokoll', 105, 20, { align: 'center' });
+    
+    pdf.setFontSize(12);
+    pdf.text(`Tester: ${activeTrackingTest.userName || 'Unbekannt'}`, 20, 40);
+    pdf.text(`Datum: ${new Date(activeTrackingTest.startTime).toLocaleDateString('de-DE')}`, 20, 48);
+    pdf.text(`Start: ${new Date(activeTrackingTest.startTime).toLocaleTimeString('de-DE')}`, 20, 56);
+    pdf.text(`Dauer: ${activeTrackingTest.durationMinutes} Minuten`, 20, 64);
+    
+    const distanceKm = (distanceMeters / 1000).toFixed(2);
+    pdf.text(`Zur\u00FCckgelegte Distanz: ${distanceMeters > 1000 ? distanceKm + ' km' : Math.round(distanceMeters) + ' m'}`, 20, 72);
+    pdf.text(`Wegpunkte erfasst: ${activeTrackingTest.trackPoints.length}`, 20, 80);
+
+    pdf.setFontSize(16);
+    pdf.text('GPS Spur (Lagekarte)', 105, 100, { align: 'center' });
+    const pdfWidth = 190;
+    const pdfHeight = (750 * pdfWidth) / 1200;
+    pdf.addImage(dataUrl, 'JPEG', 10, 110, pdfWidth, pdfHeight);
+
+    pdf.save(`TrackingTest_${new Date().getTime()}.pdf`);
+  };
 
   useEffect(() => {
     if (!activeTrackingTest || !activeTrackingTest.isActive) return;
@@ -152,63 +179,35 @@ export const TrackingTestOverlay: React.FC = () => {
                   )}
                 </div>
 
-                {snapshotUrl && (
-                  <div className="flex flex-col items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const link = document.createElement('a');
-                        link.href = snapshotUrl;
-                        link.download = `tracking-test-${new Date().getTime()}.jpg`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                      }}
-                      className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 font-bold text-xs flex items-center gap-2 shadow cursor-pointer transition active:scale-95"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Kartenbild herunterladen</span>
-                    </button>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center leading-relaxed max-w-md">
-                      💡 <strong>Mobil-Tipp:</strong> Halte deinen Finger auf das Bild gedrückt, um es direkt in deine Fotos zu speichern oder zu teilen.
-                    </p>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+                <div className="grid grid-cols-3 gap-4 text-xs font-mono">
                   <div className="p-3 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700">
                     <span className="block text-slate-500 uppercase text-[10px] mb-1">Startzeit</span>
                     <span className="text-slate-900 dark:text-slate-200">{new Date(activeTrackingTest.startTime).toLocaleTimeString()}</span>
                   </div>
                   <div className="p-3 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700">
                     <span className="block text-slate-500 uppercase text-[10px] mb-1">Wegpunkte</span>
-                    <span className="text-slate-900 dark:text-slate-200">{activeTrackingTest.trackPoints.length} Punkte</span>
+                    <span className="text-slate-900 dark:text-slate-200">{activeTrackingTest.trackPoints.length}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700">
+                    <span className="block text-slate-500 uppercase text-[10px] mb-1">Distanz</span>
+                    <span className="text-slate-900 dark:text-slate-200">
+                      {calculateTotalDistance(activeTrackingTest.trackPoints) > 1000 
+                        ? (calculateTotalDistance(activeTrackingTest.trackPoints) / 1000).toFixed(2) + ' km' 
+                        : Math.round(calculateTotalDistance(activeTrackingTest.trackPoints)) + ' m'}
+                    </span>
                   </div>
                 </div>
 
                 <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed text-center italic">
-                  Möchten Sie dieses Ergebnis speichern oder verwerfen? Nach der Auswahl erfolgt ein automatischer Logout.
+                  Prüfprotokoll herunterladen und Test beenden? (Du wirst anschließend automatisch abgemeldet)
                 </p>
               </div>
 
-              <div className="p-6 bg-white dark:bg-slate-900/50 border-t border-slate-300 dark:border-slate-700 grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => saveTrackingTestResult(false)}
-                  className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold uppercase text-xs transition cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Verwerfen</span>
-                </button>
+              <div className="p-6 bg-white dark:bg-slate-900/50 border-t border-slate-300 dark:border-slate-700 flex flex-col gap-3">
                 <button
                   onClick={async () => {
                     if (snapshotUrl) {
-                      const link = document.createElement('a');
-                      link.href = snapshotUrl;
-                      link.download = `tracking-test-${new Date().getTime()}.jpg`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      // Give the browser a brief moment to process the file stream before redirect/logout occurs
+                      generateTrackingPDF(snapshotUrl, calculateTotalDistance(activeTrackingTest.trackPoints));
                       await new Promise((resolve) => setTimeout(resolve, 800));
                     }
                     saveTrackingTestResult(true);
@@ -216,8 +215,15 @@ export const TrackingTestOverlay: React.FC = () => {
                   disabled={!snapshotUrl}
                   className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold uppercase text-xs transition shadow-lg shadow-blue-900/20 cursor-pointer"
                 >
-                  <Save className="w-4 h-4" />
-                  <span>Speichern & Logout</span>
+                  <Download className="w-4 h-4" />
+                  <span>Protokoll (PDF) laden & Logout</span>
+                </button>
+                <button
+                  onClick={() => saveTrackingTestResult(false)}
+                  className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold uppercase text-xs transition cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Verwerfen (Ohne Speichern)</span>
                 </button>
               </div>
             </motion.div>
