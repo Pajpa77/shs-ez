@@ -353,9 +353,16 @@ export const LoginScreen: React.FC = () => {
         {/* Left Side: System Branding & Mission Overview */}
         <div className="md:col-span-5 bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl">
           <div className="space-y-5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-blue-400 text-xs font-bold font-mono">
-              <span className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
-              <span>SPÜRHUNDE-SALZLANDKREIS E.V.</span>
+            <div className="flex flex-col items-start gap-4">
+              <img 
+                src="/logo-shs.jpg" 
+                alt="Spürhunde Salzlandkreis" 
+                className="w-24 h-24 object-contain invert mix-blend-screen opacity-90"
+              />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-blue-400 text-xs font-bold font-mono">
+                <span className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
+                <span>SPÜRHUNDE-SALZLANDKREIS E.V.</span>
+              </div>
             </div>
 
             <div>
