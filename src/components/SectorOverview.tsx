@@ -14,7 +14,9 @@ import {
   MapPin,
   Check,
   Shield,
+  Download,
 } from 'lucide-react';
+import { exportSectorAsKml } from '../lib/kmlExport';
 
 interface SectorOverviewProps {
   onOpenSectorEditor: (sector?: SearchSector) => void;
@@ -295,6 +297,14 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
                     <Compass className="w-4 h-4 text-blue-400" />
                   </button>
                 )}
+                
+                <button
+                  onClick={() => exportSectorAsKml(sec)}
+                  className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 border border-slate-300 dark:border-slate-700 transition cursor-pointer"
+                  title="Drohnen-Export (KML)"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
 
                 {currentUser?.role === 'admin' && (
                   <>

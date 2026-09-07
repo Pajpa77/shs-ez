@@ -13,7 +13,9 @@ import {
   Save,
   Trash2,
   PenTool,
+  Download,
 } from 'lucide-react';
+import { exportSectorAsKml } from '../lib/kmlExport';
 
 interface SectorEditorModalProps {
   sector: SearchSector | null;
@@ -560,6 +562,17 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
               <div />
             )}
             <div className="flex gap-2">
+              {sector && (
+                <button
+                  type="button"
+                  onClick={() => exportSectorAsKml(sector)}
+                  className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 uppercase tracking-wider font-mono text-xs flex items-center gap-1.5"
+                  title="Drohnen-Export (KML)"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  KML
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onClose}
