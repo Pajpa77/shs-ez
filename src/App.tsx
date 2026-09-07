@@ -303,7 +303,7 @@ const MainApp: React.FC = () => {
       )}
 
       {/* UI Zoom Controls - Slim Sleek Floating Control */}
-      <div className="fixed top-16 left-3 z-[900] pointer-events-auto flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/80 rounded-full px-2.5 py-1 shadow-lg backdrop-blur-md text-xs font-mono select-none ring-1 ring-white/10">
+      <div className="fixed top-16 md:top-[76px] left-3 md:left-[320px] z-[900] pointer-events-auto flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/80 rounded-full px-2.5 py-1 shadow-lg backdrop-blur-md text-xs font-mono select-none ring-1 ring-white/10">
         <button
           onClick={() => setUiScale(Math.max(0.7, Number((uiScale - 0.05).toFixed(2))))}
           className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer"

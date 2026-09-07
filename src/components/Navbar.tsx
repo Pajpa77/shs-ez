@@ -130,7 +130,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-5 bg-[#1E293B] border-b border-slate-700 shadow-lg shrink-0 sticky top-0 z-[1000] text-slate-200">
       {/* Brand & Central SHS Leitstellen Menu Button */}
-      <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+      <div className="flex items-center gap-1.5 sm:gap-4 min-w-0">
         {/* Interactive White SHS Button / Admin Hub */}
         <div className="relative">
           <button
@@ -382,7 +382,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         <div className="flex flex-col justify-center min-w-0">
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <h1 className="text-xs sm:text-sm md:text-base font-bold leading-tight uppercase tracking-wider text-white truncate">
               SHS EZ
             </h1>
@@ -660,11 +660,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setShowSarAdminMenu(false);
                   setShowUserDropdown(false);
                 }}
-                className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[10px] font-mono text-slate-200 flex items-center gap-1.5 cursor-pointer"
+                className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-[10px] font-mono text-slate-200 flex items-center gap-1 sm:gap-1.5 cursor-pointer"
                 title="Einsatzkräfte & Bereitschaftsliste öffnen"
               >
-                <span>👥 Einsatzkräfte ({allUsers.filter(u => u.isActive).length})</span>
-                <ChevronDown className="w-3 h-3 text-slate-400" />
+                <span className="hidden sm:inline">👥 Einsatzkräfte ({allUsers.filter(u => u.isActive).length})</span>
+                <span className="sm:hidden">👥 {allUsers.filter(u => u.isActive).length}</span>
+                <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
               </button>
 
               {showResponderListDropdown && (
@@ -943,7 +944,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </nav>
 
       {/* Right Controls: Actions, Telemetry & User Profile */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3">
 
 
         {/* Quick Action: Einsatz beenden button directly for Admins */}
