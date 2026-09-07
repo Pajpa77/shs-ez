@@ -51,6 +51,7 @@ interface NavbarProps {
   onStartDrawingSector?: () => void;
   onOpenShareAppModal?: () => void;
   isAnyModalOpen?: boolean;
+  onSelectArchiveOp?: (opId: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -69,6 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onStartDrawingSector,
   onOpenShareAppModal,
   isAnyModalOpen = false,
+  onSelectArchiveOp,
 }) => {
   const {
     currentUser,
@@ -532,7 +534,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 <div
                                   key={op.id}
                                   onClick={() => {
-                                    setActiveTab('archive');
+                                    if (onSelectArchiveOp) {
+                                      onSelectArchiveOp(op.id);
+                                    } else {
+                                      setActiveTab('archive');
+                                    }
                                     setShowOpDropdown(false);
                                   }}
                                   className="w-full text-left p-2 rounded-xl flex items-center justify-between transition cursor-pointer bg-slate-900/50 hover:bg-slate-800 text-slate-400 border border-slate-800 group"

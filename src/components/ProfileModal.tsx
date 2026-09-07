@@ -68,27 +68,37 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
+  const lastUserIdRef = useRef<string | null>(null);
+  const prevIsOpenRef = useRef<boolean>(false);
+
   useEffect(() => {
-    if (currentUser) {
-      setName(currentUser.name);
-      setCallSign(currentUser.callSign);
-      setLicensePlate(currentUser.licensePlate || '');
-      setPhone(currentUser.phone || '');
-      setOrganization(currentUser.organization || '');
-      setPhotoUrl(currentUser.photoUrl || '');
-      setEquipment(currentUser.equipment || ['foot_search']);
-      setCustomEquipmentTags(currentUser.customEquipmentTags || []);
-      setCustomEquipmentNotes(currentUser.customEquipmentNotes || '');
-      setBatteryLevel(currentUser.batteryLevel ?? 100);
-      setBatteryCharging(Boolean(currentUser.batteryCharging));
-      setShowUrlInput(false);
-      setCustomUrl('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setShowPasswordChange(false);
-      setPasswordError('');
+    const isOpening = isOpen && !prevIsOpenRef.current;
+    const isUserIdChanged = currentUser?.id !== lastUserIdRef.current;
+
+    if (isOpening || isUserIdChanged) {
+      if (currentUser) {
+        setName(currentUser.name || '');
+        setCallSign(currentUser.callSign || '');
+        setLicensePlate(currentUser.licensePlate || '');
+        setPhone(currentUser.phone || '');
+        setOrganization(currentUser.organization || '');
+        setPhotoUrl(currentUser.photoUrl || '');
+        setEquipment(currentUser.equipment || ['foot_search']);
+        setCustomEquipmentTags(currentUser.customEquipmentTags || []);
+        setCustomEquipmentNotes(currentUser.customEquipmentNotes || '');
+        setBatteryLevel(currentUser.batteryLevel ?? 100);
+        setBatteryCharging(Boolean(currentUser.batteryCharging));
+        setShowUrlInput(false);
+        setCustomUrl('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setShowPasswordChange(false);
+        setPasswordError('');
+      }
+      lastUserIdRef.current = currentUser?.id ?? null;
     }
-  }, [currentUser, isOpen]);
+    prevIsOpenRef.current = isOpen;
+  }, [currentUser?.id, isOpen]);
 
   // Query hardware battery status
   useEffect(() => {

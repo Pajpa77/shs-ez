@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { useRescue } from '../context/RescueContext';
 import { SearchOperation, OperationLogEntry, User, EquipmentType } from '../types';
 import { TacticalMap } from './TacticalMap';
@@ -35,6 +37,8 @@ import {
   Camera,
   Wrench,
   Package,
+  Loader2,
+  Cloud,
 } from 'lucide-react';
 
 const EQUIPMENT_LABELS: Record<EquipmentType, { label: string; icon: string }> = {
@@ -51,9 +55,15 @@ const EQUIPMENT_LABELS: Record<EquipmentType, { label: string; icon: string }> =
 
 interface OperationsArchiveProps {
   onNavigateToMap?: () => void;
+  initialSelectedOpId?: string;
+  onSelectOpId?: (opId: string) => void;
 }
 
-export const OperationsArchive: React.FC<OperationsArchiveProps> = ({ onNavigateToMap }) => {
+export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
+  onNavigateToMap,
+  initialSelectedOpId,
+  onSelectOpId,
+}) => {
   const {
     allOperations,
     allUsers,
@@ -66,10 +76,25 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({ onNavigate
   } = useRescue();
 
   const [selectedOpId, setSelectedOpId] = useState<string>(() => {
+    if (initialSelectedOpId) return initialSelectedOpId;
     // Prefer completed operation if any, or current
     const completed = allOperations.find((op) => op.status === 'completed');
     return completed?.id || allOperations[0]?.id || '';
   });
+
+  // Sync state with incoming props
+  React.useEffect(() => {
+    if (initialSelectedOpId && initialSelectedOpId !== selectedOpId) {
+      setSelectedOpId(initialSelectedOpId);
+    }
+  }, [initialSelectedOpId]);
+
+  // Sync prop changes back to parent
+  React.useEffect(() => {
+    if (onSelectOpId && selectedOpId) {
+      onSelectOpId(selectedOpId);
+    }
+  }, [selectedOpId, onSelectOpId]);
 
   const [activeSubTab, setActiveSubTab] = useState<'report' | 'protocol' | 'map' | 'findings' | 'roster' | 'chat'>('report');
   const [operationToDelete, setOperationToDelete] = useState<SearchOperation | null>(null);
@@ -130,8 +155,81 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({ onNavigate
     return `${hours} Std. ${mins} Min.`;
   }, [selectedOp?.createdAt, selectedOp?.completedAt]);
 
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [showPrintOptions, setShowPrintOptions] = useState(false);
+  const [screenPreviewActive, setScreenPreviewActive] = useState(false);
+
   const handlePrint = () => {
+    setShowPrintOptions(true);
+  };
+
+  const handleSystemPrint = () => {
     window.print();
+  };
+
+  const handleDirectPdfDownload = async () => {
+    if (!selectedOp) return;
+    setIsExportingPdf(true);
+
+    try {
+      const element = document.getElementById('printable-official-protocol');
+      if (!element) {
+        alert('Druckvorlage konnte nicht gefunden werden.');
+        setIsExportingPdf(false);
+        return;
+      }
+
+      // Temporarily render block for rendering screenshot beautifully
+      const originalStyle = element.style.cssText;
+      element.style.cssText = 'display: block !important; position: absolute; left: -9999px; top: 0; width: 800px; background: white; color: black;';
+
+      // Give images / canvas small timeout to render
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const canvas = await html2canvas(element, {
+        scale: 2, // crisp high resolution scaling
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
+
+      // Restore original visibility style
+      element.style.cssText = originalStyle;
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const imgWidth = 210; // A4 width
+      const pageHeight = 297; // A4 height
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Span multiple pages cleanly if height > A4
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const safeTitle = selectedOp.title.replace(/[^a-zA-Z0-9]/g, '_');
+      const filename = `Einsatzbericht_${safeTitle}_${selectedOp.id.slice(-6).toUpperCase()}.pdf`;
+      pdf.save(filename);
+    } catch (err) {
+      console.error('Programmatic PDF Export failed, trying window.print fallback...', err);
+      window.print();
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   const confirmDeleteOperation = (opId: string) => {
@@ -363,10 +461,15 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({ onNavigate
 
           <button
             onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-blue-300 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer font-mono uppercase tracking-wider shadow-sm"
+            disabled={isExportingPdf}
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-blue-300 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer font-mono uppercase tracking-wider shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Printer className="w-4 h-4" />
-            <span>Bericht drucken / PDF</span>
+            {isExportingPdf ? (
+              <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+            ) : (
+              <Printer className="w-4 h-4" />
+            )}
+            <span>{isExportingPdf ? 'Erzeuge PDF...' : 'Bericht drucken / PDF'}</span>
           </button>
         </div>
       </div>
@@ -395,6 +498,9 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({ onNavigate
                   key={op.id}
                   onClick={() => {
                     setSelectedOpId(op.id);
+                    setTimeout(() => {
+                      document.getElementById('report-details-panel')?.scrollIntoView({ behavior: 'smooth' });
+                    }, 50);
                   }}
                   className={`w-full text-left p-4 rounded-xl border transition cursor-pointer flex flex-col justify-between gap-2 shadow relative group ${
                     isSel
@@ -449,6 +555,9 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({ onNavigate
                           e.stopPropagation();
                           setSelectedOpId(op.id);
                           setActiveSubTab('report');
+                          setTimeout(() => {
+                            document.getElementById('report-details-panel')?.scrollIntoView({ behavior: 'smooth' });
+                          }, 50);
                         }}
                         className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-0.5 hover:underline cursor-pointer bg-blue-950/50 px-2 py-0.5 rounded border border-blue-800/60 text-[10px]"
                         title="Gesamtprotokoll öffnen"
@@ -465,7 +574,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({ onNavigate
 
         {/* Right Column: Detailed Replay & Debrief Report */}
         {selectedOp ? (
-          <div className="lg:col-span-8 bg-[#1E293B] border border-slate-700 rounded-2xl p-5 shadow-2xl space-y-5">
+          <div id="report-details-panel" className="lg:col-span-8 bg-[#1E293B] border border-slate-700 rounded-2xl p-5 shadow-2xl space-y-5">
             {/* Header of selected operation */}
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-700">
               <div>
@@ -726,49 +835,107 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({ onNavigate
                   </div>
                 )}
 
-                {/* Gespeicherter Lagekarten-Screenshot (Abschluss) */}
-                {selectedOp.mapSnapshotUrl && (
+                {/* Wetterbedingungen bei Einsatzzeit */}
+                {selectedOp.weatherConditions && (
+                  <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-700 font-mono space-y-2">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1.5">
+                      <Cloud className="w-3.5 h-3.5 text-blue-400" />
+                      <span>WETTERBEDINGUNGEN DER EINSATZZEIT:</span>
+                    </div>
+                    <div className="text-[11px] text-slate-200 bg-slate-950/40 p-2.5 rounded-lg border border-slate-800 font-sans flex items-center gap-2.5">
+                      <span className="text-base font-sans shrink-0">☀️</span>
+                      <span className="leading-relaxed">{selectedOp.weatherConditions}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Gespeicherte Lagekarten-Screenshots (Galerie) */}
+                {((selectedOp.mapSnapshots && selectedOp.mapSnapshots.length > 0) || selectedOp.mapSnapshotUrl) && (
                   <div className="bg-slate-900 p-3.5 rounded-xl border border-purple-500/40 font-mono space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="text-[10px] font-bold text-purple-300 uppercase flex items-center gap-1.5">
-                        <Camera className="w-4 h-4 text-purple-400" />
-                        <span>LAGEKARTEN-SCHNAPPSCHUSS BEI EINSATZENDE:</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setSnapshotPreviewModal(selectedOp.mapSnapshotUrl || null)}
-                          className="px-2.5 py-1 bg-purple-950 hover:bg-purple-900 border border-purple-700 text-purple-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
-                        >
-                          <Eye className="w-3 h-3" />
-                          <span>Vollbild</span>
-                        </button>
-                        <a
-                          href={selectedOp.mapSnapshotUrl}
-                          download={`lagekarte-${selectedOp.id}.jpg`}
-                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
-                        >
-                          <Download className="w-3 h-3 text-cyan-400" />
-                          <span>Download</span>
-                        </a>
-                      </div>
+                    <div className="text-[10px] font-bold text-purple-300 uppercase flex items-center gap-1.5">
+                      <Camera className="w-4 h-4 text-purple-400" />
+                      <span>GESPEICHERTE LAGEBILDER & VERLAUFSSNAPSHOTS ({selectedOp.mapSnapshots?.length || 1}):</span>
                     </div>
 
-                    <div
-                      onClick={() => setSnapshotPreviewModal(selectedOp.mapSnapshotUrl || null)}
-                      className="relative rounded-xl overflow-hidden border border-slate-700 bg-slate-950 max-h-64 cursor-pointer group"
-                    >
-                      <img
-                        src={selectedOp.mapSnapshotUrl}
-                        alt="Lagekarten-Screenshot"
-                        className="w-full h-auto object-cover max-h-64 group-hover:scale-[1.01] transition duration-200"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute inset-0 bg-slate-950/20 group-hover:bg-slate-950/0 transition" />
-                      <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/70 text-[10px] text-white font-mono flex items-center gap-1">
-                        <Eye className="w-3 h-3" /> Klicken zum Vergrößern
-                      </span>
-                    </div>
+                    {selectedOp.mapSnapshots && selectedOp.mapSnapshots.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        {selectedOp.mapSnapshots.map((snap, sIdx) => (
+                          <div key={sIdx} className="bg-slate-950/80 border border-slate-800 p-3 rounded-xl space-y-2 flex flex-col">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <span className="text-[10px] text-purple-400 font-bold uppercase block tracking-wider truncate">{snap.label}</span>
+                                <span className="text-[9px] text-slate-400 block font-sans">{new Date(snap.timestamp).toLocaleString('de-DE')}</span>
+                              </div>
+                              <div className="flex gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => setSnapshotPreviewModal(snap.url)}
+                                  className="p-1.5 bg-purple-950 hover:bg-purple-900 border border-purple-800 rounded-lg text-purple-200 transition cursor-pointer"
+                                  title="Vergrößern"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                <a
+                                  href={snap.url}
+                                  download={`lagekarte-${selectedOp.id}-step-${sIdx + 1}.jpg`}
+                                  className="p-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-200 transition cursor-pointer"
+                                  title="Herunterladen"
+                                >
+                                  <Download className="w-3.5 h-3.5 text-cyan-400" />
+                                </a>
+                              </div>
+                            </div>
+                            <div
+                              onClick={() => setSnapshotPreviewModal(snap.url)}
+                              className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-950 aspect-video cursor-pointer group flex items-center justify-center"
+                            >
+                              <img
+                                src={snap.url}
+                                alt={snap.label}
+                                className="w-full h-full object-cover group-hover:scale-[1.01] transition duration-200"
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col md:flex-row gap-3.5 items-center">
+                        <div
+                          onClick={() => setSnapshotPreviewModal(selectedOp.mapSnapshotUrl || null)}
+                          className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-950 w-full md:w-48 aspect-video cursor-pointer group shrink-0"
+                        >
+                          <img
+                            src={selectedOp.mapSnapshotUrl}
+                            alt="Abschluss-Screenshot"
+                            className="w-full h-full object-cover group-hover:scale-[1.01] transition duration-200"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                        <div className="flex-1 space-y-2 text-center md:text-left">
+                          <span className="text-xs font-bold text-slate-300 block">Abschluss-Screenshot vorhanden</span>
+                          <span className="text-[11px] text-slate-400 block font-sans">Gesichert beim Beenden des Einsatzes</span>
+                          <div className="flex justify-center md:justify-start gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setSnapshotPreviewModal(selectedOp.mapSnapshotUrl || null)}
+                              className="px-2.5 py-1 bg-purple-950 hover:bg-purple-900 border border-purple-700 text-purple-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                            >
+                              <Eye className="w-3 h-3" />
+                              <span>Anzeigen</span>
+                            </button>
+                            <a
+                              href={selectedOp.mapSnapshotUrl}
+                              download={`lagekarte-${selectedOp.id}.jpg`}
+                              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                            >
+                              <Download className="w-3 h-3 text-cyan-400" />
+                              <span>Download</span>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1011,11 +1178,16 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({ onNavigate
 
                     <button
                       onClick={handlePrint}
-                      className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-blue-300 rounded-xl border border-slate-700 transition flex items-center gap-1.5 cursor-pointer text-xs font-mono"
+                      disabled={isExportingPdf}
+                      className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-blue-300 rounded-xl border border-slate-700 transition flex items-center gap-1.5 cursor-pointer text-xs font-mono"
                       title="Offizielles Behördenprotokoll als PDF drucken / speichern"
                     >
-                      <Printer className="w-3.5 h-3.5 text-blue-400" />
-                      <span>Drucken / PDF</span>
+                      {isExportingPdf ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                      ) : (
+                        <Printer className="w-3.5 h-3.5 text-blue-400" />
+                      )}
+                      <span>{isExportingPdf ? 'Erzeuge PDF...' : 'Drucken / PDF'}</span>
                     </button>
 
                     {isAdmin && (
@@ -1702,6 +1874,137 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({ onNavigate
         </div>
       )}
 
+      {/* Print & PDF Export Options Dialog */}
+      {showPrintOptions && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[5200] flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-700 max-w-lg w-full rounded-2xl shadow-2xl p-6 space-y-6 font-mono text-xs">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <span className="text-sm font-bold text-white flex items-center gap-2">
+                <Printer className="w-5 h-5 text-blue-400 animate-pulse" />
+                <span>Bericht drucken & PDF exportieren</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowPrintOptions(false)}
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-slate-300 leading-relaxed font-sans">
+              Wähle die gewünschte Export- und Druckoption für den behördlichen Einsatzbericht.
+            </p>
+
+            <div className="space-y-4 font-sans text-[11px]">
+              {/* Option 1: System Print (Recommended) */}
+              <div className="bg-slate-950/80 border border-blue-500/30 p-4 rounded-xl space-y-3 flex flex-col justify-between hover:border-blue-500/60 transition">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 bg-blue-950/60 border border-blue-800 rounded-xl text-blue-400 shrink-0">
+                    <Printer className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-white text-xs">System-Drucker & Native PDF (Empfohlen)</h4>
+                    <p className="text-slate-400 leading-normal">
+                      Öffnet den nativen Druckdialog. Erzeugt eine fehlerfreie, vektorscharfe PDF-Datei.
+                      <strong> Die Karten-Screenshots werden vollflächig auf A4 skaliert und nicht zerschnitten.</strong>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end pt-1">
+                  <button
+                    onClick={() => {
+                      setShowPrintOptions(false);
+                      handleSystemPrint();
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold font-mono text-xs cursor-pointer flex items-center gap-1.5 shadow-lg shadow-blue-950/40 transition"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Druckdialog öffnen</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Option 2: Live Screen Preview */}
+              <div className="bg-slate-950/80 border border-purple-500/30 p-4 rounded-xl space-y-3 flex flex-col justify-between hover:border-purple-500/60 transition">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 bg-purple-950/60 border border-purple-800 rounded-xl text-purple-400 shrink-0">
+                    <Eye className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-white text-xs">Druckvorschau auf dem Bildschirm</h4>
+                    <p className="text-slate-400 leading-normal">
+                      Aktiviert eine originalgetreue, hochauflösende DIN-A4-Papier-Vorschau des Einsatzberichts inklusive aller Karten direkt hier im Browser.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end pt-1">
+                  <button
+                    onClick={() => {
+                      setScreenPreviewActive(!screenPreviewActive);
+                      setShowPrintOptions(false);
+                    }}
+                    className={`px-4 py-2 border rounded-xl font-bold font-mono text-xs cursor-pointer flex items-center gap-1.5 transition ${
+                      screenPreviewActive
+                        ? 'bg-purple-950 border-purple-600 text-purple-200'
+                        : 'bg-purple-600 hover:bg-purple-500 border-purple-500 text-white shadow-lg shadow-purple-950/40'
+                    }`}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>{screenPreviewActive ? 'Vorschau ausblenden' : 'Vorschau einblenden'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Option 3: Direct Download */}
+              <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-xl space-y-3 flex flex-col justify-between hover:border-slate-700 transition">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-slate-400 shrink-0">
+                    <Download className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-slate-300 text-xs">Direkter PDF-Download (Bild-Abbild)</h4>
+                    <p className="text-slate-400 leading-normal">
+                      Erzeugt im Hintergrund ein Abbild des gesamten Protokolls und lädt es direkt auf dein Gerät herunter.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end pt-1">
+                  <button
+                    onClick={() => {
+                      setShowPrintOptions(false);
+                      handleDirectPdfDownload();
+                    }}
+                    disabled={isExportingPdf}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded-xl font-bold font-mono text-xs cursor-pointer flex items-center gap-1.5 transition"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{isExportingPdf ? 'Erzeuge PDF...' : 'Download starten'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Screen Preview Notification Banner */}
+      {screenPreviewActive && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[5000] bg-purple-600 border border-purple-500 text-white px-5 py-3 rounded-2xl flex items-center gap-4 shadow-2xl font-mono text-xs animate-in slide-in-from-bottom duration-300">
+          <FileText className="w-5 h-5 text-purple-100 animate-bounce" />
+          <div className="space-y-0.5">
+            <div className="font-bold">📄 Bildschirm-Druckvorschau aktiv</div>
+            <div className="text-[10px] text-purple-200">Das offizielle Briefpapier-Protokoll wird unten auf dieser Seite gerendert.</div>
+          </div>
+          <button
+            onClick={() => setScreenPreviewActive(false)}
+            className="ml-2 px-3 py-1.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl border border-purple-500 font-bold cursor-pointer"
+          >
+            Schließen
+          </button>
+        </div>
+      )}
+
       {/* Snapshot Preview Lightbox Modal */}
       {snapshotPreviewModal && (
         <div
@@ -1747,9 +2050,13 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({ onNavigate
           </div>
         </div>
       )}
+
       {/* Offizielles druckbares Einsatz- und Abschlussprotokoll für Behörden, Polizei und Verein */}
       {selectedOp && (
-        <div id="printable-official-protocol" className="p-8 text-black bg-white space-y-6">
+        <div
+          id="printable-official-protocol"
+          className={`p-8 text-black bg-white space-y-6 ${screenPreviewActive ? 'screen-preview animate-in fade-in duration-500' : ''}`}
+        >
           {/* Header */}
           <div className="border-b-2 border-black pb-4 flex justify-between items-start">
             <div>
@@ -1818,6 +2125,12 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({ onNavigate
                 (GPS: {selectedOp.headquartersLocation?.lat?.toFixed(5) || '51.75696'},{' '}
                 {selectedOp.headquartersLocation?.lng?.toFixed(5) || '11.45352'})
               </div>
+              {selectedOp.weatherConditions && (
+                <div className="col-span-2 pt-1 border-t border-gray-300">
+                  <span className="font-bold">Wetterlage / Umweltbedingungen bei Einsatzzeit:</span>{' '}
+                  {selectedOp.weatherConditions}
+                </div>
+              )}
             </div>
           </div>
 
@@ -2070,17 +2383,41 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({ onNavigate
           </div>
 
           {/* Kartensnapshot */}
-          {selectedOp.mapSnapshot && (
-            <div className="border border-black text-xs print-no-break">
+          {((selectedOp.mapSnapshots && selectedOp.mapSnapshots.length > 0) || selectedOp.mapSnapshotUrl || selectedOp.mapSnapshot) && (
+            <div className="border border-black text-xs">
               <div className="bg-gray-100 font-bold px-3 py-1.5 border-b border-black uppercase text-[11px]">
-                8. Lagekarten-Übersicht (Abschluss-Snapshot)
+                8. Lagekarten-Übersicht & Verlaufssnapshots
               </div>
-              <div className="p-3 flex justify-center">
-                <img
-                  src={selectedOp.mapSnapshot}
-                  alt="Lagekarten-Snapshot"
-                  className="max-h-80 w-auto border border-gray-400"
-                />
+              <div className="p-3">
+                {selectedOp.mapSnapshots && selectedOp.mapSnapshots.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-4 print-map-grid">
+                    {selectedOp.mapSnapshots.map((snap, sIdx) => (
+                      <div key={sIdx} className="border border-gray-400 p-2 rounded bg-gray-50 flex flex-col items-center print-map-item">
+                        <img
+                          src={snap.url}
+                          alt={snap.label || 'Lagekarten-Snapshot'}
+                          className="max-h-48 w-auto object-contain mb-1"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="text-[9px] text-gray-900 font-bold text-center uppercase tracking-wide">
+                          {snap.label}
+                        </div>
+                        <div className="text-[8px] text-gray-500 text-center font-mono">
+                          {new Date(snap.timestamp).toLocaleString('de-DE')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex justify-center print-map-item">
+                    <img
+                      src={selectedOp.mapSnapshotUrl || selectedOp.mapSnapshot}
+                      alt="Lagekarten-Snapshot"
+                      className="max-h-80 w-auto border border-gray-400"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}

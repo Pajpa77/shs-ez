@@ -34,6 +34,7 @@ import {
   Copy,
   X,
   CloudSun,
+  FileText,
 } from 'lucide-react';
 
 interface TacticalMapProps {
@@ -49,6 +50,7 @@ interface TacticalMapProps {
   onFinishDrawing?: (coords: [number, number][]) => void;
   onCancelDrawing?: () => void;
   onSaveSnapshot?: (dataUrl: string) => void;
+  onSelectArchiveOp?: (opId: string) => void;
 }
 
 // Calculate geodesic area in hectares for a polygon
@@ -154,6 +156,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   onFinishDrawing,
   onCancelDrawing,
   onSaveSnapshot,
+  onSelectArchiveOp,
 }) => {
   const {
     currentOperation: globalOperation,
@@ -292,7 +295,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         if (onSaveSnapshot) {
           onSaveSnapshot(dataUrl);
         } else {
-          saveMapSnapshot(currentOperation.id, dataUrl);
+          saveMapSnapshot(currentOperation.id, dataUrl, 'Lagebild');
         }
         setSnapshotSavedNotice(true);
         setTimeout(() => setSnapshotSavedNotice(false), 3500);
@@ -303,6 +306,33 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       setIsCapturingSnapshot(false);
     }
   };
+
+  // Automatische Erfassung des Einsatzstart-Screenshots (gesamter Suchbereich / ausgewählter Bereich)
+  const hasAttemptedStartSnapshotRef = useRef(false);
+  useEffect(() => {
+    if (!currentOperation || currentOperation.status !== 'active') return;
+    if (!currentOperation.searchAreaPolygon || currentOperation.searchAreaPolygon.length < 3) return;
+
+    const existingSnaps = currentOperation.mapSnapshots || [];
+    const hasStartSnap = existingSnaps.some((s) => s.label === 'Einsatzstart');
+    if (hasStartSnap || hasAttemptedStartSnapshotRef.current) return;
+
+    hasAttemptedStartSnapshotRef.current = true;
+
+    const timer = setTimeout(async () => {
+      try {
+        console.log('Automatischer Snapshot der Lagekarte bei Einsatzstart wird erfasst...');
+        const dataUrl = await captureTacticalMapScreenshot(currentOperation, userLocations);
+        if (dataUrl) {
+          saveMapSnapshot(currentOperation.id, dataUrl, 'Einsatzstart');
+        }
+      } catch (err) {
+        console.error('Automatischer Einsatzstart-Snapshot fehlgeschlagen:', err);
+      }
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [currentOperation?.id, currentOperation?.searchAreaPolygon, currentOperation?.mapSnapshots, userLocations]);
 
   // Grouped / co-located responders for rapid switching when inspecting a responder
   const nearbyResponders = useMemo(() => {
@@ -1643,16 +1673,30 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={captureMapSnapshot}
-            disabled={isCapturingSnapshot}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-lg transition cursor-pointer shrink-0 disabled:opacity-50"
-            title="Aktuellen Kartenausschnitt mit allen Spuren und Sektoren als Bild für das Protokoll speichern"
-          >
-            <Camera className="w-3.5 h-3.5" />
-            <span>{isCapturingSnapshot ? 'Erfasse Bild...' : '📸 Snapshot für Protokoll speichern'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={captureMapSnapshot}
+              disabled={isCapturingSnapshot}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-lg transition cursor-pointer shrink-0 disabled:opacity-50"
+              title="Aktuellen Kartenausschnitt mit allen Spuren und Sektoren als Bild für das Protokoll speichern"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>{isCapturingSnapshot ? 'Erfasse Bild...' : '📸 Snapshot speichern'}</span>
+            </button>
+
+            {onSelectArchiveOp && currentOperation && (
+              <button
+                type="button"
+                onClick={() => onSelectArchiveOp(currentOperation.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition cursor-pointer shrink-0"
+                title="Formelles Einsatzprotokoll als PDF anzeigen und exportieren"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>📋 Protokoll PDF</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 

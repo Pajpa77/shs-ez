@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Timer, Camera, Save, Trash2, LogOut, CheckCircle2 } from 'lucide-react';
+import { Timer, Camera, Save, Trash2, LogOut, CheckCircle2, Download } from 'lucide-react';
 import { useRescue } from '../context/RescueContext';
 import { captureTacticalMapScreenshot } from '../lib/mapSnapshotHelper';
 
 export const TrackingTestOverlay: React.FC = () => {
-  const { activeTrackingTest, saveTrackingTestResult } = useRescue();
+  const { activeTrackingTest, saveTrackingTestResult, stopTrackingTest } = useRescue();
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [snapshotUrl, setSnapshotUrl] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -104,6 +104,14 @@ export const TrackingTestOverlay: React.FC = () => {
             <span className="text-[10px] font-bold uppercase tracking-widest opacity-80">Trackingtest Aktiv</span>
             <span className="text-xl font-mono font-black">{formatTime(timeLeft)}</span>
           </div>
+          <button
+            onClick={() => stopTrackingTest()}
+            className="ml-3 px-3 py-1.5 bg-red-600 hover:bg-red-500 rounded-full text-[10px] font-bold uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 border border-white/10 active:scale-95 shadow-sm"
+            title="Tracking-Test vorzeitig beenden"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Beenden</span>
+          </button>
         </motion.div>
       )}
 
@@ -133,9 +141,9 @@ export const TrackingTestOverlay: React.FC = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                <div className="aspect-video bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden relative group">
+                <div className="aspect-video bg-slate-950 rounded-2xl border border-slate-700 overflow-hidden relative group flex items-center justify-center">
                   {snapshotUrl ? (
-                    <img src={snapshotUrl} alt="Map Snapshot" className="w-full h-full object-cover" />
+                    <img src={snapshotUrl} alt="Map Snapshot" className="w-full h-full object-contain" />
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-500">
                       <Camera className="w-12 h-12 animate-pulse" />
@@ -143,6 +151,29 @@ export const TrackingTestOverlay: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {snapshotUrl && (
+                  <div className="flex flex-col items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = snapshotUrl;
+                        link.download = `tracking-test-${new Date().getTime()}.jpg`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs flex items-center gap-2 shadow cursor-pointer transition active:scale-95"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Kartenbild herunterladen</span>
+                    </button>
+                    <p className="text-[10px] text-slate-400 text-center leading-relaxed max-w-md">
+                      💡 <strong>Mobil-Tipp:</strong> Halte deinen Finger auf das Bild gedrückt, um es direkt in deine Fotos zu speichern oder zu teilen.
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4 text-xs font-mono">
                   <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-700">
@@ -169,12 +200,16 @@ export const TrackingTestOverlay: React.FC = () => {
                   <span>Verwerfen</span>
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (snapshotUrl) {
                       const link = document.createElement('a');
                       link.href = snapshotUrl;
                       link.download = `tracking-test-${new Date().getTime()}.jpg`;
+                      document.body.appendChild(link);
                       link.click();
+                      document.body.removeChild(link);
+                      // Give the browser a brief moment to process the file stream before redirect/logout occurs
+                      await new Promise((resolve) => setTimeout(resolve, 800));
                     }
                     saveTrackingTestResult(true);
                   }}

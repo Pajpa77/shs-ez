@@ -110,6 +110,7 @@ const MainApp: React.FC = () => {
   }, [uiScale]);
 
   const [activeTab, setActiveTab] = useState<'admin' | 'map' | 'sectors' | 'chat' | 'responders' | 'log' | 'archive'>('map');
+  const [selectedArchiveOpId, setSelectedArchiveOpId] = useState<string>('');
 
   // Automatically clear unread badge when opening chat
   useEffect(() => {
@@ -336,6 +337,10 @@ const MainApp: React.FC = () => {
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        onSelectArchiveOp={(opId) => {
+          setSelectedArchiveOpId(opId);
+          setActiveTab('archive');
+        }}
         onOpenFindingModal={() => setIsFindingModalOpen(true)}
         onOpenProfileModal={() => setIsProfileOpen(true)}
         onOpenLoginModal={() => {}}
@@ -381,6 +386,10 @@ const MainApp: React.FC = () => {
           {activeTab === 'map' && (
             <div className="flex-1 relative flex flex-col h-full w-full">
               <TacticalMap
+                onSelectArchiveOp={(opId) => {
+                  setSelectedArchiveOpId(opId);
+                  setActiveTab('archive');
+                }}
                 onOpenFindingDetail={(f) => setSelectedFinding(f)}
                 onOpenSectorEditor={(s) => {
                   setSectorToEdit(s);
@@ -502,7 +511,11 @@ const MainApp: React.FC = () => {
 
         {activeTab === 'archive' && (
           <div className="flex-1 overflow-y-auto pb-16 bg-[#0F172A]">
-            <OperationsArchive onNavigateToMap={() => setActiveTab('map')} />
+            <OperationsArchive
+              onNavigateToMap={() => setActiveTab('map')}
+              initialSelectedOpId={selectedArchiveOpId}
+              onSelectOpId={setSelectedArchiveOpId}
+            />
           </div>
         )}
         </Suspense>

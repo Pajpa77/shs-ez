@@ -103,9 +103,19 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     setCustomUrl('');
   };
 
+  const lastIdRef = useRef<string | null>(null);
+  const prevIsOpenRef = useRef<boolean>(false);
+
   useEffect(() => {
-    populateForm(userToEdit);
-  }, [userToEdit, isOpen]);
+    const isOpening = isOpen && !prevIsOpenRef.current;
+    const isUserIdChanged = userToEdit?.id !== lastIdRef.current;
+
+    if (isOpening || isUserIdChanged) {
+      populateForm(userToEdit);
+      lastIdRef.current = userToEdit?.id ?? null;
+    }
+    prevIsOpenRef.current = isOpen;
+  }, [userToEdit?.id, isOpen]);
 
   if (!isOpen) return null;
 

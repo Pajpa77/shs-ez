@@ -97,7 +97,7 @@ interface RescueContextType {
   updateOperation: (id: string, updates: Partial<SearchOperation> | ((prevOp: SearchOperation) => Partial<SearchOperation>)) => void;
   pauseOperation: (id: string, reason?: string, snapshotUrl?: string) => Promise<void> | void;
   resumeOperation: (id: string) => void;
-  saveMapSnapshot: (operationId: string, dataUrl: string) => void;
+  saveMapSnapshot: (operationId: string, dataUrl: string, label?: string) => void;
   endOperation: (
     id: string,
     notes?: string,
@@ -2821,6 +2821,15 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     setAllOperations((prev) => {
       const next = prev.map((op) => {
         if (op.id !== id) return op;
+        const existingSnapshots = op.mapSnapshots || [];
+        const finalSnapshots = [...existingSnapshots];
+        if (finalSnapshot) {
+          finalSnapshots.push({
+            url: finalSnapshot,
+            timestamp: now,
+            label: `Einsatzpause: ${reason || 'Einsatz pausiert'}`,
+          });
+        }
         const updated: SearchOperation = {
           ...op,
           status: 'paused',
@@ -2830,6 +2839,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
           archivedTracks: updatedArchived,
           archivedChatMessages: opChat.length > 0 ? opChat : op.archivedChatMessages,
           mapSnapshotUrl: finalSnapshot || op.mapSnapshotUrl || '',
+          mapSnapshots: finalSnapshots,
           logs: [logEntry, ...op.logs],
         };
         syncOperationToCloud(updated);
@@ -2902,21 +2912,53 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       localStorage.setItem(STORAGE_KEY_ACTIVE_OP, id);
     } catch {}
 
+    const op = allOperations.find((o) => o.id === id);
+    if (op && op.archivedTracks && op.archivedTracks.length > 0) {
+      setUserLocations((prev) => {
+        const next = { ...prev };
+        op.archivedTracks!.forEach((t) => {
+          if (t.userId && t.points && t.points.length > 0) {
+            const currentLoc = next[t.userId];
+            const currentLen = currentLoc?.trackHistory?.length || 0;
+            if (currentLen < t.points.length) {
+              next[t.userId] = {
+                userId: t.userId,
+                isLive: true,
+                lastUpdated: now,
+                currentPosition: t.points[t.points.length - 1],
+                trackHistory: [...t.points],
+              };
+            }
+          }
+        });
+        try {
+          localStorage.setItem(STORAGE_KEY_LOCATIONS, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    }
+
     broadcastChannelRef.current?.postMessage({
       type: 'OPERATION_RESUMED',
       payload: { operationId: id },
     });
   };
 
-  const saveMapSnapshot = (operationId: string, dataUrl: string) => {
+  const saveMapSnapshot = (operationId: string, dataUrl: string, label: string = 'Manuell') => {
     if (!operationId || !dataUrl) return;
     const now = new Date().toISOString();
     setAllOperations((prev) => {
       const next = prev.map((op) => {
         if (op.id === operationId) {
+          const existingSnapshots = op.mapSnapshots || [];
+          if (label === 'Einsatzstart' && existingSnapshots.some((s) => s.label === 'Einsatzstart')) {
+            return op;
+          }
+          const newSnapshot = { url: dataUrl, timestamp: now, label };
           const updated: SearchOperation = {
             ...op,
             mapSnapshotUrl: dataUrl,
+            mapSnapshots: [...existingSnapshots, newSnapshot],
             updatedAt: now,
           };
           syncOperationToCloud(updated);
@@ -3036,6 +3078,16 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
           }
         });
 
+        const existingSnapshots = op.mapSnapshots || [];
+        const finalSnapshots = [...existingSnapshots];
+        if (finalSnapshot) {
+          finalSnapshots.push({
+            url: finalSnapshot,
+            timestamp: now,
+            label: `Einsatzende: ${outcomeText}`,
+          });
+        }
+
         const updated: SearchOperation = {
           ...op,
           status: 'completed',
@@ -3047,6 +3099,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
           archivedTracks: updatedArchived,
           archivedChatMessages: opChat.length > 0 ? opChat : op.archivedChatMessages,
           mapSnapshotUrl: finalSnapshot || op.mapSnapshotUrl || '',
+          mapSnapshots: finalSnapshots,
           logs: [logEntry, ...op.logs],
         };
         syncOperationToCloud(updated);
@@ -4011,7 +4064,14 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   }, [updateUser]);
 
   const stopTrackingTest = useCallback(() => {
-    setActiveTrackingTest(null);
+    setActiveTrackingTest((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        isActive: false,
+        isCompleted: true,
+      };
+    });
   }, []);
 
   const saveTrackingTestResult = useCallback((save: boolean) => {

@@ -285,6 +285,7 @@ export interface SearchOperation {
   customEquipmentNotes?: string;
   mapSnapshotUrl?: string; // Gespeicherter Kartenscreenshot mit allen Aufzeichnungen
   mapSnapshot?: string;
+  mapSnapshots?: { url: string; timestamp: string; label: string }[];
   archivedTracks?: ArchivedSearchTrack[];
   archivedChatMessages?: ChatMessage[]; // Vollständig gesicherter Einsatz-Funk- und Chatverlauf
   notes?: string;

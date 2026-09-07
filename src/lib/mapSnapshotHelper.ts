@@ -89,17 +89,33 @@ function generateTacticalCanvasFallback(
   ctx.font = 'bold 11px monospace';
   ctx.fillText(statusLabel, width - 365, 32);
 
-  // Collect bounding box coordinates from sectors, hq, and tracks
+  // Collect bounding box coordinates from sectors, hq, and tracks with strict numeric validations
   const coords: [number, number][] = [];
-  op.sectors?.forEach((s) => s.polygon?.forEach((p) => coords.push(p)));
-  if (op.headquartersLocation?.lat) coords.push([op.headquartersLocation.lat, op.headquartersLocation.lng]);
+  op.sectors?.forEach((s) => s.polygon?.forEach((p) => {
+    if (p && typeof p[0] === 'number' && typeof p[1] === 'number' && !isNaN(p[0]) && !isNaN(p[1])) {
+      coords.push([p[0], p[1]]);
+    }
+  }));
+  if (op.headquartersLocation?.lat && typeof op.headquartersLocation.lat === 'number' && !isNaN(op.headquartersLocation.lat)) {
+    coords.push([op.headquartersLocation.lat, op.headquartersLocation.lng]);
+  }
   op.findings?.forEach((f) => {
-    if (f.location?.lat) coords.push([f.location.lat, f.location.lng]);
+    if (f.location?.lat && typeof f.location.lat === 'number' && !isNaN(f.location.lat)) {
+      coords.push([f.location.lat, f.location.lng]);
+    }
   });
-  op.archivedTracks?.forEach((t) => t.points?.forEach((pt) => coords.push([pt.lat, pt.lng])));
+  op.archivedTracks?.forEach((t) => t.points?.forEach((pt) => {
+    if (pt && typeof pt.lat === 'number' && typeof pt.lng === 'number' && !isNaN(pt.lat) && !isNaN(pt.lng)) {
+      coords.push([pt.lat, pt.lng]);
+    }
+  }));
   if (userLocations) {
     Object.values(userLocations).forEach((loc) => {
-      loc.trackHistory?.forEach((pt) => coords.push([pt.lat, pt.lng]));
+      loc.trackHistory?.forEach((pt) => {
+        if (pt && typeof pt.lat === 'number' && typeof pt.lng === 'number' && !isNaN(pt.lat) && !isNaN(pt.lng)) {
+          coords.push([pt.lat, pt.lng]);
+        }
+      });
     });
   }
 
@@ -127,8 +143,13 @@ function generateTacticalCanvasFallback(
   // Draw Sectors
   op.sectors?.forEach((sec) => {
     if (!sec.polygon || sec.polygon.length < 3) return;
+    const validPoly = sec.polygon.filter(
+      (pt) => pt && typeof pt[0] === 'number' && typeof pt[1] === 'number' && !isNaN(pt[0]) && !isNaN(pt[1])
+    );
+    if (validPoly.length < 3) return;
+
     ctx.beginPath();
-    sec.polygon.forEach((pt, idx) => {
+    validPoly.forEach((pt, idx) => {
       const [sx, sy] = toScreen(pt[0], pt[1]);
       if (idx === 0) ctx.moveTo(sx, sy);
       else ctx.lineTo(sx, sy);
@@ -146,7 +167,7 @@ function generateTacticalCanvasFallback(
     ctx.stroke();
 
     // Sector label
-    const [lx, ly] = toScreen(sec.polygon[0][0], sec.polygon[0][1]);
+    const [lx, ly] = toScreen(validPoly[0][0], validPoly[0][1]);
     ctx.fillStyle = '#f8fafc';
     ctx.font = 'bold 11px monospace';
     ctx.fillText(sec.name, lx + 6, ly - 6);
@@ -173,8 +194,13 @@ function generateTacticalCanvasFallback(
 
   allTracks.forEach((track) => {
     if (!track.points || track.points.length < 2) return;
+    const validPoints = track.points.filter(
+      (pt) => pt && typeof pt.lat === 'number' && typeof pt.lng === 'number' && !isNaN(pt.lat) && !isNaN(pt.lng)
+    );
+    if (validPoints.length < 2) return;
+
     ctx.beginPath();
-    track.points.forEach((pt, i) => {
+    validPoints.forEach((pt, i) => {
       const [tx, ty] = toScreen(pt.lat, pt.lng);
       if (i === 0) ctx.moveTo(tx, ty);
       else ctx.lineTo(tx, ty);
@@ -185,7 +211,7 @@ function generateTacticalCanvasFallback(
   });
 
   // Draw HQ / ELZ Marker
-  if (op.headquartersLocation?.lat) {
+  if (op.headquartersLocation?.lat && typeof op.headquartersLocation.lat === 'number' && !isNaN(op.headquartersLocation.lat)) {
     const [hx, hy] = toScreen(op.headquartersLocation.lat, op.headquartersLocation.lng);
     ctx.fillStyle = '#dc2626';
     ctx.beginPath();
@@ -201,7 +227,7 @@ function generateTacticalCanvasFallback(
 
   // Draw Findings
   op.findings?.forEach((f) => {
-    if (!f.location?.lat) return;
+    if (!f.location?.lat || typeof f.location.lat !== 'number' || isNaN(f.location.lat)) return;
     const [fx, fy] = toScreen(f.location.lat, f.location.lng);
     ctx.fillStyle = '#eab308';
     ctx.beginPath();

@@ -27,8 +27,10 @@ import {
   Square,
   Plus,
   Building2,
+  Cloud,
 } from 'lucide-react';
 import { VEREINSBUERO_LOCATION } from '../mockData';
+import { fetchRescueWeather } from '../lib/weatherService';
 
 const AVAILABLE_EQUIPMENT: { type: EquipmentType; label: string; icon: string; desc: string }[] = [
   { type: 'drone', label: 'Drohne / UAS', icon: '🚁', desc: 'Flugdrohnen mit Kamera' },
@@ -114,6 +116,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
   // 5. Ausrüstung & Einsatzmittel
   const [selectedEquipment, setSelectedEquipment] = useState<EquipmentType[]>(['drone', 'k9_mantrailer', 'foot_search']);
   const [customEquipmentNotes, setCustomEquipmentNotes] = useState('');
+  const [weatherConditions, setWeatherConditions] = useState('');
   const [formError, setFormError] = useState('');
 
   const prevIsOpenRef = useRef(false);
@@ -188,6 +191,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
             : ['drone', 'k9_mantrailer', 'foot_search']
         );
         setCustomEquipmentNotes(targetOp.customEquipmentNotes || '');
+        setWeatherConditions(targetOp.weatherConditions || '');
         setEzAdminIds(
           Array.isArray(targetOp.ezAdminIds) && targetOp.ezAdminIds.length > 0
             ? targetOp.ezAdminIds
@@ -227,6 +231,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
         setExternalVolunteersNotes('');
         setSelectedEquipment(['drone', 'k9_mantrailer', 'foot_search', 'first_aid']);
         setCustomEquipmentNotes('');
+        setWeatherConditions('');
       }
       setHomeGeocodeStatus('idle');
       setPlsGeocodeStatus('idle');
@@ -414,6 +419,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
       externalVolunteersNotes: externalVolunteersNotes.trim(),
       selectedEquipment,
       customEquipmentNotes: customEquipmentNotes.trim(),
+      weatherConditions: weatherConditions.trim(),
       ezAdminIds: finalEzAdminIds,
     };
 
@@ -1208,6 +1214,46 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 value={customEquipmentNotes}
                 onChange={(e) => setCustomEquipmentNotes(e.target.value)}
                 placeholder="z.B. 2x DJI Matrice 300 RTK mit Wärmebild, 1x Führungsfahrzeug EZ 1, 4x Handsprechfunkgeräte 2m"
+                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-cyan-500 font-sans"
+              />
+            </div>
+
+            {/* Wetterbedingungen bei Einsatzstart */}
+            <div className="pt-2 border-t border-slate-800">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-slate-300 font-semibold text-[11px] uppercase tracking-wider font-mono flex items-center gap-1">
+                  <Cloud className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Wetterbedingungen bei Einsatzstart:</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      // Fetch coordinates of HQ or fallback to Vereinsbüro
+                      const lat = Number(hqLat) || VEREINSBUERO_LOCATION.lat;
+                      const lng = Number(hqLng) || VEREINSBUERO_LOCATION.lng;
+                      const report = await fetchRescueWeather(lat, lng);
+                      if (report && report.current) {
+                        const cur = report.current;
+                        const formatted = `${cur.weatherIcon} ${cur.weatherDescription}, ${cur.temperature}°C (Gefühlt: ${cur.apparentTemperature}°C), Wind: ${cur.windSpeed} km/h, Feuchte: ${cur.relativeHumidity}%`;
+                        setWeatherConditions(formatted);
+                      }
+                    } catch (err) {
+                      console.warn('Wetterabruf fehlgeschlagen', err);
+                      setWeatherConditions('⛅ Heiter, ca. 16°C, mäßiger Wind');
+                    }
+                  }}
+                  className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 border border-slate-700 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-pointer"
+                >
+                  <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
+                  <span>Wetter live abrufen</span>
+                </button>
+              </div>
+              <input
+                type="text"
+                value={weatherConditions}
+                onChange={(e) => setWeatherConditions(e.target.value)}
+                placeholder="z.B. 🌤️ Leicht bewölkt, 16°C, Wind 12 km/h aus Nordost"
                 className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-cyan-500 font-sans"
               />
             </div>

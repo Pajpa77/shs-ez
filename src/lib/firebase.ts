@@ -255,6 +255,7 @@ export function serializeOperationForFirestore(op: SearchOperation): Record<stri
     logsJson: JSON.stringify(op.logs || []),
     archivedTracksJson: JSON.stringify(op.archivedTracks || []),
     archivedChatMessagesJson: JSON.stringify(op.archivedChatMessages || []),
+    mapSnapshotsJson: JSON.stringify(op.mapSnapshots || []),
     participantIds: Array.isArray(op.participantIds) ? op.participantIds : [],
     externalVolunteersCount: typeof op.externalVolunteersCount === 'number' ? op.externalVolunteersCount : 0,
     externalVolunteersNotes: op.externalVolunteersNotes || '',
@@ -339,6 +340,17 @@ export function deserializeOperationFromFirestore(data: any): SearchOperation {
     archivedChatMessages = data.archivedChatMessages;
   }
 
+  let mapSnapshots: { url: string; timestamp: string; label: string }[] = [];
+  if (data.mapSnapshotsJson) {
+    try {
+      mapSnapshots = JSON.parse(data.mapSnapshotsJson);
+    } catch (e) {
+      console.warn('Error parsing mapSnapshotsJson:', e);
+    }
+  } else if (Array.isArray(data.mapSnapshots)) {
+    mapSnapshots = data.mapSnapshots;
+  }
+
   let missingPerson = data.missingPerson;
   if (typeof data.missingPerson === 'string' && data.missingPerson.trim().startsWith('{')) {
     try {
@@ -392,6 +404,7 @@ export function deserializeOperationFromFirestore(data: any): SearchOperation {
     logs,
     archivedTracks,
     archivedChatMessages,
+    mapSnapshots,
     participantIds: Array.isArray(data.participantIds) ? data.participantIds : [],
     externalVolunteersCount: typeof data.externalVolunteersCount === 'number' ? data.externalVolunteersCount : 0,
     externalVolunteersNotes: data.externalVolunteersNotes || '',
