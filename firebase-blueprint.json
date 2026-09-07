@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "users": {
+      "title": "Search and Rescue Personnel",
+      "description": "User profiles, roles, contact info, equipment, and live status of responders",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "callSign": { "type": "string" },
+        "licensePlate": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "phone": { "type": "string" },
+        "equipment": { "type": "array" },
+        "customEquipmentTags": { "type": "array" },
+        "customEquipmentNotes": { "type": "string" },
+        "organization": { "type": "string" },
+        "assignedSectorId": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "batteryLevel": { "type": "number" },
+        "batteryCharging": { "type": "boolean" },
+        "lastSeen": { "type": "string" },
+        "activeSessionId": { "type": "string" },
+        "arrivalStatus": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "operations": {
+      "title": "Search Operations",
+      "description": "Active and archived rescue/search missions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "commander": { "type": "string" },
+        "headquartersLocation": { "type": "object" },
+        "missingPerson": { "type": "string" },
+        "sectorsJson": { "type": "string" },
+        "findingsJson": { "type": "string" },
+        "logsJson": { "type": "string" },
+        "participantIds": { "type": "array" },
+        "notes": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "user_locations": {
+      "title": "Live Responder Locations",
+      "description": "Realtime GPS coordinates and tracks of rescue personnel",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "isLive": { "type": "boolean" },
+        "lastUpdated": { "type": "string" },
+        "currentPosition": { "type": "object" },
+        "trackHistoryJson": { "type": "string" }
+      }
+    },
+    "chat_messages": {
+      "title": "Tactical Chat Messages",
+      "description": "Radio and digital text messages between responders and HQ",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "operationId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderCallSign": { "type": "string" },
+        "senderRole": { "type": "string" },
+        "channel": { "type": "string" },
+        "isDirect": { "type": "boolean" },
+        "recipientId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "isAlert": { "type": "boolean" },
+        "attachmentUrl": { "type": "string" },
+        "location": { "type": "object" },
+        "audioUrl": { "type": "string" },
+        "audioDuration": { "type": "number" },
+        "isVoiceMessage": { "type": "boolean" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "User profiles, roles, contact info, equipment, and live status of responders"
+    },
+    "/operations/{operationId}": {
+      "schema": "operations",
+      "description": "Active and archived rescue/search missions"
+    },
+    "/user_locations/{userId}": {
+      "schema": "user_locations",
+      "description": "Realtime GPS coordinates and tracks of rescue personnel"
+    },
+    "/chat_messages/{messageId}": {
+      "schema": "chat_messages",
+      "description": "Radio and digital text messages between responders and HQ"
+    }
+  }
+}

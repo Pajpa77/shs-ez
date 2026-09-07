@@ -1,0 +1,203 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ----------------------------------------------------------------------
+    // GLOBAL SECURITY PRIMITIVES & PILLARS
+    // ----------------------------------------------------------------------
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Bootstrap Administrator (Maria Borth) & Root Privileges
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'MariaBorth@gmail.com' ||
+        (request.auth.token.email_verified == true && request.auth.token.email == 'MariaBorth@gmail.com')
+      );
+    }
+
+    // Pillar 3: Path Variable Hardening & ID Poisoning Guard
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // ----------------------------------------------------------------------
+    // PILLAR 2: VALIDATION BLUEPRINTS (Anti-Update-Gap & Zero-Trust)
+    // ----------------------------------------------------------------------
+
+    function isValidUser(data) {
+      return data.id is string && isValidId(data.id) &&
+        data.username is string && data.username.size() >= 1 && data.username.size() <= 100 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 200 &&
+        data.role is string && data.role in ['admin', 'group_leader', 'responder', 'observer'] &&
+        (!('callSign' in data) || (data.callSign is string && data.callSign.size() <= 100)) &&
+        (!('equipment' in data) || (data.equipment is list && data.equipment.size() <= 20)) &&
+        (!('customEquipmentTags' in data) || (data.customEquipmentTags is list && data.customEquipmentTags.size() <= 20)) &&
+        (!('customEquipmentNotes' in data) || (data.customEquipmentNotes is string && data.customEquipmentNotes.size() <= 5000)) &&
+        (!('organization' in data) || (data.organization is string && data.organization.size() <= 200)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 50)) &&
+        (!('licensePlate' in data) || (data.licensePlate is string && data.licensePlate.size() <= 50)) &&
+        (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 1000000)) &&
+        (!('assignedSectorId' in data) || (data.assignedSectorId is string && data.assignedSectorId.size() <= 128)) &&
+        (!('isActive' in data) || (data.isActive is bool)) &&
+        (!('batteryLevel' in data) || (data.batteryLevel is number && data.batteryLevel >= 0 && data.batteryLevel <= 100)) &&
+        (!('batteryCharging' in data) || (data.batteryCharging is bool)) &&
+        (!('lastSeen' in data) || (data.lastSeen is string && data.lastSeen.size() <= 100)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 100));
+    }
+
+    function isValidOperation(data) {
+      return data.id is string && isValidId(data.id) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+        data.type is string && data.type in ['operation', 'exercise'] &&
+        data.status is string && data.status in ['active', 'completed', 'paused', 'aborted'] &&
+        data.commander is string && data.commander.size() <= 200 &&
+        data.createdAt is string && data.createdAt.size() <= 100 &&
+        (!('participantIds' in data) || (data.participantIds is list && data.participantIds.size() <= 200)) &&
+        (!('selectedEquipment' in data) || (data.selectedEquipment is list && data.selectedEquipment.size() <= 50)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 10000)) &&
+        (!('sectorsJson' in data) || (data.sectorsJson is string && data.sectorsJson.size() <= 500000)) &&
+        (!('findingsJson' in data) || (data.findingsJson is string && data.findingsJson.size() <= 500000)) &&
+        (!('logsJson' in data) || (data.logsJson is string && data.logsJson.size() <= 500000)) &&
+        (!('archivedTracksJson' in data) || (data.archivedTracksJson is string && data.archivedTracksJson.size() <= 500000)) &&
+        (!('missingPerson' in data) || (data.missingPerson is string && data.missingPerson.size() <= 50000)) &&
+        (!('externalVolunteersCount' in data) || (data.externalVolunteersCount is number && data.externalVolunteersCount >= 0 && data.externalVolunteersCount <= 10000)) &&
+        (!('externalVolunteersNotes' in data) || (data.externalVolunteersNotes is string && data.externalVolunteersNotes.size() <= 5000)) &&
+        (!('customEquipmentNotes' in data) || (data.customEquipmentNotes is string && data.customEquipmentNotes.size() <= 5000)) &&
+        (!('mapSnapshotUrl' in data) || (data.mapSnapshotUrl is string && data.mapSnapshotUrl.size() <= 500000)) &&
+        (!('outcome' in data) || (data.outcome == null || (data.outcome is string && data.outcome.size() <= 100))) &&
+        (!('closingNotes' in data) || (data.closingNotes == null || (data.closingNotes is string && data.closingNotes.size() <= 10000))) &&
+        (!('completedAt' in data) || (data.completedAt == null || (data.completedAt is string && data.completedAt.size() <= 100))) &&
+        (!('pausedAt' in data) || (data.pausedAt == null || (data.pausedAt is string && data.pausedAt.size() <= 100))) &&
+        (!('pausedReason' in data) || (data.pausedReason == null || (data.pausedReason is string && data.pausedReason.size() <= 5000))) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 100));
+    }
+
+    function isValidLocation(data) {
+      return data.userId is string && isValidId(data.userId) &&
+        data.isLive is bool &&
+        data.lastUpdated is string && data.lastUpdated.size() <= 100 &&
+        data.currentPosition is map &&
+        data.currentPosition.lat is number && data.currentPosition.lat >= -90.0 && data.currentPosition.lat <= 90.0 &&
+        data.currentPosition.lng is number && data.currentPosition.lng >= -180.0 && data.currentPosition.lng <= 180.0 &&
+        (!('trackHistoryJson' in data) || (data.trackHistoryJson is string && data.trackHistoryJson.size() <= 500000));
+    }
+
+    function isValidChatMessage(data) {
+      return data.id is string && isValidId(data.id) &&
+        data.operationId is string && isValidId(data.operationId) &&
+        data.senderId is string && isValidId(data.senderId) &&
+        data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 200 &&
+        data.senderCallSign is string && data.senderCallSign.size() <= 100 &&
+        data.senderRole is string && data.senderRole in ['admin', 'group_leader', 'responder', 'observer'] &&
+        data.channel is string && data.channel.size() <= 100 &&
+        data.isDirect is bool &&
+        data.text is string && data.text.size() <= 2000 &&
+        data.timestamp is string && data.timestamp.size() <= 100 &&
+        data.isAlert is bool &&
+        (!('recipientId' in data) || (data.recipientId is string && isValidId(data.recipientId))) &&
+        (!('attachmentUrl' in data) || (data.attachmentUrl is string && data.attachmentUrl.size() <= 500000)) &&
+        (!('audioUrl' in data) || (data.audioUrl is string)) &&
+        (!('audioDuration' in data) || (data.audioDuration is number)) &&
+        (!('isVoiceMessage' in data) || (data.isVoiceMessage is bool));
+    }
+
+    // ----------------------------------------------------------------------
+    // 1. DEFAULT DENY CATCH-ALL (Global Safety Net)
+    // ----------------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ----------------------------------------------------------------------
+    // 2. USERS COLLECTION (/users/{userId})
+    // ----------------------------------------------------------------------
+    match /users/{userId} {
+      allow read: if true;
+
+      allow create: if isValidId(userId) &&
+                       incoming().id == userId &&
+                       isValidUser(incoming());
+
+      allow update: if isValidId(userId) &&
+                       incoming().id == existing().id &&
+                       isValidUser(incoming()) &&
+                       (
+                         // Non-admins cannot self-elevate to admin
+                         existing().role == 'admin' ||
+                         incoming().role != 'admin' ||
+                         isAdmin()
+                       );
+
+      allow delete: if isValidId(userId) && (isAdmin() || (isSignedIn() && request.auth.uid == userId));
+    }
+
+    // ----------------------------------------------------------------------
+    // 3. OPERATIONS COLLECTION (/operations/{operationId})
+    // ----------------------------------------------------------------------
+    match /operations/{operationId} {
+      allow read: if true;
+
+      allow create: if isValidId(operationId) &&
+                       incoming().id == operationId &&
+                       isValidOperation(incoming());
+
+      allow update: if isValidId(operationId) &&
+                       incoming().id == existing().id &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidOperation(incoming()) &&
+                       (
+                         // Terminal State Protection: Completed/aborted missions cannot be corrupted
+                         existing().status != 'completed' ||
+                         incoming().status == 'completed' ||
+                         isAdmin()
+                       );
+
+      allow delete: if isValidId(operationId) && isAdmin();
+    }
+
+    // ----------------------------------------------------------------------
+    // 4. USER LOCATIONS (/user_locations/{userId})
+    // ----------------------------------------------------------------------
+    match /user_locations/{userId} {
+      allow read: if true;
+
+      allow create: if isValidId(userId) &&
+                       incoming().userId == userId &&
+                       isValidLocation(incoming());
+
+      allow update: if isValidId(userId) &&
+                       incoming().userId == existing().userId &&
+                       isValidLocation(incoming());
+
+      allow delete: if isValidId(userId) && (isAdmin() || (isSignedIn() && request.auth.uid == userId));
+    }
+
+    // ----------------------------------------------------------------------
+    // 5. TACTICAL CHAT MESSAGES (/chat_messages/{messageId})
+    // ----------------------------------------------------------------------
+    match /chat_messages/{messageId} {
+      allow read: if true;
+
+      allow create: if isValidId(messageId) &&
+                       incoming().id == messageId &&
+                       isValidChatMessage(incoming());
+
+      // PILLAR: Tactical audit messages are strictly append-only (immutable)
+      allow update: if false;
+
+      allow delete: if isValidId(messageId) && isAdmin();
+    }
+  }
+}

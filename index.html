@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Vermisstensuche & Einsatzleitung</title>
+    <meta name="description" content="Taktisches Einsatzleitsystem für Vermisstensuchen mit GPS-Echtzeit-Tracking, Suchsektoren, Drohnen/Hunde-Einsatz, Fundmeldungen und Einsatzarchiv." />
+    <meta property="og:title" content="Vermisstensuche & Einsatzleitung" />
+    <meta property="og:description" content="Taktisches Einsatzleitsystem für Vermisstensuchen mit GPS-Echtzeit-Tracking, Suchsektoren, Drohnen/Hunde-Einsatz, Fundmeldungen und Einsatzarchiv." />
+    
+    <script>
+      // Global error listener to prevent blank screen and show diagnostics
+      window.addEventListener('error', function(e) {
+        console.error('[BOOT-ERROR]', e);
+      });
+    </script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <style>
+      html, body {
+        background-color: #0F172A;
+        color: #f8fafc;
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

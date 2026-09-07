@@ -1,0 +1,97 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidRole(role) {
+      return role in ['admin', 'einsatzleitung', 'responder', 'observer', 'group_leader'];
+    }
+
+    function isValidOperationStatus(status) {
+      return status in ['active', 'paused', 'completed', 'archived'];
+    }
+
+    function isValidOperationType(type) {
+      return type in ['operation', 'exercise', 'live_search'];
+    }
+
+    function isValidArrivalStatus(status) {
+      return status == null || status in ['', 'in_transit', 'ez_reached', 'ready'];
+    }
+
+    function isValidCoordinate(lat, lng) {
+      return lat >= -90.0 && lat <= 90.0 && lng >= -180.0 && lng <= 180.0;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.id is string
+        && (!('username' in request.resource.data) || (request.resource.data.username is string && request.resource.data.username.size() <= 100))
+        && (!('name' in request.resource.data) || (request.resource.data.name is string && request.resource.data.name.size() <= 200))
+        && (!('role' in request.resource.data) || isValidRole(request.resource.data.role))
+        && (!('arrivalStatus' in request.resource.data) || isValidArrivalStatus(request.resource.data.arrivalStatus))
+        && (!('isActive' in request.resource.data) || request.resource.data.isActive is bool)
+        // First Admin (Maria) protection: role cannot be altered away from admin on user-maria
+        && (userId != 'user-maria' || request.resource.data.get('role', 'admin') == 'admin');
+      // First Admin / Owner account (user-maria) cannot be deleted under any circumstances
+      allow delete: if userId != 'user-maria';
+    }
+
+    // Operations Collection
+    match /operations/{operationId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.id is string
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 150
+        && isValidOperationStatus(request.resource.data.status)
+        && isValidOperationType(request.resource.data.type);
+      allow delete: if true;
+    }
+
+    // Locations Collections (Live GPS & Breadcrumbs)
+    match /locations/{userId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.userId is string
+        && request.resource.data.isLive is bool
+        && request.resource.data.currentPosition != null
+        && isValidCoordinate(request.resource.data.currentPosition.lat, request.resource.data.currentPosition.lng);
+      allow delete: if true;
+    }
+
+    match /user_locations/{userId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.userId is string
+        && request.resource.data.isLive is bool
+        && request.resource.data.currentPosition != null
+        && isValidCoordinate(request.resource.data.currentPosition.lat, request.resource.data.currentPosition.lng);
+      allow delete: if true;
+    }
+
+    // Chat Collections
+    match /chat/{messageId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.id is string
+        && request.resource.data.senderId is string
+        && request.resource.data.senderName is string
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 3000;
+      allow delete: if true;
+    }
+
+    match /chat_messages/{messageId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.id is string
+        && request.resource.data.senderId is string
+        && request.resource.data.senderName is string
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 3000;
+      allow delete: if true;
+    }
+
+    // Settings Collection
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
+  }
+}
