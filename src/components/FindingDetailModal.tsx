@@ -46,14 +46,14 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
   };
 
   return (
-    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto font-sans">
-      <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl text-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md overflow-y-auto font-sans">
+      <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl text-black dark:text-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-slate-900/90 p-4 border-b border-slate-700 flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900/90 p-4 border-b border-slate-300 dark:border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className={`h-10 w-10 rounded-xl flex items-center justify-center text-xl font-bold border border-slate-700 ${
-                isPerson ? 'bg-red-600/30 text-red-400 border-red-500/40' : 'bg-slate-800 text-blue-400'
+              className={`h-10 w-10 rounded-xl flex items-center justify-center text-xl font-bold border border-slate-300 dark:border-slate-700 ${
+                isPerson ? 'bg-red-600/30 text-red-400 border-red-500/40' : 'bg-slate-50 dark:bg-slate-800 text-blue-400'
               }`}
             >
               {isPerson ? '🚨' : finding.category === 'clothing' ? '👕' : finding.category === 'trail_scent' ? '🐾' : '🚩'}
@@ -68,8 +68,8 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
                     finding.urgency === 'critical'
                       ? 'bg-red-500/20 text-red-300 border border-red-500/40'
                       : finding.urgency === 'high'
-                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                      : 'bg-slate-800 text-slate-300 border border-slate-700'
+                      ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border border-amber-500/40'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
                   }`}
                 >
                   {finding.urgency.toUpperCase()}
@@ -80,16 +80,16 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
           </div>
           <button
             onClick={onClose}
-            className="h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center transition cursor-pointer"
+            className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 flex items-center justify-center transition cursor-pointer"
           >
-            <X className="w-4 h-4 text-slate-400" />
+            <X className="w-4 h-4 text-slate-500 dark:text-slate-400" />
           </button>
         </div>
 
         <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto text-xs">
           {/* Media preview */}
           {finding.mediaUrl && (
-            <div className="rounded-xl overflow-hidden border border-slate-700 bg-slate-900 max-h-72 flex items-center justify-center">
+            <div className="rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 max-h-72 flex items-center justify-center">
               {finding.mediaType === 'video' ? (
                 <video src={finding.mediaUrl} controls className="max-h-72 w-full object-contain" />
               ) : (
@@ -99,36 +99,36 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
           )}
 
           {/* Description */}
-          <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-700 space-y-1">
-            <span className="text-slate-400 font-bold uppercase text-[10px] block font-mono">FUND-BESCHREIBUNG:</span>
-            <p className="text-xs text-slate-200 leading-relaxed">{finding.description}</p>
+          <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700 space-y-1">
+            <span className="text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] block font-mono">FUND-BESCHREIBUNG:</span>
+            <p className="text-xs text-slate-900 dark:text-slate-200 leading-relaxed">{finding.description}</p>
           </div>
 
           {/* Metadata Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 bg-slate-900/60 p-3.5 rounded-xl border border-slate-700">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 bg-white dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700">
             <div>
-              <span className="text-slate-400 text-[10px] block font-bold font-mono uppercase">GEMELDET VON</span>
-              <div className="font-bold text-slate-200 mt-0.5">{finding.userName}</div>
+              <span className="text-slate-500 dark:text-slate-400 text-[10px] block font-bold font-mono uppercase">GEMELDET VON</span>
+              <div className="font-bold text-slate-900 dark:text-slate-200 mt-0.5">{finding.userName}</div>
               <div className="text-[10px] text-blue-400 font-mono">{finding.userCallSign}</div>
             </div>
 
             <div>
-              <span className="text-slate-400 text-[10px] block font-bold font-mono uppercase">KFZ-KENNZEICHEN</span>
-              <div className="font-mono font-bold text-slate-200 mt-0.5">
+              <span className="text-slate-500 dark:text-slate-400 text-[10px] block font-bold font-mono uppercase">KFZ-KENNZEICHEN</span>
+              <div className="font-mono font-bold text-slate-900 dark:text-slate-200 mt-0.5">
                 {finding.userLicensePlate || 'k.A.'}
               </div>
             </div>
 
             <div>
-              <span className="text-slate-400 text-[10px] block font-bold font-mono uppercase">ZEITPUNKT</span>
-              <div className="text-slate-200 font-mono mt-0.5 text-[11px]">
+              <span className="text-slate-500 dark:text-slate-400 text-[10px] block font-bold font-mono uppercase">ZEITPUNKT</span>
+              <div className="text-slate-900 dark:text-slate-200 font-mono mt-0.5 text-[11px]">
                 {new Date(finding.timestamp).toLocaleString()}
               </div>
             </div>
 
-            <div className="sm:col-span-3 pt-2 border-t border-slate-700/80 flex items-center justify-between">
+            <div className="sm:col-span-3 pt-2 border-t border-slate-300 dark:border-slate-700/80 flex items-center justify-between">
               <div>
-                <span className="text-slate-400 text-[10px] block font-bold font-mono uppercase">GPS-KOORDINATEN</span>
+                <span className="text-slate-500 dark:text-slate-400 text-[10px] block font-bold font-mono uppercase">GPS-KOORDINATEN</span>
                 <span className="font-mono font-bold text-blue-400">
                   {finding.location.lat.toFixed(6)}, {finding.location.lng.toFixed(6)}
                 </span>
@@ -137,7 +137,7 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
                 href={`https://www.google.com/maps?q=${finding.location.lat},${finding.location.lng}`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-blue-400 font-semibold text-[11px] transition font-mono"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 text-blue-400 font-semibold text-[11px] transition font-mono"
               >
                 <span>Google Maps</span>
                 <ExternalLink className="w-3 h-3" />
@@ -152,7 +152,7 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
                 ? 'bg-red-950/50 border-red-800 text-red-300'
                 : finding.status === 'verified' || finding.verified
                 ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                : 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                : 'bg-slate-50 dark:bg-[#0F172A]mber-500/15 border-amber-500/40 text-amber-300'
             }`}
           >
             <div className="flex items-center gap-2.5">
@@ -184,7 +184,7 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
 
           {/* Admin Evaluation & Notes */}
           {isAdmin && (
-            <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-700 space-y-2.5">
+            <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700 space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-blue-400 flex items-center gap-1.5 text-xs font-mono uppercase">
                   <Shield className="w-3.5 h-3.5" />
@@ -197,7 +197,7 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
                 value={adminNotes}
                 onChange={(e) => setAdminNotes(e.target.value)}
                 placeholder="Vermerk der Einsatzleitung, z.B. K9 Fährtenhund angesetzt, Spurensicherung informiert, Spaziergänger-Spur..."
-                className="w-full p-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                className="w-full p-2.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
               />
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 font-mono">
                 <button
@@ -242,7 +242,7 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
                     setIsSaved(true);
                     setTimeout(() => setIsSaved(false), 2000);
                   }}
-                  className={`py-2 px-2.5 rounded-xl text-xs font-semibold transition cursor-pointer border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300`}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-semibold transition cursor-pointer border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300`}
                 >
                   In Prüfung
                 </button>
@@ -252,7 +252,7 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
         </div>
 
         {/* Footer */}
-        <div className="bg-slate-900/90 p-4 border-t border-slate-700 flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900/90 p-4 border-t border-slate-300 dark:border-slate-700 flex items-center justify-between">
           {isAdmin ? (
             showDeleteConfirm ? (
               <div className="flex items-center gap-2 bg-red-950/90 border border-red-600/80 p-1.5 rounded-xl text-xs animate-in fade-in duration-150">
@@ -270,7 +270,7 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition cursor-pointer font-mono border border-slate-700"
+                  className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition cursor-pointer font-mono border border-slate-300 dark:border-slate-700"
                 >
                   Nein
                 </button>
@@ -291,7 +291,7 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition cursor-pointer border border-slate-700 uppercase tracking-wider font-mono"
+            className="px-5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-white text-xs font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 uppercase tracking-wider font-mono"
           >
             Schließen
           </button>

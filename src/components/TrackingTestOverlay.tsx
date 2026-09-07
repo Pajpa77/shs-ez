@@ -121,27 +121,27 @@ export const TrackingTestOverlay: React.FC = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="fixed inset-0 bg-slate-950/90 pointer-events-auto flex items-center justify-center p-4"
+            className="fixed inset-0 bg-slate-100 dark:bg-slate-950/90 pointer-events-auto flex items-center justify-center p-4"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-[#1E293B] border border-slate-700 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col"
+              className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col"
             >
-              <div className="p-6 border-b border-slate-700 flex items-center justify-between bg-blue-900/20">
+              <div className="p-6 border-b border-slate-300 dark:border-slate-700 flex items-center justify-between bg-blue-900/20">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/40">
                     <CheckCircle2 className="w-6 h-6" />
                   </div>
                   <div>
                     <h2 className="text-xl font-black text-white uppercase tracking-tight">Test abgeschlossen</h2>
-                    <p className="text-xs text-slate-400 font-mono">GPS-Aufzeichnung beendet ({activeTrackingTest.durationMinutes} Min.)</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">GPS-Aufzeichnung beendet ({activeTrackingTest.durationMinutes} Min.)</p>
                   </div>
                 </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                <div className="aspect-video bg-slate-950 rounded-2xl border border-slate-700 overflow-hidden relative group flex items-center justify-center">
+                <div className="aspect-video bg-slate-100 dark:bg-slate-950 rounded-2xl border border-slate-300 dark:border-slate-700 overflow-hidden relative group flex items-center justify-center">
                   {snapshotUrl ? (
                     <img src={snapshotUrl} alt="Map Snapshot" className="w-full h-full object-contain" />
                   ) : (
@@ -164,37 +164,37 @@ export const TrackingTestOverlay: React.FC = () => {
                         link.click();
                         document.body.removeChild(link);
                       }}
-                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs flex items-center gap-2 shadow cursor-pointer transition active:scale-95"
+                      className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 font-bold text-xs flex items-center gap-2 shadow cursor-pointer transition active:scale-95"
                     >
                       <Download className="w-4 h-4" />
                       <span>Kartenbild herunterladen</span>
                     </button>
-                    <p className="text-[10px] text-slate-400 text-center leading-relaxed max-w-md">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center leading-relaxed max-w-md">
                       💡 <strong>Mobil-Tipp:</strong> Halte deinen Finger auf das Bild gedrückt, um es direkt in deine Fotos zu speichern oder zu teilen.
                     </p>
                   </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-4 text-xs font-mono">
-                  <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-700">
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700">
                     <span className="block text-slate-500 uppercase text-[10px] mb-1">Startzeit</span>
-                    <span className="text-slate-200">{new Date(activeTrackingTest.startTime).toLocaleTimeString()}</span>
+                    <span className="text-slate-900 dark:text-slate-200">{new Date(activeTrackingTest.startTime).toLocaleTimeString()}</span>
                   </div>
-                  <div className="p-3 rounded-xl bg-slate-900/50 border border-slate-700">
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700">
                     <span className="block text-slate-500 uppercase text-[10px] mb-1">Wegpunkte</span>
-                    <span className="text-slate-200">{activeTrackingTest.trackPoints.length} Punkte</span>
+                    <span className="text-slate-900 dark:text-slate-200">{activeTrackingTest.trackPoints.length} Punkte</span>
                   </div>
                 </div>
 
-                <p className="text-sm text-slate-300 leading-relaxed text-center italic">
+                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed text-center italic">
                   Möchten Sie dieses Ergebnis speichern oder verwerfen? Nach der Auswahl erfolgt ein automatischer Logout.
                 </p>
               </div>
 
-              <div className="p-6 bg-slate-900/50 border-t border-slate-700 grid grid-cols-2 gap-4">
+              <div className="p-6 bg-white dark:bg-slate-900/50 border-t border-slate-300 dark:border-slate-700 grid grid-cols-2 gap-4">
                 <button
                   onClick={() => saveTrackingTestResult(false)}
-                  className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase text-xs transition cursor-pointer"
+                  className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold uppercase text-xs transition cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Verwerfen</span>

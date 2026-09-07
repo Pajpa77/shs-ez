@@ -52,7 +52,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
 
   if (!currentOperation) {
     return (
-      <div className="p-8 text-center text-slate-400">
+      <div className="p-8 text-center text-slate-500 dark:text-slate-400">
         Kein aktiver Einsatz ausgewählt.
       </div>
     );
@@ -70,9 +70,9 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
   const percentComplete = sectors.length > 0 ? Math.round((searchedCount / sectors.length) * 100) : 0;
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-5 text-slate-100 font-sans">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-5 text-black dark:text-slate-100 font-sans">
       {/* Top Banner Stats */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#1E293B] border border-slate-700 p-5 rounded-2xl shadow-xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#1E293B] border border-slate-300 dark:border-slate-700 p-5 rounded-2xl shadow-xl">
         <div>
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
@@ -80,7 +80,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
             </div>
             <div>
               <h1 className="text-lg font-bold text-white uppercase tracking-wide">Suchsektoren & Gebietsaufteilung</h1>
-              <p className="text-xs text-slate-400 font-mono">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                 Einsatzgebiet: {currentOperation.title} • Gesamtfläche: ca. {totalHectares} ha
               </p>
             </div>
@@ -89,8 +89,8 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
 
         {/* Progress pill & Action */}
         <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-          <div className="bg-slate-900/90 px-4 py-2 rounded-xl border border-slate-700 text-right">
-            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">
+          <div className="bg-white dark:bg-slate-900/90 px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-right">
+            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider font-mono">
               Abgesuchte Fläche
             </div>
             <div className="text-base font-black text-emerald-400 font-mono">
@@ -100,7 +100,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
 
           <button
             onClick={onOpenSearchTeams}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-blue-300 border border-slate-700 rounded-xl text-xs font-bold shadow-lg transition cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-blue-300 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold shadow-lg transition cursor-pointer"
           >
             <span>🐕‍🦺</span> Suchtrupps ({currentOperation.teams?.length || 0})
           </button>
@@ -118,7 +118,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
       </div>
 
       {/* Progress Bar */}
-      <div className="w-full bg-slate-900 rounded-full h-2.5 border border-slate-800 overflow-hidden">
+      <div className="w-full bg-white dark:bg-slate-900 rounded-full h-2.5 border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div
           className="bg-gradient-to-r from-blue-500 via-emerald-500 to-green-400 h-full rounded-full transition-all duration-500"
           style={{ width: `${percentComplete}%` }}
@@ -132,7 +132,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
             ● ABGESUCHT (GRÜN)
           </span>
           <span className="text-2xl font-black text-emerald-300 font-mono mt-1 block">
-            {searchedCount} <span className="text-xs font-normal text-slate-400">Sektoren</span>
+            {searchedCount} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">Sektoren</span>
           </span>
         </div>
 
@@ -141,7 +141,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
             ● IN BEARBEITUNG
           </span>
           <span className="text-2xl font-black text-amber-300 font-mono mt-1 block">
-            {inProgressCount} <span className="text-xs font-normal text-slate-400">Sektoren</span>
+            {inProgressCount} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">Sektoren</span>
           </span>
         </div>
 
@@ -150,16 +150,16 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
             ● OFFEN / GEPLANT
           </span>
           <span className="text-2xl font-black text-blue-300 font-mono mt-1 block">
-            {openCount} <span className="text-xs font-normal text-slate-400">Sektoren</span>
+            {openCount} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">Sektoren</span>
           </span>
         </div>
 
-        <div className="bg-[#1E293B] border border-slate-700 p-4 rounded-xl shadow">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-mono">
+        <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 p-4 rounded-xl shadow">
+          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block font-mono">
             GESAMTE SEKTOREN
           </span>
           <span className="text-2xl font-black text-white font-mono mt-1 block">
-            {sectors.length} <span className="text-xs font-normal text-slate-400">Sektoren</span>
+            {sectors.length} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">Sektoren</span>
           </span>
         </div>
       </div>
@@ -179,7 +179,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
                   ? 'bg-[#1E293B] border-emerald-500/60 ring-1 ring-emerald-500/20'
                   : isInProgress
                   ? 'bg-[#1E293B] border-amber-500/60'
-                  : 'bg-[#1E293B] border-slate-700'
+                  : 'bg-[#1E293B] border-slate-300 dark:border-slate-700'
               }`}
             >
               {/* Top Sector Info */}
@@ -189,7 +189,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
                     <span className="text-xl">{isSearched ? '✅' : isInProgress ? '⏳' : '🎯'}</span>
                     <div>
                       <h3 className="font-bold text-base text-white leading-tight">{sec.name}</h3>
-                      <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
                         ca. {sec.areaHectares || 25} ha • Priorität: {sec.priority.toUpperCase()}
                       </div>
                     </div>
@@ -200,7 +200,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
                       isSearched
                         ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500'
                         : isInProgress
-                        ? 'bg-amber-500/20 text-amber-300 border-amber-500'
+                        ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border-amber-500'
                         : 'bg-blue-500/20 text-blue-300 border-blue-500'
                     }`}
                   >
@@ -209,7 +209,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
                 </div>
 
                 {sec.notes && (
-                  <p className="text-xs text-slate-300 mt-3 p-2.5 bg-slate-900/60 rounded-xl border border-slate-700/60 italic">
+                  <p className="text-xs text-slate-700 dark:text-slate-300 mt-3 p-2.5 bg-white dark:bg-slate-900/60 rounded-xl border border-slate-300 dark:border-slate-700/60 italic">
                     "{sec.notes}"
                   </p>
                 )}
@@ -217,7 +217,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
                 {/* Assigned Units & Equipment Badges */}
                 <div className="mt-4 space-y-2 text-xs">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 font-mono">
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1 font-mono">
                       ZUGETEILTE KRÄFTE ({assignedUsers.length}):
                     </span>
                     <div className="flex flex-wrap gap-1.5">
@@ -225,7 +225,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
                         assignedUsers.map((u) => (
                           <span
                             key={u.id}
-                            className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
+                            className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 text-xs"
                           >
                             <span className="text-sm">
                               {u.equipment.includes('drone')
@@ -245,14 +245,14 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
 
                   {sec.assignedEquipment && sec.assignedEquipment.length > 0 && (
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 font-mono">
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1 font-mono">
                         EINGESETZTE HILFSMITTEL:
                       </span>
                       <div className="flex flex-wrap gap-1">
                         {sec.assignedEquipment.map((eq) => (
                           <span
                             key={eq}
-                            className="px-2 py-0.5 rounded-md bg-slate-900 text-slate-300 border border-slate-700 text-[10px] font-medium uppercase font-mono"
+                            className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-[10px] font-medium uppercase font-mono"
                           >
                             {getEquipmentIcon(eq)} {eq}
                           </span>
@@ -270,7 +270,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
               </div>
 
               {/* Bottom Actions */}
-              <div className="mt-5 pt-3 border-t border-slate-700 flex items-center justify-between gap-2">
+              <div className="mt-5 pt-3 border-t border-slate-300 dark:border-slate-700 flex items-center justify-between gap-2">
                 <button
                   onClick={() => {
                     const next: SectorStatus = isSearched ? 'in_progress' : 'searched';
@@ -278,7 +278,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
                   }}
                   className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow ${
                     isSearched
-                      ? 'bg-amber-600 hover:bg-amber-500 text-slate-950'
+                      ? 'bg-slate-50 dark:bg-[#0F172A]mber-600 hover:bg-slate-50 dark:bg-[#0F172A]mber-500 text-slate-950'
                       : 'bg-emerald-600 hover:bg-emerald-500 text-white'
                   }`}
                 >
@@ -289,7 +289,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
                 {onFocusSectorOnMap && (
                   <button
                     onClick={() => onFocusSectorOnMap(sec)}
-                    className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition cursor-pointer"
+                    className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 transition cursor-pointer"
                     title="Auf Karte anzeigen"
                   >
                     <Compass className="w-4 h-4 text-blue-400" />
@@ -300,7 +300,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
                   <>
                     <button
                       onClick={() => onOpenSectorEditor(sec)}
-                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition cursor-pointer"
+                      className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 transition cursor-pointer"
                       title="Sektor bearbeiten"
                     >
                       <Edit className="w-4 h-4" />

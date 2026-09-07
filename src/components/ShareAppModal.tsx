@@ -99,7 +99,7 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({ isOpen, onClose })
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 sm:p-5 bg-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
+        <div className="p-4 sm:p-5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/40 flex items-center justify-center">
               <Share2 className="w-5 h-5" />
@@ -108,24 +108,24 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({ isOpen, onClose })
               <h2 className="text-base font-bold text-white uppercase tracking-wider font-mono">
                 App teilen & Einsatzkräfte einladen
               </h2>
-              <p className="text-[11px] text-slate-400 font-mono">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                 Ohne Google-Konto nutzbar für alle Helfer & Sucher vor Ort
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-white hover:bg-slate-50 dark:bg-slate-800 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 text-slate-200 text-xs font-sans">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 text-slate-900 dark:text-slate-200 text-xs font-sans">
           {/* QR Code Section */}
-          <div className="bg-slate-900/80 border border-slate-700/80 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-5">
-            <div className="bg-white p-3 rounded-xl shadow-lg border border-slate-600 shrink-0 flex items-center justify-center">
+          <div className="bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700/80 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-5">
+            <div className="bg-white p-3 rounded-xl shadow-lg border border-slate-400 dark:border-slate-600 shrink-0 flex items-center justify-center">
               {qrDataUrl ? (
                 <img
                   src={qrDataUrl}
@@ -147,7 +147,7 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({ isOpen, onClose })
               <h3 className="text-sm font-bold text-white">
                 Mit dem Smartphone scannen
               </h3>
-              <p className="text-slate-300 leading-relaxed text-xs">
+              <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-xs">
                 Einsatzkräfte und Helfer scannen diesen QR-Code direkt mit ihrer Handy-Kamera (iPhone oder Android). 
                 Die App öffnet sich sofort im Browser – ganz <strong>ohne Login-Zwang mit Google</strong> oder Registrierung im Store.
               </p>
@@ -166,7 +166,7 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({ isOpen, onClose })
 
           {/* Direct Link Copy Box */}
           <div className="space-y-1.5">
-            <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider font-mono">
+            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono">
               Einsatz-Web-Adresse (Link zum Verschicken):
             </label>
             <div className="flex items-center gap-2">
@@ -174,7 +174,7 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({ isOpen, onClose })
                 type="text"
                 readOnly
                 value={appUrl}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-blue-300 font-mono select-all focus:outline-none focus:border-blue-500"
+                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs text-blue-300 font-mono select-all focus:outline-none focus:border-blue-500"
               />
               <button
                 type="button"
@@ -192,21 +192,21 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({ isOpen, onClose })
           </div>
 
           {/* Instructions for Field Users */}
-          <div className="bg-slate-900/50 border border-slate-700/60 rounded-xl p-4 space-y-3">
+          <div className="bg-white dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700/60 rounded-xl p-4 space-y-3">
             <h4 className="font-bold text-white text-xs uppercase tracking-wider font-mono flex items-center gap-2">
               <Info className="w-4 h-4 text-blue-400" />
               <span>Ablauf für neue Suchkräfte vor Ort:</span>
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] text-slate-300">
-              <div className="p-2.5 rounded-lg bg-slate-800/80 border border-slate-700/60">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] text-slate-700 dark:text-slate-300">
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700/60">
                 <span className="font-bold text-blue-400 block mb-1">1. Link öffnen</span>
                 <span>QR-Code scannen oder Link im mobilen Browser (Safari, Chrome) aufrufen.</span>
               </div>
-              <div className="p-2.5 rounded-lg bg-slate-800/80 border border-slate-700/60">
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700/60">
                 <span className="font-bold text-emerald-400 block mb-1">2. Name wählen</span>
                 <span>Eigenes Profil auswählen oder als neue Suchkraft mit 1 Klick eintragen.</span>
               </div>
-              <div className="p-2.5 rounded-lg bg-slate-800/80 border border-slate-700/60">
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700/60">
                 <span className="font-bold text-purple-400 block mb-1">3. GPS aktivieren</span>
                 <span>Tippen auf &quot;Live-GPS an&quot;. Der Browser fragt nach Standort: &quot;Erlauben&quot; wählen.</span>
               </div>
@@ -214,7 +214,7 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({ isOpen, onClose })
           </div>
 
           {/* PWA Home Screen Installation Guide */}
-          <div className="bg-blue-950/30 border border-blue-800/50 rounded-xl p-4 space-y-2 text-[11px] text-slate-300">
+          <div className="bg-blue-950/30 border border-blue-800/50 rounded-xl p-4 space-y-2 text-[11px] text-slate-700 dark:text-slate-300">
             <div className="flex items-center gap-2 text-blue-300 font-bold font-mono">
               <Download className="w-4 h-4" />
               <span>Tipp: Als App auf dem Homescreen speichern (Vollbild)</span>
@@ -227,11 +227,11 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({ isOpen, onClose })
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-900 border-t border-slate-800 flex justify-end shrink-0">
+        <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-end shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs transition cursor-pointer"
+            className="px-5 py-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-white rounded-xl font-bold text-xs transition cursor-pointer"
           >
             Schließen
           </button>

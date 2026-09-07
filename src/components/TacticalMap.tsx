@@ -95,13 +95,20 @@ interface TileLayerConfig {
 }
 
 // Tile layers configurations (All 100% free, reliable, no API key required)
-const TILE_LAYERS: Record<'osm' | 'hybrid' | 'satellite', TileLayerConfig> = {
+const TILE_LAYERS: Record<'osm' | 'hybrid' | 'satellite' | 'topo', TileLayerConfig> = {
   osm: {
     name: 'Standard Straße & Wald (OSM)',
     url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
     subdomains: ['a', 'b', 'c'],
     maxZoom: 19,
+  },
+  topo: {
+    name: 'Topografie & Höhenlinien',
+    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    attribution: 'Kartendaten: &copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>, SRTM | Kartendarstellung: &copy; <a href="http://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+    subdomains: ['a', 'b', 'c'],
+    maxZoom: 17,
   },
   satellite: {
     name: 'Satellit (Luftbild)',
@@ -191,7 +198,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const ezLayerRef = useRef<L.FeatureGroup | null>(null);
 
   // Map state - Default to OpenStreetMap for maximum clarity of street names & paths
-  const [activeBaseMap, setActiveBaseMap] = useState<'osm' | 'hybrid' | 'satellite'>('osm');
+  const [activeBaseMap, setActiveBaseMap] = useState<'osm' | 'hybrid' | 'satellite' | 'topo'>('osm');
   const [showTracks, setShowTracks] = useState(true);
   const [showSectors, setShowSectors] = useState(true);
   const [showResponders, setShowResponders] = useState(!isArchiveMode);
@@ -358,7 +365,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const currentStrokeRef = useRef<[number, number][]>([]);
 
   // Function to create tile layer or hybrid layer group
-  const createTileLayer = (key: 'osm' | 'hybrid' | 'satellite'): L.Layer => {
+  const createTileLayer = (key: 'osm' | 'hybrid' | 'satellite' | 'topo'): L.Layer => {
     const config = TILE_LAYERS[key] || TILE_LAYERS.osm;
     if (key === 'hybrid' && 'overlayUrl' in config && config.overlayUrl) {
       const baseSat = L.tileLayer(config.url, {
@@ -786,7 +793,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         className: 'custom-home-marker',
         html: `
           <div class="relative flex items-center justify-center group">
-            <div class="relative flex h-8 w-8 items-center justify-center rounded-full bg-amber-500 text-slate-950 shadow-xl ring-2 ring-amber-200 font-bold text-sm">
+            <div class="relative flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 dark:bg-[#0F172A]mber-500 text-slate-950 shadow-xl ring-2 ring-amber-200 font-bold text-sm">
               🏠
             </div>
           </div>
@@ -873,7 +880,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     let hqLat = VEREINSBUERO_LOCATION.lat;
     let hqLng = VEREINSBUERO_LOCATION.lng;
     let hqAddress = VEREINSBUERO_LOCATION.address;
-    let hqTitle = '🏢 EZ (Bereitschaft)';
+    let hqTitle = '📡 EZ';
     let isStandbyOffice = true;
 
     if (currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused')) {
@@ -890,7 +897,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         hqLng = VEREINSBUERO_LOCATION.lng;
         hqAddress = VEREINSBUERO_LOCATION.address;
       }
-      hqTitle = '🏢 EZ';
+      hqTitle = '📡 EZ';
     }
 
     const hqIcon = L.divIcon({
@@ -898,19 +905,19 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       html: isStandbyOffice
         ? `
           <div class="flex items-center justify-center px-2 py-1 rounded-lg bg-indigo-950 text-indigo-200 border border-indigo-400 font-bold text-xs shadow-xl ring-2 ring-indigo-500/50 whitespace-nowrap">
-            🏢 EZ (Bereitschaft)
+            📡 EZ
           </div>
         `
         : `
           <div class="relative flex items-center justify-center">
             <span class="absolute h-10 w-10 rounded-full bg-indigo-500/40 animate-ping"></span>
-            <div class="relative flex items-center justify-center px-2.5 py-1 rounded-xl bg-indigo-700 text-white shadow-xl ring-2 ring-white font-black text-xs">
-              🏢 EZ
+            <div class="relative flex items-center justify-center px-2.5 py-1 rounded-xl bg-indigo-700 text-white shadow-xl ring-2 ring-white font-black text-xs whitespace-nowrap">
+              📡 EZ
             </div>
           </div>
         `,
-      iconSize: isStandbyOffice ? [175, 28] : [64, 30],
-      iconAnchor: isStandbyOffice ? [87, 14] : [32, 15],
+      iconSize: [64, 30],
+      iconAnchor: [32, 15],
     });
 
     const hqMarker = L.marker([hqLat, hqLng], {
@@ -936,7 +943,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     hqMarker.bindPopup(`
       <div class="p-2.5 text-slate-900 font-sans min-w-[220px]">
         <div class="font-bold text-indigo-700 text-sm flex items-center gap-1.5">
-          <span>${isStandbyOffice ? '🏢' : '🚨'}</span>
+          <span>${isStandbyOffice ? '📡' : '🚨'}</span>
           <span>${hqTitle}</span>
         </div>
         <div class="text-xs text-slate-700 mt-1 font-medium">${hqAddress}</div>
@@ -1049,8 +1056,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             isSearched
               ? 'bg-emerald-900/90 text-emerald-100 border-emerald-500 ring-2 ring-emerald-400/40'
               : isInProgress
-              ? 'bg-amber-950/90 text-amber-200 border-amber-500'
-              : 'bg-slate-900/90 text-slate-200 border-slate-700'
+              ? 'bg-slate-50 dark:bg-[#0F172A]mber-950/90 text-amber-200 border-amber-500'
+              : 'bg-white dark:bg-slate-900/90 text-slate-900 dark:text-slate-200 border-slate-300 dark:border-slate-700'
           }">
             <span>${isSearched ? '✅' : isInProgress ? '⏳' : '🎯'}</span>
             <span>${sector.name}</span>
@@ -1304,7 +1311,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           weight: 2,
         });
         hubMarker.bindTooltip(
-          `<div class="text-[10px] font-mono font-bold text-slate-100 bg-slate-900 px-1.5 py-0.5 rounded border border-cyan-500">📍 Sammelpunkt (${cluster.length} Kräfte)</div>`,
+          `<div class="text-[10px] font-mono font-bold text-black dark:text-slate-100 bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-cyan-500">📍 Sammelpunkt (${cluster.length} Kräfte)</div>`,
           { direction: 'top', className: 'tactical-tooltip', opacity: 0.95 }
         );
         respondersLayerRef.current?.addLayer(hubMarker);
@@ -1348,7 +1355,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         // Custom animated responder pin with photo/equipment
         const iconHtml = `
           <div class="relative group cursor-pointer">
-            <div class="absolute -inset-1.5 rounded-full ${item.isMe ? 'bg-cyan-500/40 animate-ping' : item.isOnline ? 'bg-amber-500/20' : 'bg-slate-500/20'}"></div>
+            <div class="absolute -inset-1.5 rounded-full ${item.isMe ? 'bg-cyan-500/40 animate-ping' : item.isOnline ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20' : 'bg-slate-500/20'}"></div>
             <div class="relative flex items-center justify-center h-10 w-10 rounded-full border-2 ${item.isOnline ? 'border-white' : 'border-slate-400 opacity-60'} shadow-2xl overflow-hidden" style="background-color: ${item.trackColor};">
               ${
                 item.user.photoUrl
@@ -1357,16 +1364,16 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               }
             </div>
             <!-- Sub-badge with equipment icon -->
-            <div class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-xs border border-white/50 shadow">
+            <div class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-white dark:bg-slate-900 text-xs border border-white/50 shadow">
               ${badge.icon}
             </div>
             <!-- Call sign banner with Sector & Cluster Position -->
-            <div class="absolute top-11 left-1/2 transform -translate-x-1/2 px-2 py-0.5 rounded ${item.isOnline ? 'bg-slate-900/90 text-white' : 'bg-slate-800/80 text-slate-300'} text-[10px] font-semibold border border-slate-700 whitespace-nowrap shadow-md flex items-center gap-1">
+            <div class="absolute top-11 left-1/2 transform -translate-x-1/2 px-2 py-0.5 rounded ${item.isOnline ? 'bg-white dark:bg-slate-900/90 text-white' : 'bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300'} text-[10px] font-semibold border border-slate-300 dark:border-slate-700 whitespace-nowrap shadow-md flex items-center gap-1">
               <span>${item.user.callSign}</span>
               ${clusterBadge}
               ${sectorTag}
-              ${item.user.licensePlate ? `<span class="text-slate-400">• ${item.user.licensePlate}</span>` : ''}
-              ${!item.isOnline ? '<span class="text-slate-400">(Abgemeldet)</span>' : ''}
+              ${item.user.licensePlate ? `<span class="text-slate-500 dark:text-slate-400">• ${item.user.licensePlate}</span>` : ''}
+              ${!item.isOnline ? '<span class="text-slate-500 dark:text-slate-400">(Abgemeldet)</span>' : ''}
             </div>
           </div>
         `;
@@ -1414,20 +1421,20 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         className: 'custom-finding-marker',
         html: `
           <div class="relative flex items-center justify-center cursor-pointer">
-            ${isFalseAlarm ? '' : `<span class="absolute h-10 w-10 rounded-full ${isCritical ? 'bg-red-500/50 animate-ping' : 'bg-amber-500/30'}"></span>`}
+            ${isFalseAlarm ? '' : `<span class="absolute h-10 w-10 rounded-full ${isCritical ? 'bg-red-500/50 animate-ping' : 'bg-slate-50 dark:bg-[#0F172A]mber-500/30'}"></span>`}
             <div class="relative flex h-9 w-9 items-center justify-center rounded-full ${
               isFalseAlarm
-                ? 'bg-slate-700 opacity-75 ring-1 ring-red-400'
+                ? 'bg-slate-100 dark:bg-slate-700 opacity-75 ring-1 ring-red-400'
                 : isPerson
                 ? 'bg-red-600'
                 : isCritical
-                ? 'bg-amber-600'
+                ? 'bg-slate-50 dark:bg-[#0F172A]mber-600'
                 : 'bg-emerald-600'
             } text-white shadow-2xl ring-2 ring-white text-base">
               ${isFalseAlarm ? '❌' : isPerson ? '🚨' : finding.category === 'clothing' ? '👕' : finding.category === 'trail_scent' ? '🐾' : '🚩'}
             </div>
             <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 px-2 py-0.5 rounded ${
-              isFalseAlarm ? 'bg-slate-900 text-slate-400 border border-slate-700' : 'bg-red-950/90 text-red-200 border border-red-500'
+              isFalseAlarm ? 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700' : 'bg-red-950/90 text-red-200 border border-red-500'
             } text-[10px] font-bold whitespace-nowrap shadow">
               ${isFalseAlarm ? 'FEHLALARM' : `FUND #${finding.id.slice(-3)}`}
             </div>
@@ -1517,14 +1524,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full min-h-[500px] overflow-hidden bg-slate-950 select-none">
+    <div className="relative w-full h-full min-h-[500px] overflow-hidden bg-slate-100 dark:bg-slate-950 select-none">
       {/* Map DOM Container */}
       <div id="tactical-leaflet-map" ref={mapContainerRef} className="w-full h-full z-0" />
 
       {/* Drawing Mode Banner Overlay */}
       {isDrawingSector && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] w-[95%] max-w-2xl bg-slate-900/95 text-slate-100 p-3 sm:p-4 rounded-2xl shadow-2xl border border-blue-500/80 backdrop-blur-md flex flex-col gap-3 font-sans">
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-700">
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] w-[95%] max-w-2xl bg-white dark:bg-slate-900/95 text-black dark:text-slate-100 p-3 sm:p-4 rounded-2xl shadow-2xl border border-blue-500/80 backdrop-blur-md flex flex-col gap-3 font-sans">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-300 dark:border-slate-700">
             <div className="flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30">
                 <PenTool className="w-4 h-4" />
@@ -1536,7 +1543,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     {drawMode === 'pen' ? '🖊️ Freihand / Stift (Stylus/Touch)' : '📐 Punkt-für-Punkt (Klick)'}
                   </span>
                 </h3>
-                <p className="text-[10px] text-slate-400 font-mono">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                   {drawMode === 'pen'
                     ? 'Mit Pen, Finger oder Maus eine geschlossene Kontur über das Suchgebiet ziehen.'
                     : 'Auf die Karte tippen, um nacheinander Eckpunkte zu setzen.'}
@@ -1546,7 +1553,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
             {/* Live Stats Badge */}
             <div className="flex items-center gap-2 font-mono text-xs">
-              <span className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300">
+              <span className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300">
                 📍 {drawnPoints.length} Punkte
               </span>
               {drawnPoints.length >= 3 && (
@@ -1560,14 +1567,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           {/* Controls Bar: Mode Switcher + Action Buttons */}
           <div className="flex flex-wrap items-center justify-between gap-2 font-mono">
             {/* Draw Mode Switcher */}
-            <div className="flex items-center p-0.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px]">
+            <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px]">
               <button
                 type="button"
                 onClick={() => setDrawMode('pen')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
                   drawMode === 'pen'
                     ? 'bg-blue-600 text-white shadow'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                 }`}
               >
                 <PenTool className="w-3.5 h-3.5" />
@@ -1579,7 +1586,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
                   drawMode === 'click'
                     ? 'bg-blue-600 text-white shadow'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                 }`}
               >
                 <MousePointer className="w-3.5 h-3.5" />
@@ -1602,7 +1609,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   }
                 }}
                 disabled={drawnPoints.length === 0}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-40 border border-slate-700 transition cursor-pointer text-[11px]"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40 border border-slate-300 dark:border-slate-700 transition cursor-pointer text-[11px]"
                 title="Letzten Schritt rückgängig machen"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -1616,7 +1623,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   setStrokeHistory([]);
                 }}
                 disabled={drawnPoints.length === 0}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-40 border border-slate-700 transition cursor-pointer text-[11px]"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-40 border border-slate-300 dark:border-slate-700 transition cursor-pointer text-[11px]"
                 title="Zeichnung leeren"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -1630,7 +1637,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   setStrokeHistory([]);
                   if (onCancelDrawing) onCancelDrawing();
                 }}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition cursor-pointer text-[11px] font-bold"
+                className="px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 transition cursor-pointer text-[11px] font-bold"
               >
                 Abbrechen
               </button>
@@ -1657,16 +1664,16 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       {/* COMPLETED OPERATION ARCHIVE BANNER / PROTOKOLL */}
       {isArchiveMode && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[950] max-w-xl w-[94%] sm:w-auto bg-slate-900/95 backdrop-blur-md border border-amber-500/50 rounded-2xl px-4 py-2.5 shadow-2xl text-slate-200 flex flex-wrap items-center justify-between gap-3 font-sans">
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[950] max-w-xl w-[94%] sm:w-auto bg-white dark:bg-slate-900/95 backdrop-blur-md border border-amber-500/50 rounded-2xl px-4 py-2.5 shadow-2xl text-slate-900 dark:text-slate-200 flex flex-wrap items-center justify-between gap-3 font-sans">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 rounded-xl bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-400 flex items-center justify-center shrink-0">
               <CheckCircle2 className="w-4 h-4" />
             </div>
             <div className="text-xs">
               <div className="font-bold text-amber-300 uppercase tracking-wider font-mono text-[10px]">
                 Einsatzprotokoll & Lagekarte (Archiv)
               </div>
-              <div className="text-slate-300 font-mono text-[11px]">
+              <div className="text-slate-700 dark:text-slate-300 font-mono text-[11px]">
                 {currentOperation?.closingNotes
                   ? currentOperation.closingNotes
                   : 'Sektoren, Fundstellen und Bewegungsprofile der Suchtrupps'}
@@ -1678,7 +1685,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               type="button"
               onClick={captureMapSnapshot}
               disabled={isCapturingSnapshot}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-lg transition cursor-pointer shrink-0 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-[#0F172A]mber-600 hover:bg-slate-50 dark:bg-[#0F172A]mber-500 text-white font-bold text-xs shadow-lg transition cursor-pointer shrink-0 disabled:opacity-50"
               title="Aktuellen Kartenausschnitt mit allen Spuren und Sektoren als Bild für das Protokoll speichern"
             >
               <Camera className="w-3.5 h-3.5" />
@@ -1710,7 +1717,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       {/* MOBILE FLOATING ACTION BAR (Top, compact, unobstructed view for smartphone searchers) */}
       <div className="md:hidden absolute top-2 left-2 right-2 z-[900] flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-1.5 pointer-events-auto bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-xl">
+        <div className="flex items-center gap-1.5 pointer-events-auto bg-white dark:bg-slate-900/90 backdrop-blur-md p-1.5 rounded-xl border border-slate-300 dark:border-slate-700 shadow-xl">
           <button
             onClick={handleCenterOnMe}
             className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white rounded-lg text-xs font-bold transition cursor-pointer border border-blue-500/40 font-mono"
@@ -1730,7 +1737,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 lat: hq.lat,
                 lng: hq.lng,
                 address: hq.address || (isOpActive ? 'EZ vor Ort' : VEREINSBUERO_LOCATION.address),
-                title: isOpActive ? '🏢 EZ' : '🏢 EZ (Bereitschaft)',
+                title: '📡 EZ',
                 isStandbyOffice: !isOpActive,
                 operationTitle: currentOperation?.title,
                 commander: currentOperation?.commander,
@@ -1747,8 +1754,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             onClick={() => setIsWeatherModalOpenMobile(true)}
             className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer font-mono ${
               isWeatherModalOpenMobile
-                ? 'bg-amber-600 text-white'
-                : 'bg-amber-600/30 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/40'
+                ? 'bg-slate-50 dark:bg-[#0F172A]mber-600 text-white'
+                : 'bg-slate-50 dark:bg-[#0F172A]mber-600/30 hover:bg-slate-50 dark:bg-[#0F172A]mber-600 text-amber-300 hover:text-white border border-amber-500/40'
             }`}
             title="Lokale Einsatz-Wetterdaten anzeigen"
           >
@@ -1761,7 +1768,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer font-mono ${
               isLayersOpenMobile
                 ? 'bg-blue-600 text-white'
-                : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-white border border-slate-300 dark:border-slate-700'
             }`}
             title="Kartenebenen konfigurieren"
           >
@@ -1774,20 +1781,20 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       {/* MOBILE LAYERS MODAL SHEET (Clean drawer that doesn't permanently block map) */}
       {isLayersOpenMobile && (
         <div
-          className="md:hidden fixed inset-0 z-[2000] bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-2"
+          className="md:hidden fixed inset-0 z-[2000] bg-slate-100 dark:bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-2"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsLayersOpenMobile(false);
           }}
         >
-          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl p-4 w-full max-w-sm shadow-2xl space-y-3.5 text-slate-200 animate-in slide-in-from-bottom duration-200">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-700">
+          <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl p-4 w-full max-w-sm shadow-2xl space-y-3.5 text-slate-900 dark:text-slate-200 animate-in slide-in-from-bottom duration-200">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-300 dark:border-slate-700">
               <span className="flex items-center gap-2 font-bold text-white text-xs uppercase tracking-wider font-mono">
                 <Layers className="w-4 h-4 text-blue-400" />
                 Lagekarten-Ebenen & Ansicht
               </span>
               <button
                 onClick={() => setIsLayersOpenMobile(false)}
-                className="h-7 w-7 rounded-lg bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-xs border border-slate-700"
+                className="h-7 w-7 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-white flex items-center justify-center text-xs border border-slate-300 dark:border-slate-700"
               >
                 ✕
               </button>
@@ -1797,7 +1804,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               <button
                 onClick={() => setShowSectors((v) => !v)}
                 className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition text-left cursor-pointer font-semibold text-xs ${
-                  showSectors ? 'bg-blue-500/20 text-blue-300 border border-blue-400' : 'bg-slate-800 text-slate-400 border border-slate-700'
+                  showSectors ? 'bg-blue-500/20 text-blue-300 border border-blue-400' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700'
                 }`}
               >
                 <span>Sektoren ({currentOperation?.sectors.length || 0})</span>
@@ -1807,7 +1814,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               <button
                 onClick={() => setShowTracks((v) => !v)}
                 className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition text-left cursor-pointer font-semibold text-xs ${
-                  showTracks ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400' : 'bg-slate-800 text-slate-400 border border-slate-700'
+                  showTracks ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700'
                 }`}
               >
                 <span>Suchspuren</span>
@@ -1817,7 +1824,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               <button
                 onClick={() => setShowResponders((v) => !v)}
                 className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition text-left cursor-pointer font-semibold text-xs ${
-                  showResponders ? 'bg-orange-500/20 text-orange-300 border border-orange-400' : 'bg-slate-800 text-slate-400 border border-slate-700'
+                  showResponders ? 'bg-orange-500/20 text-orange-300 border border-orange-400' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700'
                 }`}
               >
                 <span>Sucher ({Object.keys(userLocations).length})</span>
@@ -1827,7 +1834,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               <button
                 onClick={() => setShowFindings((v) => !v)}
                 className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition text-left cursor-pointer font-semibold text-xs ${
-                  showFindings ? 'bg-red-500/20 text-red-300 border border-red-400' : 'bg-slate-800 text-slate-400 border border-slate-700'
+                  showFindings ? 'bg-red-500/20 text-red-300 border border-red-400' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700'
                 }`}
               >
                 <span>Funde ({currentOperation?.findings.filter((f) => showFalseAlarms || f.status !== 'false_alarm').length || 0})</span>
@@ -1836,10 +1843,10 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             </div>
 
             {/* False alarm toggle */}
-            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-between">
+            <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 flex items-center justify-between">
               <div>
-                <div className="text-xs font-bold text-slate-200">Fehlalarme archiviert</div>
-                <div className="text-[10px] text-slate-400 font-mono">
+                <div className="text-xs font-bold text-slate-900 dark:text-slate-200">Fehlalarme archiviert</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                   {showFalseAlarms ? 'Fehlalarme werden auf Karte angezeigt' : 'Auf der Einsatzkarte ausgeblendet'}
                 </div>
               </div>
@@ -1847,8 +1854,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 onClick={() => setShowFalseAlarms((v) => !v)}
                 className={`px-3 py-1 rounded-lg text-[11px] font-bold font-mono transition cursor-pointer ${
                   showFalseAlarms
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+                    ? 'bg-slate-50 dark:bg-[#0F172A]mber-600 text-white'
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-white border border-slate-300 dark:border-slate-700'
                 }`}
               >
                 {showFalseAlarms ? 'Sichtbar' : 'Ausgeblendet'}
@@ -1856,10 +1863,10 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             </div>
 
             {/* Inactive responders toggle */}
-            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-between">
+            <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 flex items-center justify-between">
               <div>
-                <div className="text-xs font-bold text-slate-200">Abgemeldete Kräfte</div>
-                <div className="text-[10px] text-slate-400 font-mono">
+                <div className="text-xs font-bold text-slate-900 dark:text-slate-200">Abgemeldete Kräfte</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                   {showInactiveResponders ? 'Werden ausgegraut auf Karte angezeigt' : 'Ausgeblendet (Nur aktive & eingeloggte Kräfte)'}
                 </div>
               </div>
@@ -1867,8 +1874,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 onClick={() => setShowInactiveResponders((v) => !v)}
                 className={`px-3 py-1 rounded-lg text-[11px] font-bold font-mono transition cursor-pointer ${
                   showInactiveResponders
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+                    ? 'bg-slate-50 dark:bg-[#0F172A]mber-600 text-white'
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-white border border-slate-300 dark:border-slate-700'
                 }`}
               >
                 {showInactiveResponders ? 'Sichtbar' : 'Ausgeblendet'}
@@ -1876,13 +1883,13 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             </div>
 
             {/* Weather overlay toggle */}
-            <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-between">
+            <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 flex items-center justify-between">
               <div>
-                <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                <div className="text-xs font-bold text-slate-900 dark:text-slate-200 flex items-center gap-1.5">
                   <CloudSun className="w-3.5 h-3.5 text-amber-400" />
                   Einsatzort-Wetter & Impact
                 </div>
-                <div className="text-[10px] text-slate-400 font-mono">
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                   {showWeatherOverlay ? 'Wetter-Widget & Spurlagen-Analyse aktiv' : 'Ausgeblendet'}
                 </div>
               </div>
@@ -1890,8 +1897,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 onClick={() => setShowWeatherOverlay((v) => !v)}
                 className={`px-3 py-1 rounded-lg text-[11px] font-bold font-mono transition cursor-pointer ${
                   showWeatherOverlay
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+                    ? 'bg-slate-50 dark:bg-[#0F172A]mber-600 text-white'
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-white border border-slate-300 dark:border-slate-700'
                 }`}
               >
                 {showWeatherOverlay ? 'Sichtbar' : 'Ausgeblendet'}
@@ -1899,11 +1906,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             </div>
 
             {/* Base Map selection */}
-            <div className="pt-2 border-t border-slate-700 space-y-1.5">
-              <span className="text-[10px] text-slate-400 uppercase font-mono block">KARTEN-BASIS:</span>
+            <div className="pt-2 border-t border-slate-300 dark:border-slate-700 space-y-1.5">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-mono block">KARTEN-BASIS:</span>
               <div className="grid grid-cols-2 gap-1.5">
                 {[
-                  { id: 'osm', label: '🌲 Wald & Straße (OSM)' },
+                  { id: 'osm', label: '🗺️ Standard OSM' },
+                  { id: 'topo', label: '🏔️ Topografie (Höhenlinien)' },
                   { id: 'hybrid', label: '🛰️ Satellit Hybrid' },
                   { id: 'satellite', label: '📡 Satellit Foto' },
                 ].map((item) => (
@@ -1913,7 +1921,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold text-left transition cursor-pointer ${
                       activeBaseMap === item.id
                         ? 'bg-blue-600 text-white font-bold shadow'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:bg-slate-700'
                     }`}
                   >
                     {item.label}
@@ -1937,12 +1945,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         <div className="hidden md:flex absolute top-4 left-4 z-[900]">
           <button
             onClick={() => setIsDesktopSidebarCollapsed(false)}
-            className="flex items-center gap-2 px-3 py-2 bg-[#1E293B]/95 hover:bg-slate-800 text-slate-200 border border-slate-700 rounded-xl shadow-xl backdrop-blur-md text-xs font-bold transition cursor-pointer font-mono group"
+            className="flex items-center gap-2 px-3 py-2 bg-[#1E293B]/95 hover:bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-xl shadow-xl backdrop-blur-md text-xs font-bold transition cursor-pointer font-mono group"
             title="Lagekarten-Tools und Ebenen einblenden"
           >
             <Layers className="w-4 h-4 text-blue-400 group-hover:scale-110 transition-transform" />
             <span>Kartentools</span>
-            <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">▶</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700">▶</span>
           </button>
         </div>
       )}
@@ -1951,14 +1959,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       {!isDesktopSidebarCollapsed && (
         <div className="hidden md:flex absolute top-4 left-4 z-[900] flex-col gap-2 max-w-[290px] w-[290px] max-h-[calc(100vh-140px)] overflow-y-auto pr-1 select-none scrollbar-thin">
           {/* Header Tab Bar */}
-          <div className="bg-[#1E293B]/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-xl flex items-center justify-between text-xs font-mono">
+          <div className="bg-[#1E293B]/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-300 dark:border-slate-700 shadow-xl flex items-center justify-between text-xs font-mono">
             <div className="flex gap-1">
               <button
                 onClick={() => setDesktopSidebarTab('layers')}
                 className={`px-2 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1 ${
                   desktopSidebarTab === 'layers'
                     ? 'bg-blue-600 text-white shadow'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200 hover:bg-slate-50 dark:bg-slate-800'
                 }`}
                 title="Kartenebenen & Stile"
               >
@@ -1970,7 +1978,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 className={`px-2 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1 ${
                   desktopSidebarTab === 'actions'
                     ? 'bg-blue-600 text-white shadow'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200 hover:bg-slate-50 dark:bg-slate-800'
                 }`}
                 title="Aktionen & GPS-Fokus"
               >
@@ -1980,7 +1988,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             </div>
             <button
               onClick={() => setIsDesktopSidebarCollapsed(true)}
-              className="text-slate-400 hover:text-white px-2 py-1 rounded text-[11px] bg-slate-800 hover:bg-slate-700 border border-slate-700 cursor-pointer ml-1"
+              className="text-slate-500 dark:text-slate-400 hover:text-white px-2 py-1 rounded text-[11px] bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 cursor-pointer ml-1"
               title="Sidebar minimieren"
             >
               ◀
@@ -1989,12 +1997,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
           {/* TAB 1: LAYERS */}
           {desktopSidebarTab === 'layers' && (
-            <div className="bg-[#1E293B]/95 backdrop-blur-md p-3 rounded-xl border border-slate-700 shadow-xl flex flex-col gap-2.5 text-xs text-slate-300">
+            <div className="bg-[#1E293B]/95 backdrop-blur-md p-3 rounded-xl border border-slate-300 dark:border-slate-700 shadow-xl flex flex-col gap-2.5 text-xs text-slate-700 dark:text-slate-300">
               <div className="grid grid-cols-2 gap-1.5">
                 <button
                   onClick={() => setShowSectors((v) => !v)}
                   className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition text-left cursor-pointer font-medium text-[11px] ${
-                    showSectors ? 'bg-blue-500/20 text-blue-300 border border-blue-400' : 'bg-slate-800/80 text-slate-400 border border-slate-700'
+                    showSectors ? 'bg-blue-500/20 text-blue-300 border border-blue-400' : 'bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700'
                   }`}
                 >
                   {showSectors ? <Eye className="w-3 h-3 text-blue-400" /> : <EyeOff className="w-3 h-3" />}
@@ -2004,7 +2012,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 <button
                   onClick={() => setShowTracks((v) => !v)}
                   className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition text-left cursor-pointer font-medium text-[11px] ${
-                    showTracks ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400' : 'bg-slate-800/80 text-slate-400 border border-slate-700'
+                    showTracks ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400' : 'bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700'
                   }`}
                 >
                   {showTracks ? <Eye className="w-3 h-3 text-emerald-400" /> : <EyeOff className="w-3 h-3" />}
@@ -2014,7 +2022,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 <button
                   onClick={() => setShowResponders((v) => !v)}
                   className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition text-left cursor-pointer font-medium text-[11px] ${
-                    showResponders ? 'bg-orange-500/20 text-orange-300 border border-orange-400' : 'bg-slate-800/80 text-slate-400 border border-slate-700'
+                    showResponders ? 'bg-orange-500/20 text-orange-300 border border-orange-400' : 'bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700'
                   }`}
                 >
                   {showResponders ? <Eye className="w-3 h-3 text-orange-400" /> : <EyeOff className="w-3 h-3" />}
@@ -2024,7 +2032,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 <button
                   onClick={() => setShowFindings((v) => !v)}
                   className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition text-left cursor-pointer font-medium text-[11px] ${
-                    showFindings ? 'bg-red-500/20 text-red-300 border border-red-400' : 'bg-slate-800/80 text-slate-400 border border-slate-700'
+                    showFindings ? 'bg-red-500/20 text-red-300 border border-red-400' : 'bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700'
                   }`}
                 >
                   {showFindings ? <Eye className="w-3 h-3 text-red-400" /> : <EyeOff className="w-3 h-3" />}
@@ -2033,12 +2041,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               </div>
 
               {/* Toggle to view false alarms */}
-              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-700/80">
-                <span className="text-slate-400 font-mono text-[10px]">Fehlalarme:</span>
+              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-300 dark:border-slate-700/80">
+                <span className="text-slate-500 dark:text-slate-400 font-mono text-[10px]">Fehlalarme:</span>
                 <button
                   onClick={() => setShowFalseAlarms((v) => !v)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono transition cursor-pointer ${
-                    showFalseAlarms ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                    showFalseAlarms ? 'bg-slate-50 dark:bg-[#0F172A]mber-600 text-white' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                   }`}
                 >
                   {showFalseAlarms ? '✓ Eingeblendet' : 'Ausgeblendet'}
@@ -2046,12 +2054,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               </div>
 
               {/* Toggle to view inactive responders */}
-              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-700/80">
-                <span className="text-slate-400 font-mono text-[10px]">Abgemeldete Kräfte:</span>
+              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-300 dark:border-slate-700/80">
+                <span className="text-slate-500 dark:text-slate-400 font-mono text-[10px]">Abgemeldete Kräfte:</span>
                 <button
                   onClick={() => setShowInactiveResponders((v) => !v)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono transition cursor-pointer ${
-                    showInactiveResponders ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                    showInactiveResponders ? 'bg-slate-50 dark:bg-[#0F172A]mber-600 text-white' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                   }`}
                 >
                   {showInactiveResponders ? '✓ Sichtbar' : 'Ausgeblendet'}
@@ -2059,26 +2067,27 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               </div>
 
               {/* Toggle to view weather overlay */}
-              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-700/80">
-                <span className="text-slate-400 font-mono text-[10px] flex items-center gap-1">
+              <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-300 dark:border-slate-700/80">
+                <span className="text-slate-500 dark:text-slate-400 font-mono text-[10px] flex items-center gap-1">
                   <CloudSun className="w-3 h-3 text-amber-400" />
                   Einsatz-Wetter:
                 </span>
                 <button
                   onClick={() => setShowWeatherOverlay((v) => !v)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono transition cursor-pointer ${
-                    showWeatherOverlay ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                    showWeatherOverlay ? 'bg-slate-50 dark:bg-[#0F172A]mber-600 text-white' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                   }`}
                 >
                   {showWeatherOverlay ? '✓ Eingeblendet' : 'Ausgeblendet'}
                 </button>
               </div>
 
-              <div className="pt-2 border-t border-slate-700 flex flex-col gap-1.5">
-                <span className="text-[10px] text-slate-400 uppercase font-mono">KARTENSTIL:</span>
+              <div className="pt-2 border-t border-slate-300 dark:border-slate-700 flex flex-col gap-1.5">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-mono">KARTENSTIL:</span>
                 <div className="grid grid-cols-2 gap-1">
                   {[
-                    { id: 'osm', label: 'Straße/Wald' },
+                    { id: 'osm', label: 'OSM' },
+                    { id: 'topo', label: 'Topo' },
                     { id: 'hybrid', label: 'Hybrid' },
                     { id: 'satellite', label: 'Satellit' },
                   ].map((item) => (
@@ -2088,7 +2097,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                       className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider transition cursor-pointer text-center ${
                         activeBaseMap === item.id
                           ? 'bg-blue-600 text-white font-bold shadow'
-                          : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                       }`}
                     >
                       {item.label}
@@ -2101,11 +2110,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
           {/* TAB 2: ACTIONS */}
           {desktopSidebarTab === 'actions' && (
-            <div className="bg-[#1E293B]/95 backdrop-blur-md p-3 rounded-xl border border-slate-700 shadow-xl flex flex-col gap-2 text-xs text-slate-300">
+            <div className="bg-[#1E293B]/95 backdrop-blur-md p-3 rounded-xl border border-slate-300 dark:border-slate-700 shadow-xl flex flex-col gap-2 text-xs text-slate-700 dark:text-slate-300">
               <div className="grid grid-cols-2 gap-1.5">
                 <button
                   onClick={handleCenterOnMe}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-blue-400 text-xs font-semibold rounded-lg border border-slate-700 transition cursor-pointer font-mono"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-blue-400 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 transition cursor-pointer font-mono"
                   title="Auf meinen Standort zentrieren"
                 >
                   <Navigation className="w-3.5 h-3.5" />
@@ -2114,19 +2123,27 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 <button
                   onClick={captureMapSnapshot}
                   disabled={isCapturingSnapshot}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold rounded-lg border border-slate-700 transition cursor-pointer font-mono disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-amber-300 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 transition cursor-pointer font-mono disabled:opacity-50"
                   title="Lagekarten-Snapshot für Einsatzbericht / Protokoll erfassen"
                 >
                   <Camera className="w-3.5 h-3.5" />
                   {isCapturingSnapshot ? 'Erfasse...' : 'Snapshot'}
                 </button>
+
                 <button
-                  onClick={() => clearGpsTracks(currentUser?.id)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-950/80 hover:bg-red-900 text-red-300 text-xs font-semibold rounded-lg border border-red-700/60 transition cursor-pointer font-mono"
-                  title="Eigene Suchspur auf aktuellen Punkt zurücksetzen"
+                  onClick={() => {
+                    const hq = (currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused')) && currentOperation.headquartersLocation
+                      ? currentOperation.headquartersLocation
+                      : VEREINSBUERO_LOCATION;
+                    if (mapInstanceRef.current && hq.lat && hq.lng) {
+                      mapInstanceRef.current.setView([hq.lat, hq.lng], 16);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-indigo-300 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 transition cursor-pointer font-mono"
+                  title="Auf Einsatzzentrale (EZ) zentrieren"
                 >
-                  <Trash2 className="w-3 h-3" />
-                  Spur leeren
+                  <Navigation className="w-3.5 h-3.5" />
+                  EZ Fokus
                 </button>
                 <button
                   onClick={() => {
@@ -2138,7 +2155,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                       lat: hq.lat,
                       lng: hq.lng,
                       address: hq.address || (isOpActive ? 'EZ vor Ort' : VEREINSBUERO_LOCATION.address),
-                      title: isOpActive ? '🏢 EZ' : '🏢 EZ (Bereitschaft)',
+                      title: '📡 EZ',
                       isStandbyOffice: !isOpActive,
                       operationTitle: currentOperation?.title,
                       commander: currentOperation?.commander,
@@ -2153,7 +2170,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               </div>
 
               {isAdminOrEL && !isDrawingSector && (
-                <div className="pt-2 border-t border-slate-700 flex gap-1.5">
+                <div className="pt-2 border-t border-slate-300 dark:border-slate-700 flex gap-1.5">
                   {onStartFreehandDrawing && (
                     <button
                       onClick={() => onStartFreehandDrawing()}
@@ -2167,7 +2184,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   {onOpenSectorEditor && (
                     <button
                       onClick={() => onOpenSectorEditor()}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 transition cursor-pointer font-mono"
+                      className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-200 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 transition cursor-pointer font-mono"
                       title="Sektor per Dialog erstellen"
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -2178,8 +2195,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               )}
 
               {/* Direct focus jump buttons for active responders */}
-              <div className="pt-2 border-t border-slate-700">
-                <span className="text-[10px] text-slate-400 font-mono block mb-1.5 uppercase font-bold">SCHNELLSPRUNG KRÄFTE:</span>
+              <div className="pt-2 border-t border-slate-300 dark:border-slate-700">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block mb-1.5 uppercase font-bold">SCHNELLSPRUNG KRÄFTE:</span>
                 <div className="flex flex-wrap gap-1">
                   {allUsers
                     .filter((u) => u.isActive)
@@ -2192,7 +2209,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                             mapInstanceRef.current.flyTo([loc.lat, loc.lng], 16, { duration: 1.2 });
                           }
                         }}
-                        className="flex items-center gap-1 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 text-[11px] font-semibold rounded-lg border border-slate-700 transition cursor-pointer font-mono"
+                        className="flex items-center gap-1 px-2 py-1 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-emerald-300 text-[11px] font-semibold rounded-lg border border-slate-300 dark:border-slate-700 transition cursor-pointer font-mono"
                         title={`Fokus auf ${u.name} (${u.callSign})`}
                       >
                         <MapPin className="w-3 h-3 text-emerald-400" />
@@ -2208,25 +2225,25 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       {/* Floating Sector Details Card (When a sector is clicked) */}
       {selectedSector && (
-        <div className="fixed sm:absolute bottom-24 sm:bottom-28 md:bottom-24 right-2 sm:right-6 left-2 sm:left-auto sm:w-[420px] max-w-[calc(100vw-1rem)] z-[1100] bg-[#1E293B]/95 backdrop-blur-md border border-slate-700 rounded-2xl shadow-2xl text-slate-100 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed sm:absolute bottom-24 sm:bottom-28 md:bottom-24 right-2 sm:right-6 left-2 sm:left-auto sm:w-[420px] max-w-[calc(100vw-1rem)] z-[1100] bg-[#1E293B]/95 backdrop-blur-md border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl text-black dark:text-slate-100 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
           <>
             {/* Card Header */}
-            <div className="flex items-start justify-between gap-2 p-3.5 pb-2.5 border-b border-slate-700 bg-slate-900/50">
+            <div className="flex items-start justify-between gap-2 p-3.5 pb-2.5 border-b border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">
                     {selectedSector.status === 'searched' ? '✅' : selectedSector.status === 'in_progress' ? '⏳' : '🎯'}
                   </span>
-                  <h3 className="font-bold text-sm text-slate-100 truncate">{selectedSector.name}</h3>
+                  <h3 className="font-bold text-sm text-black dark:text-slate-100 truncate">{selectedSector.name}</h3>
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5 font-mono">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
                   Fläche: ca. {selectedSector.areaHectares || 25} ha • Priorität: {selectedSector.priority.toUpperCase()}
                 </p>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => setSelectedSector(null)}
-                  className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 cursor-pointer"
+                  className="text-slate-500 dark:text-slate-400 hover:text-white p-1 rounded hover:bg-slate-50 dark:bg-slate-800 cursor-pointer"
                   title="Schließen"
                 >
                   ✕
@@ -2237,14 +2254,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               {/* Scrollable Body */}
               <div className="p-3.5 space-y-2.5 text-xs max-h-[min(380px,calc(100vh-280px))] overflow-y-auto scrollbar-thin">
                 {/* Status indicator */}
-                <div className="flex items-center justify-between bg-slate-900/60 p-2.5 rounded-lg border border-slate-700/80">
-                  <span className="text-slate-400 font-mono text-[11px]">STATUS:</span>
+                <div className="flex items-center justify-between bg-white dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-300 dark:border-slate-700/80">
+                  <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">STATUS:</span>
                   <span
                     className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px] ${
                       selectedSector.status === 'searched'
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500'
                         : selectedSector.status === 'in_progress'
-                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500'
+                        ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-400 border border-amber-500'
                         : 'bg-blue-500/20 text-blue-400 border border-blue-500'
                     }`}
                   >
@@ -2257,14 +2274,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 </div>
 
                 {selectedSector.notes && (
-                  <div className="bg-slate-900/50 p-2.5 rounded-lg text-slate-300 italic border border-slate-700/50">
+                  <div className="bg-white dark:bg-slate-900/50 p-2.5 rounded-lg text-slate-700 dark:text-slate-300 italic border border-slate-300 dark:border-slate-700/50">
                     "{selectedSector.notes}"
                   </div>
                 )}
 
                 {/* Assigned Responders */}
                 <div>
-                  <span className="font-semibold text-slate-400 block mb-1 font-mono text-[10px] uppercase">Zugewiesene Einheiten:</span>
+                  <span className="font-semibold text-slate-500 dark:text-slate-400 block mb-1 font-mono text-[10px] uppercase">Zugewiesene Einheiten:</span>
                   <div className="flex flex-wrap gap-1.5">
                     {selectedSector.assignedUserIds && selectedSector.assignedUserIds.length > 0 ? (
                       allUsers
@@ -2274,7 +2291,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                           return (
                             <span
                               key={u.id}
-                              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-[11px] font-mono"
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 text-[11px] font-mono"
                             >
                               <span>{badge.icon}</span>
                               <span className="font-bold">{u.callSign}</span>
@@ -2296,7 +2313,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               </div>
 
               {/* Sticky Action Footer */}
-              <div className="p-3 border-t border-slate-700 bg-[#1E293B] flex gap-2 shrink-0 shadow-lg">
+              <div className="p-3 border-t border-slate-300 dark:border-slate-700 bg-[#1E293B] flex gap-2 shrink-0 shadow-lg">
                 <button
                   onClick={() => {
                     const nextStatus: SectorStatus = selectedSector.status === 'searched' ? 'in_progress' : 'searched';
@@ -2305,7 +2322,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   }}
                   className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow ${
                     selectedSector.status === 'searched'
-                      ? 'bg-amber-600 hover:bg-amber-500 text-slate-950'
+                      ? 'bg-slate-50 dark:bg-[#0F172A]mber-600 hover:bg-slate-50 dark:bg-[#0F172A]mber-500 text-slate-950'
                       : 'bg-emerald-600 hover:bg-emerald-500 text-white'
                   }`}
                 >
@@ -2319,7 +2336,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                       onOpenSectorEditor(selectedSector);
                       setSelectedSector(null);
                     }}
-                    className="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold cursor-pointer border border-slate-600 font-mono"
+                    className="px-3 py-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-200 rounded-xl text-xs font-semibold cursor-pointer border border-slate-400 dark:border-slate-600 font-mono"
                   >
                     Edit
                   </button>
@@ -2346,12 +2363,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       {/* Floating Tactical User / Responder Card (When a responder pin is clicked) */}
       {selectedUser && (
-        <div className="fixed sm:absolute bottom-24 sm:bottom-28 md:bottom-24 right-2 sm:right-6 left-2 sm:left-auto sm:w-[420px] max-w-[calc(100vw-1rem)] z-[1100] bg-[#1E293B]/95 backdrop-blur-md border border-slate-700 rounded-2xl shadow-2xl text-slate-100 flex flex-col overflow-hidden animate-in fade-in slide-in-from-right-4 duration-200">
+        <div className="fixed sm:absolute bottom-24 sm:bottom-28 md:bottom-24 right-2 sm:right-6 left-2 sm:left-auto sm:w-[420px] max-w-[calc(100vw-1rem)] z-[1100] bg-[#1E293B]/95 backdrop-blur-md border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl text-black dark:text-slate-100 flex flex-col overflow-hidden animate-in fade-in slide-in-from-right-4 duration-200">
           <>
             {/* Card Header */}
-            <div className="flex items-start justify-between gap-3 p-3.5 pb-2.5 border-b border-slate-700 bg-slate-900/50">
+            <div className="flex items-start justify-between gap-3 p-3.5 pb-2.5 border-b border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-blue-500 shadow-md bg-slate-800 flex items-center justify-center shrink-0">
+                <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-blue-500 shadow-md bg-slate-50 dark:bg-slate-800 flex items-center justify-center shrink-0">
                   {selectedUser.photoUrl ? (
                     <img src={selectedUser.photoUrl} alt={selectedUser.name} className="h-full w-full object-cover" />
                   ) : (
@@ -2361,13 +2378,13 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 <div className="min-w-0">
                   <h3 className="font-bold text-sm text-white truncate">{selectedUser.name}</h3>
                   <div className="text-xs text-blue-400 font-mono font-bold">{selectedUser.callSign}</div>
-                  <div className="text-[10px] text-slate-400 truncate">{selectedUser.organization || 'Einsatzkraft'}</div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{selectedUser.organization || 'Einsatzkraft'}</div>
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => setSelectedUser(null)}
-                  className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 cursor-pointer"
+                  className="text-slate-500 dark:text-slate-400 hover:text-white p-1 rounded hover:bg-slate-50 dark:bg-slate-800 cursor-pointer"
                   title="Schließen"
                 >
                   ✕
@@ -2377,21 +2394,21 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
               {/* Scrollable Body */}
               <div className="p-3.5 space-y-2.5 text-xs max-h-[min(380px,calc(100vh-280px))] overflow-y-auto scrollbar-thin">
-                <div className="grid grid-cols-2 gap-2 bg-slate-900/60 p-2.5 rounded-xl border border-slate-700/80">
+                <div className="grid grid-cols-2 gap-2 bg-white dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-300 dark:border-slate-700/80">
                   <div>
-                    <span className="text-slate-400 text-[10px] block font-mono">KFZ-KENNZEICHEN</span>
-                    <span className="font-mono font-bold text-slate-200 text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 text-[10px] block font-mono">KFZ-KENNZEICHEN</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-slate-200 text-xs">
                       {selectedUser.licensePlate || 'Nicht angegeben'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-[10px] block font-mono">AKKUSTAND</span>
+                    <span className="text-slate-500 dark:text-slate-400 text-[10px] block font-mono">AKKUSTAND</span>
                     <span className="font-bold text-emerald-400 text-xs">
                       🔋 {selectedUser.batteryLevel ?? 100}%
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-[10px] block font-mono">AKTUELLER SEKTOR</span>
+                    <span className="text-slate-500 dark:text-slate-400 text-[10px] block font-mono">AKTUELLER SEKTOR</span>
                     <span className="font-semibold text-amber-400 text-xs truncate block">
                       {currentOperation?.sectors.find((s) => s.id === selectedUser.assignedSectorId || s.assignedUserIds?.includes(selectedUser.id))?.name
                         ? `🎯 ${currentOperation?.sectors.find((s) => s.id === selectedUser.assignedSectorId || s.assignedUserIds?.includes(selectedUser.id))?.name}`
@@ -2399,8 +2416,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-[10px] block font-mono">LETZTER GPS-PING</span>
-                    <span className="text-slate-300 text-xs font-mono">
+                    <span className="text-slate-500 dark:text-slate-400 text-[10px] block font-mono">LETZTER GPS-PING</span>
+                    <span className="text-slate-700 dark:text-slate-300 text-xs font-mono">
                       {userLocations[selectedUser.id]?.lastUpdated
                         ? new Date(userLocations[selectedUser.id].lastUpdated).toLocaleTimeString()
                         : 'Online'}
@@ -2409,18 +2426,18 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 </div>
 
                 {selectedUser.customEquipmentNotes && (
-                  <div className="bg-slate-900/50 p-2.5 rounded-xl text-slate-300 border border-slate-700/50">
-                    <span className="font-semibold text-slate-400 block text-[10px] font-mono">SPEZIAL-AUSRÜSTUNG / HILFSMITTEL:</span>
+                  <div className="bg-white dark:bg-slate-900/50 p-2.5 rounded-xl text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700/50">
+                    <span className="font-semibold text-slate-500 dark:text-slate-400 block text-[10px] font-mono">SPEZIAL-AUSRÜSTUNG / HILFSMITTEL:</span>
                     {selectedUser.customEquipmentNotes}
                   </div>
                 )}
 
                 {/* Quick Switcher for other responders at the same gathering point */}
                 {nearbyResponders.length > 0 && (
-                  <div className="bg-slate-900/90 p-2.5 rounded-xl border border-blue-500/40 shadow-inner">
+                  <div className="bg-white dark:bg-slate-900/90 p-2.5 rounded-xl border border-blue-500/40 shadow-inner">
                     <span className="text-blue-300 text-[10px] block font-mono font-bold mb-1.5 flex items-center justify-between">
                       <span>👥 WEITERE KRÄFTE AN DIESEM STANDORT ({nearbyResponders.length})</span>
-                      <span className="text-[9px] text-slate-400 font-normal">Auswählen</span>
+                      <span className="text-[9px] text-slate-500 dark:text-slate-400 font-normal">Auswählen</span>
                     </span>
                     <div className="flex flex-wrap gap-1.5">
                       {nearbyResponders.map((u) => (
@@ -2429,11 +2446,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                           onClick={() => {
                             setSelectedUser(u);
                           }}
-                          className="px-2 py-1 bg-slate-800 hover:bg-blue-900/60 hover:border-blue-400 text-slate-200 border border-slate-700 rounded-lg text-[10px] font-mono font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                          className="px-2 py-1 bg-slate-50 dark:bg-slate-800 hover:bg-blue-900/60 hover:border-blue-400 text-slate-900 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-[10px] font-mono font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
                         >
                           <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: u.isActive ? '#10b981' : '#64748b' }}></span>
                           <span className="text-white">{u.callSign}</span>
-                          <span className="text-slate-400 text-[9px]">({u.name})</span>
+                          <span className="text-slate-500 dark:text-slate-400 text-[9px]">({u.name})</span>
                         </button>
                       ))}
                     </div>
@@ -2442,11 +2459,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               </div>
 
               {/* Sticky Action Footer */}
-              <div className="p-3 border-t border-slate-700 bg-[#1E293B] flex gap-2 shrink-0 shadow-lg">
+              <div className="p-3 border-t border-slate-300 dark:border-slate-700 bg-[#1E293B] flex gap-2 shrink-0 shadow-lg">
                 {selectedUser.phone && (
                   <a
                     href={`tel:${selectedUser.phone}`}
-                    className="flex-1 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer border border-slate-700"
+                    className="flex-1 py-2.5 px-3 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-200 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer border border-slate-300 dark:border-slate-700"
                   >
                     <Phone className="w-3.5 h-3.5 text-emerald-400" />
                     Anrufen
@@ -2472,12 +2489,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       {/* EZ COORDINATES & NAVIGATION MODAL (Interactive Intent to Navigation Apps) */}
       {ezNavData && (
         <div
-          className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150 font-sans"
+          className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150 font-sans"
           onClick={(e) => {
             if (e.target === e.currentTarget) setEzNavData(null);
           }}
         >
-          <div className="bg-[#1E293B] border border-indigo-500/50 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col text-slate-100 animate-in zoom-in-95 duration-150">
+          <div className="bg-[#1E293B] border border-indigo-500/50 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col text-black dark:text-slate-100 animate-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="p-4 bg-gradient-to-r from-indigo-950/90 via-slate-900 to-indigo-950/90 border-b border-indigo-500/30 flex items-center justify-between">
               <div className="flex items-center gap-2.5 min-w-0">
@@ -2491,13 +2508,13 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     </h3>
                   </div>
                   <div className="text-[11px] text-indigo-300 font-mono flex items-center gap-1.5 truncate">
-                    <span>{ezNavData.isStandbyOffice ? '🏢 Vereinsbüro Aschersleben (Bereitschaft)' : '🚨 Einsatz-EZ vor Ort'}</span>
+                    <span>{ezNavData.isStandbyOffice ? '📡 Vereinsbüro Aschersleben (Bereitschaft)' : '🚨 Einsatz-EZ vor Ort'}</span>
                   </div>
                 </div>
               </div>
               <button
                 onClick={() => setEzNavData(null)}
-                className="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer border border-slate-700 shrink-0"
+                className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer border border-slate-300 dark:border-slate-700 shrink-0"
                 title="Schließen"
               >
                 <X className="w-4 h-4" />
@@ -2507,9 +2524,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             {/* Modal Body */}
             <div className="p-4 sm:p-5 space-y-4 text-xs overflow-y-auto max-h-[75vh]">
               {/* Target Location Card */}
-              <div className="bg-slate-900/90 border border-indigo-500/30 rounded-xl p-3.5 space-y-2">
+              <div className="bg-white dark:bg-slate-900/90 border border-indigo-500/30 rounded-xl p-3.5 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-slate-400">
+                  <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-slate-500 dark:text-slate-400">
                     Zielort & Adresse
                   </span>
                   <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
@@ -2526,24 +2543,24 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 </div>
 
                 {ezNavData.operationTitle && !ezNavData.isStandbyOffice && (
-                  <div className="text-[11px] text-slate-300 bg-slate-800/60 p-2 rounded-lg border border-slate-700/60">
+                  <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-lg border border-slate-300 dark:border-slate-700/60">
                     Einsatz: <strong className="text-white">{ezNavData.operationTitle}</strong>
                     {ezNavData.commander && <> • Leitung: <strong className="text-white">{ezNavData.commander}</strong></>}
                   </div>
                 )}
 
                 {/* GPS Coordinates & Live Distance */}
-                <div className="pt-2 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono">
-                  <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800 flex items-center justify-between">
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono">
+                  <div className="bg-slate-100 dark:bg-slate-950/60 p-2 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between">
                     <div>
-                      <span className="text-slate-400 block text-[9px]">GPS-KOORDINATEN</span>
-                      <span className="text-slate-200 font-bold">
+                      <span className="text-slate-500 dark:text-slate-400 block text-[9px]">GPS-KOORDINATEN</span>
+                      <span className="text-slate-900 dark:text-slate-200 font-bold">
                         {ezNavData.lat.toFixed(6)}, {ezNavData.lng.toFixed(6)}
                       </span>
                     </div>
                     <button
                       onClick={() => handleCopyCoordinates(ezNavData.lat, ezNavData.lng)}
-                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition cursor-pointer text-[10px] flex items-center gap-1 shrink-0"
+                      className="px-2 py-1 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded border border-slate-300 dark:border-slate-700 transition cursor-pointer text-[10px] flex items-center gap-1 shrink-0"
                       title="Koordinaten in Zwischenablage kopieren"
                     >
                       {copiedCoords ? (
@@ -2560,8 +2577,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     </button>
                   </div>
 
-                  <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-800">
-                    <span className="text-slate-400 block text-[9px]">ENTFERNUNG (MEIN STANDORT)</span>
+                  <div className="bg-slate-100 dark:bg-slate-950/60 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                    <span className="text-slate-500 dark:text-slate-400 block text-[9px]">ENTFERNUNG (MEIN STANDORT)</span>
                     {myLocation ? (
                       (() => {
                         const R = 6371e3;
@@ -2588,7 +2605,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                         );
                       })()
                     ) : (
-                      <span className="text-slate-400">GPS nicht aktiv</span>
+                      <span className="text-slate-500 dark:text-slate-400">GPS nicht aktiv</span>
                     )}
                   </div>
                 </div>
@@ -2604,14 +2621,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   <span>In Standard-Navi-App öffnen</span>
                   <ExternalLink className="w-4 h-4 ml-1" />
                 </button>
-                <p className="text-[10px] text-slate-400 text-center mt-1 font-mono">
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center mt-1 font-mono">
                   Startet automatisch Ihre Standard-Navigations-App (Google Maps, Apple Maps, Waze etc.)
                 </p>
               </div>
 
               {/* Dedicated App Shortcuts */}
               <div className="space-y-1.5 pt-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono block">
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider font-mono block">
                   Oder App direkt auswählen:
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -2619,12 +2636,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     href={`https://www.google.com/maps/dir/?api=1&destination=${ezNavData.lat},${ezNavData.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-blue-500/60 transition cursor-pointer text-slate-200 hover:text-white flex items-center gap-2 text-xs font-mono font-bold no-underline"
+                    className="p-2.5 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700/80 hover:border-blue-500/60 transition cursor-pointer text-slate-900 dark:text-slate-200 hover:text-white flex items-center gap-2 text-xs font-mono font-bold no-underline"
                   >
                     <span className="text-lg">🗺️</span>
                     <div>
                       <div>Google Maps</div>
-                      <div className="text-[9px] text-slate-400 font-normal">Route starten</div>
+                      <div className="text-[9px] text-slate-500 dark:text-slate-400 font-normal">Route starten</div>
                     </div>
                   </a>
 
@@ -2632,12 +2649,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     href={`https://maps.apple.com/?daddr=${ezNavData.lat},${ezNavData.lng}&q=${encodeURIComponent(ezNavData.title)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-blue-500/60 transition cursor-pointer text-slate-200 hover:text-white flex items-center gap-2 text-xs font-mono font-bold no-underline"
+                    className="p-2.5 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700/80 hover:border-blue-500/60 transition cursor-pointer text-slate-900 dark:text-slate-200 hover:text-white flex items-center gap-2 text-xs font-mono font-bold no-underline"
                   >
                     <span className="text-lg">🍏</span>
                     <div>
                       <div>Apple Maps</div>
-                      <div className="text-[9px] text-slate-400 font-normal">Karten-App</div>
+                      <div className="text-[9px] text-slate-500 dark:text-slate-400 font-normal">Karten-App</div>
                     </div>
                   </a>
 
@@ -2645,12 +2662,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     href={`https://waze.com/ul?ll=${ezNavData.lat},${ezNavData.lng}&navigate=yes`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-blue-500/60 transition cursor-pointer text-slate-200 hover:text-white flex items-center gap-2 text-xs font-mono font-bold no-underline"
+                    className="p-2.5 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700/80 hover:border-blue-500/60 transition cursor-pointer text-slate-900 dark:text-slate-200 hover:text-white flex items-center gap-2 text-xs font-mono font-bold no-underline"
                   >
                     <span className="text-lg">🚙</span>
                     <div>
                       <div>Waze</div>
-                      <div className="text-[9px] text-slate-400 font-normal">Echtzeit-Verkehr</div>
+                      <div className="text-[9px] text-slate-500 dark:text-slate-400 font-normal">Echtzeit-Verkehr</div>
                     </div>
                   </a>
                 </div>
@@ -2658,7 +2675,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             </div>
 
             {/* Modal Footer */}
-            <div className="p-3 sm:p-4 bg-slate-900/80 border-t border-slate-700/80 flex items-center justify-between gap-2">
+            <div className="p-3 sm:p-4 bg-white dark:bg-slate-900/80 border-t border-slate-300 dark:border-slate-700/80 flex items-center justify-between gap-2">
               <button
                 onClick={() => {
                   if (mapInstanceRef.current && ezNavData) {
@@ -2666,7 +2683,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     setEzNavData(null);
                   }
                 }}
-                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-mono font-semibold transition cursor-pointer border border-slate-700 flex items-center gap-1.5"
+                className="px-3 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-white rounded-xl text-xs font-mono font-semibold transition cursor-pointer border border-slate-300 dark:border-slate-700 flex items-center gap-1.5"
               >
                 <MapPin className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Auf Karte zentrieren</span>
@@ -2674,7 +2691,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
               <button
                 onClick={() => setEzNavData(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-mono font-bold transition cursor-pointer border border-slate-700 uppercase"
+                className="px-4 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-mono font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 uppercase"
               >
                 Schließen
               </button>
@@ -2698,7 +2715,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       {/* MOBILE WEATHER MODAL SHEET (On-demand view on smartphones) */}
       {isWeatherModalOpenMobile && (
         <div
-          className="md:hidden fixed inset-0 z-[2000] bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-2"
+          className="md:hidden fixed inset-0 z-[2000] bg-slate-100 dark:bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-2"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsWeatherModalOpenMobile(false);
           }}

@@ -126,7 +126,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
   if (!selectedOp && allOperations.length === 0) {
     return (
-      <div className="p-12 text-center text-slate-400 font-mono space-y-3">
+      <div className="p-12 text-center text-slate-500 dark:text-slate-400 font-mono space-y-3">
         <div className="text-3xl">📭</div>
         <div className="text-base font-bold text-white">Keine Einsätze vorhanden</div>
         <p className="text-xs text-slate-500">Es wurden noch keine Einsätze oder Übungen angelegt.</p>
@@ -432,9 +432,9 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6 text-slate-100 font-sans">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6 text-black dark:text-slate-100 font-sans">
       {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#1E293B] border border-slate-700 p-5 rounded-2xl shadow-xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#1E293B] border border-slate-300 dark:border-slate-700 p-5 rounded-2xl shadow-xl">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xl">🗄️</span>
@@ -442,7 +442,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
               Einsatzarchiv & Nachbereitung (Debriefing)
             </h1>
           </div>
-          <p className="text-xs text-slate-400 mt-1 font-mono">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-mono">
             Dauerhafte Archivierung, lückenloses Protokoll, GPS-Bewegungsprofile und Reaktivierung für Folgesuchen
           </p>
         </div>
@@ -462,7 +462,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
           <button
             onClick={handlePrint}
             disabled={isExportingPdf}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-blue-300 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer font-mono uppercase tracking-wider shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-blue-300 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 transition cursor-pointer font-mono uppercase tracking-wider shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isExportingPdf ? (
               <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
@@ -479,7 +479,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
         {/* Left Column: Operation Selection Cards */}
         <div className="lg:col-span-4 space-y-3 font-mono">
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
               EINSÄTZE ({allOperations.length}):
             </span>
             <span className="text-[10px] text-slate-500 font-mono">
@@ -504,8 +504,8 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                   }}
                   className={`w-full text-left p-4 rounded-xl border transition cursor-pointer flex flex-col justify-between gap-2 shadow relative group ${
                     isSel
-                      ? 'bg-slate-800/95 border-blue-500 ring-2 ring-blue-500/30'
-                      : 'bg-[#1E293B] border-slate-700 hover:bg-slate-800/50'
+                      ? 'bg-slate-50 dark:bg-slate-800/95 border-blue-500 ring-2 ring-blue-500/30'
+                      : 'bg-[#1E293B] border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:bg-slate-800/50'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -513,7 +513,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                       <span className="text-base shrink-0">{opIsExercise ? '🟠' : '🔴'}</span>
                       <div className="min-w-0">
                         <h3 className="font-bold text-xs text-white leading-tight font-sans truncate">{op.title}</h3>
-                        <div className="text-[10px] text-slate-400 mt-0.5 truncate">
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                           Erstellt: {new Date(op.createdAt).toLocaleDateString()} • {op.commander}
                         </div>
                       </div>
@@ -544,7 +544,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1.5 border-t border-slate-700/60 font-mono">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1.5 border-t border-slate-300 dark:border-slate-700/60 font-mono">
                     <span>
                       {op.sectors?.length || 0} Sektoren • {op.findings?.length || 0} Funde • {op.logs?.length || 0} Logs
                     </span>
@@ -574,21 +574,21 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
         {/* Right Column: Detailed Replay & Debrief Report */}
         {selectedOp ? (
-          <div id="report-details-panel" className="lg:col-span-8 bg-[#1E293B] border border-slate-700 rounded-2xl p-5 shadow-2xl space-y-5">
+          <div id="report-details-panel" className="lg:col-span-8 bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl p-5 shadow-2xl space-y-5">
             {/* Header of selected operation */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-700">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-300 dark:border-slate-700">
               <div>
                 <div className="flex items-center gap-2">
                   <span
                     className={`text-[10px] font-bold px-2.5 py-0.5 rounded uppercase border font-mono ${
                       isExercise
-                        ? 'bg-amber-950 text-amber-300 border-amber-600'
+                        ? 'bg-slate-50 dark:bg-[#0F172A]mber-950 text-amber-300 border-amber-600'
                         : 'bg-red-950 text-red-300 border-red-600'
                     }`}
                   >
                     {isExercise ? 'ÜBUNG' : 'REALEINSATZ'}
                   </span>
-                  <span className="text-xs font-mono text-slate-400">ID: {selectedOp.id}</span>
+                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400">ID: {selectedOp.id}</span>
                   <span
                     className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase font-mono ${
                       selectedOp.status === 'completed'
@@ -600,9 +600,9 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                   </span>
                 </div>
                 <h2 className="text-base font-bold text-white mt-1 uppercase tracking-wide">{selectedOp.title}</h2>
-                <p className="text-xs text-slate-400 mt-0.5 font-mono">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
                   Vermisste Person:{' '}
-                  <strong className="text-slate-200 font-sans">
+                  <strong className="text-slate-900 dark:text-slate-200 font-sans">
                     {selectedOp.missingPerson?.name || 'Unbekannt'}
                   </strong>{' '}
                   ({selectedOp.missingPerson?.age || 0} Jahre)
@@ -651,11 +651,11 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                   </button>
                 )}
 
-                <div className="flex flex-wrap gap-1 bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs font-mono">
+                <div className="flex flex-wrap gap-1 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-mono">
                   <button
                     onClick={() => setActiveSubTab('report')}
                     className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer uppercase tracking-wider ${
-                      activeSubTab === 'report' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                      activeSubTab === 'report' ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                     }`}
                   >
                     Gesamtprotokoll
@@ -663,7 +663,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                   <button
                     onClick={() => setActiveSubTab('protocol')}
                     className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer uppercase tracking-wider flex items-center gap-1.5 ${
-                      activeSubTab === 'protocol' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                      activeSubTab === 'protocol' ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                     }`}
                   >
                     <span>Tagebuch</span>
@@ -674,7 +674,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                   <button
                     onClick={() => setActiveSubTab('map')}
                     className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer uppercase tracking-wider ${
-                      activeSubTab === 'map' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                      activeSubTab === 'map' ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                     }`}
                   >
                     Lagekarte
@@ -682,7 +682,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                   <button
                     onClick={() => setActiveSubTab('findings')}
                     className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer uppercase tracking-wider ${
-                      activeSubTab === 'findings' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                      activeSubTab === 'findings' ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                     }`}
                   >
                     Funde ({selectedOp.findings?.length || 0})
@@ -690,7 +690,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                   <button
                     onClick={() => setActiveSubTab('roster')}
                     className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer uppercase tracking-wider ${
-                      activeSubTab === 'roster' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                      activeSubTab === 'roster' ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                     }`}
                   >
                     Kräfte ({participants.length})
@@ -698,7 +698,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                   <button
                     onClick={() => setActiveSubTab('chat')}
                     className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer uppercase tracking-wider flex items-center gap-1.5 ${
-                      activeSubTab === 'chat' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                      activeSubTab === 'chat' ? 'bg-blue-600 text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                     }`}
                   >
                     <span>Funk & Chat</span>
@@ -714,8 +714,8 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
             {activeSubTab === 'report' && (
               <div className="space-y-5 text-xs">
                 {/* Missing Person Profile Box */}
-                <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col sm:flex-row gap-4 items-start font-mono">
-                  <div className="h-24 w-24 rounded-xl overflow-hidden border border-slate-700 bg-slate-950 shrink-0 flex items-center justify-center">
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-300 dark:border-slate-700 flex flex-col sm:flex-row gap-4 items-start font-mono">
+                  <div className="h-24 w-24 rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-950 shrink-0 flex items-center justify-center">
                     {selectedOp.missingPerson?.photoUrl && selectedOp.missingPerson.photoUrl.trim() !== '' ? (
                       <img
                         src={selectedOp.missingPerson.photoUrl}
@@ -735,12 +735,12 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                         {selectedOp.missingPerson?.policeCaseId || 'Aktenzeichen SLK'}
                       </span>
                     </div>
-                    <div className="text-slate-300">
-                      <strong className="text-slate-400 uppercase text-[10px]">Bekleidung:</strong>{' '}
+                    <div className="text-slate-700 dark:text-slate-300">
+                      <strong className="text-slate-500 dark:text-slate-400 uppercase text-[10px]">Bekleidung:</strong>{' '}
                       <span className="font-sans">{selectedOp.missingPerson?.clothing || 'Keine Angabe'}</span>
                     </div>
-                    <div className="text-slate-400 font-sans">
-                      <strong className="text-slate-400 uppercase text-[10px] font-mono">Beschreibung:</strong>{' '}
+                    <div className="text-slate-500 dark:text-slate-400 font-sans">
+                      <strong className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-mono">Beschreibung:</strong>{' '}
                       {selectedOp.missingPerson?.description || '-'}
                     </div>
                     <div className="text-amber-400">
@@ -749,7 +749,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                         {selectedOp.missingPerson?.medicalConditions?.join(', ') || 'Keine'}
                       </span>
                     </div>
-                    <div className="text-slate-400 text-[11px] pt-1">
+                    <div className="text-slate-500 dark:text-slate-400 text-[11px] pt-1">
                       Letzter Sichtungsort: {selectedOp.missingPerson?.lastSeenLocation?.address || 'Einsatzgebiet'} (
                       {selectedOp.missingPerson?.lastSeenTime || '-'})
                     </div>
@@ -758,8 +758,8 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
                 {/* Sektor & Search Summary */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono">
-                  <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase block">SUCHSEKTOREN GESAMT</span>
+                  <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700">
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block">SUCHSEKTOREN GESAMT</span>
                     <div className="text-base font-bold text-white font-mono mt-1">
                       {selectedOp.sectors?.length || 0} Sektoren
                     </div>
@@ -768,22 +768,22 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase block">DOKUMENTIERTE FUNDE</span>
+                  <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700">
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block">DOKUMENTIERTE FUNDE</span>
                     <div className="text-base font-bold text-amber-400 font-mono mt-1">
                       {selectedOp.findings?.length || 0} Fundmeldungen
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                       {selectedOp.findings?.filter((f) => f.verified).length || 0} verifiziert durch Einsatzleitung
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-700">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase block">EINGESETZTE KRÄFTE</span>
+                  <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700">
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block">EINGESETZTE KRÄFTE</span>
                     <div className="text-base font-bold text-cyan-400 font-mono mt-1">
                       {totalRespondersCount} Kräfte Gesamt
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                       {participants.length} App-Kräfte {externalVolunteersCount > 0 ? `+ ${externalVolunteersCount} Freiwillige / Externe` : ''}
                     </div>
                   </div>
@@ -791,15 +791,15 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
                 {/* Externe Helfer Notiz (ohne App) */}
                 {(externalVolunteersCount > 0 || (selectedOp.externalVolunteersNotes && selectedOp.externalVolunteersNotes.trim() !== '')) && (
-                  <div className="bg-slate-900 p-3.5 rounded-xl border border-amber-500/30 font-mono flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-amber-950/80 border border-amber-800 text-amber-300 shrink-0">
+                  <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-amber-500/30 font-mono flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-[#0F172A]mber-950/80 border border-amber-800 text-amber-300 shrink-0">
                       <Users className="w-4 h-4" />
                     </div>
                     <div className="space-y-0.5">
                       <div className="text-xs font-bold text-amber-300 uppercase tracking-wider">
                         Freiwillige Helfer & Externe Kräfte (Ohne App-Zugang): {externalVolunteersCount} Personen
                       </div>
-                      <div className="text-[11px] text-slate-300 font-sans">
+                      <div className="text-[11px] text-slate-700 dark:text-slate-300 font-sans">
                         {selectedOp.externalVolunteersNotes || 'Im Stärkenachweis des Einsatzes erfasst.'}
                       </div>
                     </div>
@@ -808,8 +808,8 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
                 {/* Ausrüstung & Einsatzmittel Übersicht */}
                 {Array.isArray(selectedOp.selectedEquipment) && selectedOp.selectedEquipment.length > 0 && (
-                  <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-700 font-mono space-y-2">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1.5">
+                  <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700 font-mono space-y-2">
+                    <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase flex items-center gap-1.5">
                       <Wrench className="w-3.5 h-3.5 text-cyan-400" />
                       <span>EINGESETZTE AUSRÜSTUNG & HILFSMITTEL ({selectedOp.selectedEquipment.length}):</span>
                     </div>
@@ -828,8 +828,8 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                       })}
                     </div>
                     {selectedOp.customEquipmentNotes && (
-                      <div className="text-[11px] text-slate-300 bg-slate-950/40 p-2 rounded-lg border border-slate-800 font-sans">
-                        <span className="font-mono text-slate-400">Spezialausrüstung:</span> {selectedOp.customEquipmentNotes}
+                      <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-950/40 p-2 rounded-lg border border-slate-200 dark:border-slate-800 font-sans">
+                        <span className="font-mono text-slate-500 dark:text-slate-400">Spezialausrüstung:</span> {selectedOp.customEquipmentNotes}
                       </div>
                     )}
                   </div>
@@ -837,12 +837,12 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
                 {/* Wetterbedingungen bei Einsatzzeit */}
                 {selectedOp.weatherConditions && (
-                  <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-700 font-mono space-y-2">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1.5">
+                  <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700 font-mono space-y-2">
+                    <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase flex items-center gap-1.5">
                       <Cloud className="w-3.5 h-3.5 text-blue-400" />
                       <span>WETTERBEDINGUNGEN DER EINSATZZEIT:</span>
                     </div>
-                    <div className="text-[11px] text-slate-200 bg-slate-950/40 p-2.5 rounded-lg border border-slate-800 font-sans flex items-center gap-2.5">
+                    <div className="text-[11px] text-slate-900 dark:text-slate-200 bg-slate-100 dark:bg-slate-950/40 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 font-sans flex items-center gap-2.5">
                       <span className="text-base font-sans shrink-0">☀️</span>
                       <span className="leading-relaxed">{selectedOp.weatherConditions}</span>
                     </div>
@@ -851,7 +851,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
                 {/* Gespeicherte Lagekarten-Screenshots (Galerie) */}
                 {((selectedOp.mapSnapshots && selectedOp.mapSnapshots.length > 0) || selectedOp.mapSnapshotUrl) && (
-                  <div className="bg-slate-900 p-3.5 rounded-xl border border-purple-500/40 font-mono space-y-2.5">
+                  <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-purple-500/40 font-mono space-y-2.5">
                     <div className="text-[10px] font-bold text-purple-300 uppercase flex items-center gap-1.5">
                       <Camera className="w-4 h-4 text-purple-400" />
                       <span>GESPEICHERTE LAGEBILDER & VERLAUFSSNAPSHOTS ({selectedOp.mapSnapshots?.length || 1}):</span>
@@ -860,11 +860,11 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                     {selectedOp.mapSnapshots && selectedOp.mapSnapshots.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                         {selectedOp.mapSnapshots.map((snap, sIdx) => (
-                          <div key={sIdx} className="bg-slate-950/80 border border-slate-800 p-3 rounded-xl space-y-2 flex flex-col">
+                          <div key={sIdx} className="bg-slate-100 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 p-3 rounded-xl space-y-2 flex flex-col">
                             <div className="flex items-center justify-between gap-2">
                               <div className="min-w-0 flex-1">
                                 <span className="text-[10px] text-purple-400 font-bold uppercase block tracking-wider truncate">{snap.label}</span>
-                                <span className="text-[9px] text-slate-400 block font-sans">{new Date(snap.timestamp).toLocaleString('de-DE')}</span>
+                                <span className="text-[9px] text-slate-500 dark:text-slate-400 block font-sans">{new Date(snap.timestamp).toLocaleString('de-DE')}</span>
                               </div>
                               <div className="flex gap-1.5 shrink-0">
                                 <button
@@ -878,7 +878,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                                 <a
                                   href={snap.url}
                                   download={`lagekarte-${selectedOp.id}-step-${sIdx + 1}.jpg`}
-                                  className="p-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-200 transition cursor-pointer"
+                                  className="p-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-200 transition cursor-pointer"
                                   title="Herunterladen"
                                 >
                                   <Download className="w-3.5 h-3.5 text-cyan-400" />
@@ -887,7 +887,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                             </div>
                             <div
                               onClick={() => setSnapshotPreviewModal(snap.url)}
-                              className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-950 aspect-video cursor-pointer group flex items-center justify-center"
+                              className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 aspect-video cursor-pointer group flex items-center justify-center"
                             >
                               <img
                                 src={snap.url}
@@ -900,10 +900,10 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                         ))}
                       </div>
                     ) : (
-                      <div className="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col md:flex-row gap-3.5 items-center">
+                      <div className="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-xl flex flex-col md:flex-row gap-3.5 items-center">
                         <div
                           onClick={() => setSnapshotPreviewModal(selectedOp.mapSnapshotUrl || null)}
-                          className="relative rounded-lg overflow-hidden border border-slate-800 bg-slate-950 w-full md:w-48 aspect-video cursor-pointer group shrink-0"
+                          className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 w-full md:w-48 aspect-video cursor-pointer group shrink-0"
                         >
                           <img
                             src={selectedOp.mapSnapshotUrl}
@@ -913,8 +913,8 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                           />
                         </div>
                         <div className="flex-1 space-y-2 text-center md:text-left">
-                          <span className="text-xs font-bold text-slate-300 block">Abschluss-Screenshot vorhanden</span>
-                          <span className="text-[11px] text-slate-400 block font-sans">Gesichert beim Beenden des Einsatzes</span>
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Abschluss-Screenshot vorhanden</span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-sans">Gesichert beim Beenden des Einsatzes</span>
                           <div className="flex justify-center md:justify-start gap-2">
                             <button
                               type="button"
@@ -927,7 +927,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                             <a
                               href={selectedOp.mapSnapshotUrl}
                               download={`lagekarte-${selectedOp.id}.jpg`}
-                              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                              className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-200 border border-slate-400 dark:border-slate-600 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                             >
                               <Download className="w-3 h-3 text-cyan-400" />
                               <span>Download</span>
@@ -941,12 +941,12 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
                 {/* Sektoren Detail-Tabelle */}
                 <div className="space-y-2">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block font-mono">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block font-mono">
                     Detaillierte Sektoren-Dokumentation:
                   </span>
-                  <div className="border border-slate-700 rounded-xl overflow-hidden bg-slate-900">
+                  <div className="border border-slate-300 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
                     <table className="w-full text-left text-xs font-mono">
-                      <thead className="bg-slate-950 text-slate-400 text-[10px] uppercase font-bold border-b border-slate-700">
+                      <thead className="bg-slate-100 dark:bg-slate-950 text-slate-500 dark:text-slate-400 text-[10px] uppercase font-bold border-b border-slate-300 dark:border-slate-700">
                         <tr>
                           <th className="p-2.5">Sektor</th>
                           <th className="p-2.5">Fläche</th>
@@ -957,16 +957,16 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                       </thead>
                       <tbody className="divide-y divide-slate-700/60">
                         {selectedOp.sectors?.map((s) => (
-                          <tr key={s.id} className="hover:bg-slate-800/50">
+                          <tr key={s.id} className="hover:bg-slate-50 dark:bg-slate-800/50">
                             <td className="p-2.5 font-bold text-white font-sans">{s.name}</td>
-                            <td className="p-2.5 text-slate-400 font-mono">{s.areaHectares || 25} ha</td>
+                            <td className="p-2.5 text-slate-500 dark:text-slate-400 font-mono">{s.areaHectares || 25} ha</td>
                             <td className="p-2.5">
                               <span
                                 className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                   s.status === 'searched'
                                     ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
                                     : s.status === 'in_progress'
-                                    ? 'bg-amber-950 text-amber-300'
+                                    ? 'bg-slate-50 dark:bg-[#0F172A]mber-950 text-amber-300'
                                     : 'bg-blue-950 text-blue-300'
                                 }`}
                               >
@@ -977,13 +977,13 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                                   : 'Offen'}
                               </span>
                             </td>
-                            <td className="p-2.5 text-slate-300 font-sans">
+                            <td className="p-2.5 text-slate-700 dark:text-slate-300 font-sans">
                               {allUsers
                                 .filter((u) => s.assignedUserIds?.includes(u.id))
                                 .map((u) => u.callSign)
                                 .join(', ') || 'Keine'}
                             </td>
-                            <td className="p-2.5 text-slate-400 italic font-sans">
+                            <td className="p-2.5 text-slate-500 dark:text-slate-400 italic font-sans">
                               {s.clearedAt ? `Abgesucht: ${new Date(s.clearedAt).toLocaleTimeString()}` : s.notes || '-'}
                             </td>
                           </tr>
@@ -995,12 +995,12 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
                 {/* Teilnehmerliste / Roster */}
                 <div className="space-y-2">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block font-mono">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block font-mono">
                     Eingesetzte Kräfte & Teilnehmer:
                   </span>
-                  <div className="border border-slate-700 rounded-xl overflow-hidden bg-slate-900">
+                  <div className="border border-slate-300 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
                     <table className="w-full text-left text-xs font-mono">
-                      <thead className="bg-slate-950 text-slate-400 text-[10px] uppercase font-bold border-b border-slate-700">
+                      <thead className="bg-slate-100 dark:bg-slate-950 text-slate-500 dark:text-slate-400 text-[10px] uppercase font-bold border-b border-slate-300 dark:border-slate-700">
                         <tr>
                           <th className="p-2.5">Name (Funkrufname)</th>
                           <th className="p-2.5">Rolle</th>
@@ -1012,11 +1012,11 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                         {participants.map((u) => {
                           const userSectors = selectedOp.sectors?.filter(s => s.assignedUserIds?.includes(u.id)).map(s => s.name).join(', ') || '-';
                           return (
-                            <tr key={u.id} className="hover:bg-slate-800/50">
+                            <tr key={u.id} className="hover:bg-slate-50 dark:bg-slate-800/50">
                               <td className="p-2.5 font-bold text-white font-sans">{u.name} ({u.callSign})</td>
-                              <td className="p-2.5 text-slate-400 font-sans capitalize">{u.role === 'einsatzleitung' || u.role === 'admin' ? 'Einsatzleitung' : 'Suchkraft'}</td>
-                              <td className="p-2.5 text-slate-400 font-sans capitalize">{u.groupId || '-'}</td>
-                              <td className="p-2.5 text-slate-400 font-sans">{userSectors}</td>
+                              <td className="p-2.5 text-slate-500 dark:text-slate-400 font-sans capitalize">{u.role === 'einsatzleitung' || u.role === 'admin' ? 'Einsatzleitung' : 'Suchkraft'}</td>
+                              <td className="p-2.5 text-slate-500 dark:text-slate-400 font-sans capitalize">{u.groupId || '-'}</td>
+                              <td className="p-2.5 text-slate-500 dark:text-slate-400 font-sans">{userSectors}</td>
                             </tr>
                           );
                         })}
@@ -1030,26 +1030,26 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
                 {/* Funde */}
                 <div className="space-y-2">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block font-mono">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block font-mono">
                     Funde und Erkenntnisse:
                   </span>
                   {selectedOp.findings && selectedOp.findings.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {selectedOp.findings.map(f => (
-                        <div key={f.id} className="bg-slate-900 p-3 rounded-xl border border-slate-700">
+                        <div key={f.id} className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-300 dark:border-slate-700">
                           <div className="flex justify-between items-start mb-2">
                             <span className="font-bold text-amber-400 font-sans">{f.title}</span>
                             <span className="text-[10px] text-slate-500 font-mono">{new Date(f.timestamp).toLocaleTimeString()}</span>
                           </div>
-                          <p className="text-xs text-slate-300 mb-2 font-sans">{f.description || 'Keine Details'}</p>
-                          <div className="text-[10px] text-slate-400 font-mono bg-slate-950 p-1.5 rounded inline-block">
+                          <p className="text-xs text-slate-700 dark:text-slate-300 mb-2 font-sans">{f.description || 'Keine Details'}</p>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-950 p-1.5 rounded inline-block">
                             Verbleib: {f.status === 'verified' ? '✅ Gesichert' : f.status === 'pending' ? '🔍 In Untersuchung' : 'Gemeldet'}
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="bg-slate-900 p-3 rounded-xl border border-slate-700 text-slate-500 italic text-center text-xs">
+                    <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-500 italic text-center text-xs">
                       Keine Funde dokumentiert.
                     </div>
                   )}
@@ -1057,26 +1057,26 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
                 {/* Chatverlauf */}
                 <div className="space-y-2">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block font-mono">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block font-mono">
                     Funk- und Chatprotokoll:
                   </span>
-                  <div className="bg-slate-900 rounded-xl border border-slate-700 overflow-hidden max-h-96 overflow-y-auto">
+                  <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-300 dark:border-slate-700 overflow-hidden max-h-96 overflow-y-auto">
                     {selectedOp.archivedChatMessages && selectedOp.archivedChatMessages.length > 0 ? (
                       <div className="divide-y divide-slate-700/50">
                         {selectedOp.archivedChatMessages.map(msg => {
                           const sender = allUsers.find(u => u.id === msg.senderId);
                           return (
-                            <div key={msg.id} className="p-3 hover:bg-slate-800/30">
+                            <div key={msg.id} className="p-3 hover:bg-slate-50 dark:bg-slate-800/30">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="text-[10px] text-slate-500 font-mono">{new Date(msg.timestamp).toLocaleString()}</span>
                                 <span className={`text-[11px] font-bold ${msg.isAlert ? 'text-red-400' : 'text-blue-400'}`}>
                                   {sender ? `${sender.name} (${sender.callSign})` : 'System'}
                                 </span>
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 uppercase">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700 uppercase">
                                   {msg.channel}
                                 </span>
                               </div>
-                              <p className={`text-xs ${msg.isAlert ? 'text-red-300 font-bold' : 'text-slate-300'}`}>{msg.text}</p>
+                              <p className={`text-xs ${msg.isAlert ? 'text-red-300 font-bold' : 'text-slate-700 dark:text-slate-300'}`}>{msg.text}</p>
                             </div>
                           );
                         })}
@@ -1090,13 +1090,13 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                 </div>
 
                 {/* Quick Protocol Banner in Report */}
-                <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex items-center justify-between font-mono">
+                <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-300 dark:border-slate-700 flex items-center justify-between font-mono">
                   <div>
                     <div className="font-bold text-white flex items-center gap-2">
                       <FileText className="w-4 h-4 text-blue-400" />
                       <span>Einsatztagebuch & Chronologie ({selectedOp.logs?.length || 0} Einträge)</span>
                     </div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                       Vollständige lückenlose Dokumentation aller Ereignisse, Funksprüche und Reaktivierungen
                     </div>
                   </div>
@@ -1111,11 +1111,11 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
                 {/* Notes & Commander Signoff */}
                 {selectedOp.notes && (
-                  <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 font-mono">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-300 dark:border-slate-700 font-mono">
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
                       ABSCHLUSSVERMERK DER EINSATZLEITUNG:
                     </span>
-                    <p className="text-xs text-slate-200 italic leading-relaxed font-sans">{selectedOp.notes}</p>
+                    <p className="text-xs text-slate-900 dark:text-slate-200 italic leading-relaxed font-sans">{selectedOp.notes}</p>
                   </div>
                 )}
               </div>
@@ -1125,22 +1125,22 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
             {activeSubTab === 'protocol' && (
               <div className="space-y-4">
                 {/* Protocol Filter & Action Toolbar */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-900 p-3.5 rounded-xl border border-slate-700 font-mono text-xs">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700 font-mono text-xs">
                   <div className="flex items-center gap-2 flex-1">
                     <div className="relative flex-1">
-                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Search className="w-4 h-4 text-slate-500 dark:text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
                         value={protocolSearch}
                         onChange={(e) => setProtocolSearch(e.target.value)}
                         placeholder="Im Protokoll suchen..."
-                        className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+                        className="w-full pl-9 pr-3 py-2 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
                       />
                     </div>
                     {protocolSearch && (
                       <button
                         onClick={() => setProtocolSearch('')}
-                        className="p-2 text-slate-400 hover:text-white"
+                        className="p-2 text-slate-500 dark:text-slate-400 hover:text-white"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -1150,7 +1150,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       onClick={handleCopyProtocol}
-                      className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition flex items-center gap-1.5 cursor-pointer text-xs font-mono"
+                      className="px-3 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-200 rounded-xl border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 cursor-pointer text-xs font-mono"
                       title="Chronologisches Protokoll in Zwischenablage kopieren"
                     >
                       {copiedProtocol ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -1179,7 +1179,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                     <button
                       onClick={handlePrint}
                       disabled={isExportingPdf}
-                      className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-blue-300 rounded-xl border border-slate-700 transition flex items-center gap-1.5 cursor-pointer text-xs font-mono"
+                      className="px-3 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-blue-300 rounded-xl border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 cursor-pointer text-xs font-mono"
                       title="Offizielles Behördenprotokoll als PDF drucken / speichern"
                     >
                       {isExportingPdf ? (
@@ -1204,7 +1204,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
                 {/* Category Filter Pills */}
                 <div className="flex flex-wrap items-center gap-1.5 font-mono text-[11px]">
-                  <span className="text-slate-400 uppercase text-[10px] font-bold mr-1">Filter:</span>
+                  <span className="text-slate-500 dark:text-slate-400 uppercase text-[10px] font-bold mr-1">Filter:</span>
                   {[
                     { id: 'all', label: 'Alle' },
                     { id: 'status', label: 'Status & Reaktivierung' },
@@ -1220,7 +1220,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                       className={`px-2.5 py-1 rounded-lg border transition cursor-pointer ${
                         protocolCategoryFilter === cat.id
                           ? 'bg-blue-600 border-blue-500 text-white font-bold'
-                          : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'
+                          : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-white'
                       }`}
                     >
                       {cat.label}
@@ -1231,19 +1231,19 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                 {/* Protocol Timeline Entries */}
                 <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
                   {filteredLogs.length === 0 ? (
-                    <div className="p-8 text-center text-slate-500 font-mono text-xs bg-slate-900 rounded-xl border border-slate-800">
+                    <div className="p-8 text-center text-slate-500 font-mono text-xs bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
                       Keine Protokolleinträge für diese Filterung gefunden.
                     </div>
                   ) : (
                     filteredLogs.map((log) => {
                       const categoryColors: Record<string, string> = {
                         status: 'border-blue-500 bg-blue-950/40 text-blue-300',
-                        finding: 'border-amber-500 bg-amber-950/40 text-amber-300',
+                        finding: 'border-amber-500 bg-slate-50 dark:bg-[#0F172A]mber-950/40 text-amber-300',
                         sector: 'border-emerald-500 bg-emerald-950/40 text-emerald-300',
                         member: 'border-purple-500 bg-purple-950/40 text-purple-300',
                         radio: 'border-cyan-500 bg-cyan-950/40 text-cyan-300',
                         end: 'border-red-500 bg-red-950/40 text-red-300',
-                        general: 'border-slate-600 bg-slate-900 text-slate-300',
+                        general: 'border-slate-400 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300',
                       };
 
                       const categoryBadges: Record<string, string> = {
@@ -1259,7 +1259,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                       return (
                         <div
                           key={log.id}
-                          className="bg-slate-900/90 border border-slate-700 rounded-xl p-3.5 space-y-1.5 shadow"
+                          className="bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700 rounded-xl p-3.5 space-y-1.5 shadow"
                         >
                           <div className="flex items-center justify-between text-xs font-mono">
                             <div className="flex items-center gap-2">
@@ -1271,32 +1271,32 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                                 {categoryBadges[log.category] || log.category.toUpperCase()}
                               </span>
                               <span className="font-bold text-white font-sans">{log.authorName}</span>
-                              <span className="text-[10px] text-slate-400 font-mono">({log.authorRole})</span>
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">({log.authorRole})</span>
                             </div>
-                            <span className="text-slate-400 text-[11px] flex items-center gap-1 font-mono">
+                            <span className="text-slate-500 dark:text-slate-400 text-[11px] flex items-center gap-1 font-mono">
                               <Clock className="w-3 h-3 text-slate-500" />
                               {new Date(log.timestamp).toLocaleString()}
                             </span>
                           </div>
 
-                          <p className="text-xs text-slate-200 leading-relaxed font-sans pl-1 border-l-2 border-slate-700">
+                          <p className="text-xs text-slate-900 dark:text-slate-200 leading-relaxed font-sans pl-1 border-l-2 border-slate-300 dark:border-slate-700">
                             {log.text}
                           </p>
 
                           {log.snapshotUrl && (
-                            <div className="mt-2.5 p-2.5 bg-slate-950/80 rounded-xl border border-purple-500/30 flex items-center gap-3">
+                            <div className="mt-2.5 p-2.5 bg-slate-100 dark:bg-slate-950/80 rounded-xl border border-purple-500/30 flex items-center gap-3">
                               <img
                                 src={log.snapshotUrl}
                                 alt="Lagekarten-Snapshot"
                                 onClick={() => setSnapshotPreviewModal(log.snapshotUrl || null)}
-                                className="h-14 w-24 object-cover rounded-lg border border-slate-800 cursor-pointer shrink-0 hover:opacity-90"
+                                className="h-14 w-24 object-cover rounded-lg border border-slate-200 dark:border-slate-800 cursor-pointer shrink-0 hover:opacity-90"
                               />
                               <div className="space-y-1 flex-1">
                                 <div className="text-xs font-bold text-purple-300 font-mono flex items-center gap-1.5">
                                   <Camera className="w-3.5 h-3.5" />
                                   <span>Lagekarten-Snapshot gesichert</span>
                                 </div>
-                                <p className="text-[10px] text-slate-400 font-sans">
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-sans">
                                   Momentaufnahme aller Suchspuren, Sektoren und Funde zu diesem Zeitpunkt.
                                 </p>
                                 <button
@@ -1320,8 +1320,8 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
             {/* SubTab 3: Lagekarten Replay (With preserved sectors, green search markers & tracks) */}
             {activeSubTab === 'map' && (
               <div className="space-y-3">
-                <div className="p-3 bg-slate-900 rounded-xl border border-slate-700 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 text-xs font-mono">
-                  <span className="text-slate-300">
+                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-300 dark:border-slate-700 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 text-xs font-mono">
+                  <span className="text-slate-700 dark:text-slate-300">
                     🗺️ <strong>Archivierte Lagekarte:</strong> Sektoren, dokumentierte Suchspuren & Fundstellen dieses Einsatzes.
                   </span>
                   <div className="flex items-center gap-2">
@@ -1329,7 +1329,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                       <a
                         href={selectedOp.mapSnapshotUrl}
                         download={`lagekarte-${selectedOp.id}.jpg`}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 rounded-lg font-bold text-[10px] uppercase transition cursor-pointer flex items-center gap-1"
+                        className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-200 border border-slate-400 dark:border-slate-600 rounded-lg font-bold text-[10px] uppercase transition cursor-pointer flex items-center gap-1"
                       >
                         <Download className="w-3 h-3 text-cyan-400" />
                         <span>Snapshot JPEG</span>
@@ -1348,7 +1348,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
                 {/* If a snapshot was saved on completion, offer quick preview */}
                 {selectedOp.mapSnapshotUrl && (
-                  <div className="bg-slate-900/90 p-3 rounded-xl border border-purple-500/30 flex items-center justify-between gap-3 text-xs font-mono">
+                  <div className="bg-white dark:bg-slate-900/90 p-3 rounded-xl border border-purple-500/30 flex items-center justify-between gap-3 text-xs font-mono">
                     <div className="flex items-center gap-2 text-purple-300">
                       <Camera className="w-4 h-4 shrink-0" />
                       <span>Gespeicherter Lagekarten-Screenshot zum Einsatzabschluss verfügbar</span>
@@ -1364,7 +1364,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                   </div>
                 )}
 
-                <div className="h-[520px] rounded-xl overflow-hidden border border-slate-700 shadow-xl">
+                <div className="h-[520px] rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 shadow-xl">
                   <TacticalMap operation={selectedOp} mode="archive" />
                 </div>
               </div>
@@ -1380,11 +1380,11 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                     {selectedOp.findings?.map((f) => (
                       <div
                         key={f.id}
-                        className="bg-slate-900 p-3.5 rounded-xl border border-slate-700 space-y-2 shadow flex flex-col justify-between"
+                        className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700 space-y-2 shadow flex flex-col justify-between"
                       >
                         <div>
                           {f.mediaUrl && f.mediaUrl.trim() !== '' && (
-                            <div className="h-32 w-full rounded-lg overflow-hidden border border-slate-700 mb-2 bg-black">
+                            <div className="h-32 w-full rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 mb-2 bg-black">
                               <img src={f.mediaUrl} alt={f.title} className="h-full w-full object-cover" />
                             </div>
                           )}
@@ -1392,16 +1392,16 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                             <h4 className="font-bold text-white text-xs font-sans">{f.title}</h4>
                             <span
                               className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                                f.verified ? 'bg-emerald-950 text-emerald-300' : 'bg-amber-950 text-amber-300'
+                                f.verified ? 'bg-emerald-950 text-emerald-300' : 'bg-slate-50 dark:bg-[#0F172A]mber-950 text-amber-300'
                               }`}
                             >
                               {f.verified ? '✓ Verifiziert' : 'In Prüfung'}
                             </span>
                           </div>
-                          <p className="text-[11px] text-slate-300 mt-1 leading-snug font-sans">{f.description}</p>
+                          <p className="text-[11px] text-slate-700 dark:text-slate-300 mt-1 leading-snug font-sans">{f.description}</p>
                         </div>
 
-                        <div className="pt-2 border-t border-slate-700/80 flex items-center justify-between text-[10px] text-slate-400">
+                        <div className="pt-2 border-t border-slate-300 dark:border-slate-700/80 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
                           <span>
                             Von: {f.userName} ({f.userCallSign})
                           </span>
@@ -1419,15 +1419,15 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
             {/* SubTab 5: Responders Roster (Teilnehmerliste & Stärkenachweis) */}
             {activeSubTab === 'roster' && (
               <div className="space-y-4 text-xs font-mono">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700 pb-2">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-300 dark:border-slate-700 pb-2">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
                     Stärkenachweis & Teilnehmerliste der eingesetzten Kräfte:
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="px-2.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[11px] font-bold">
                       Stärke: {totalRespondersCount} Gesamt
                     </span>
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
                       ({participants.length} App-registriert, {externalVolunteersCount} externe Helfer)
                     </span>
                   </div>
@@ -1438,9 +1438,9 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                   <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider block">
                     App-Registrierte Einsatzkräfte ({participants.length}):
                   </span>
-                  <div className="border border-slate-700 rounded-xl overflow-hidden bg-slate-900">
+                  <div className="border border-slate-300 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-900">
                     <table className="w-full text-left">
-                      <thead className="bg-slate-950 text-slate-400 text-[10px] uppercase font-bold border-b border-slate-700">
+                      <thead className="bg-slate-100 dark:bg-slate-950 text-slate-500 dark:text-slate-400 text-[10px] uppercase font-bold border-b border-slate-300 dark:border-slate-700">
                         <tr>
                           <th className="p-2.5">Name</th>
                           <th className="p-2.5">Funkrufname</th>
@@ -1458,13 +1458,13 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                           </tr>
                         ) : (
                           participants.map((u) => (
-                            <tr key={u.id} className="hover:bg-slate-800/50 font-sans">
+                            <tr key={u.id} className="hover:bg-slate-50 dark:bg-slate-800/50 font-sans">
                               <td className="p-2.5 font-bold text-white flex items-center gap-2">
-                                <div className="h-6 w-6 rounded-lg overflow-hidden bg-slate-800 border border-slate-700 shrink-0 flex items-center justify-center">
+                                <div className="h-6 w-6 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shrink-0 flex items-center justify-center">
                                   {u.photoUrl && u.photoUrl.trim() !== '' ? (
                                     <img src={u.photoUrl} alt={u.name} className="h-full w-full object-cover" />
                                   ) : (
-                                    <span className="text-[10px] font-bold text-slate-300 uppercase">
+                                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase">
                                       {u.name.charAt(0)}
                                     </span>
                                   )}
@@ -1472,9 +1472,9 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                                 <span>{u.name}</span>
                               </td>
                               <td className="p-2.5 text-blue-400 font-mono font-semibold">{u.callSign}</td>
-                              <td className="p-2.5 font-mono text-slate-300">{u.licensePlate || '-'}</td>
-                              <td className="p-2.5 text-slate-400">{u.organization || '-'}</td>
-                              <td className="p-2.5 text-slate-300 font-mono text-[11px]">
+                              <td className="p-2.5 font-mono text-slate-700 dark:text-slate-300">{u.licensePlate || '-'}</td>
+                              <td className="p-2.5 text-slate-500 dark:text-slate-400">{u.organization || '-'}</td>
+                              <td className="p-2.5 text-slate-700 dark:text-slate-300 font-mono text-[11px]">
                                 {u.role === 'admin' ? '🛡️ Einsatzleiter' : '🚶 Suchkraft'} •{' '}
                                 {u.isActive ? '🟢 Aktiv' : '⚪ Inaktiv'}
                               </td>
@@ -1488,7 +1488,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
                 {/* Externe Helfer & Freiwillige ohne App */}
                 {(externalVolunteersCount > 0 || (selectedOp.externalVolunteersNotes && selectedOp.externalVolunteersNotes.trim() !== '')) && (
-                  <div className="bg-slate-900/90 p-4 rounded-xl border border-amber-500/40 space-y-2">
+                  <div className="bg-white dark:bg-slate-900/90 p-4 rounded-xl border border-amber-500/40 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-amber-300 font-bold">
                         <Users className="w-4 h-4" />
@@ -1496,15 +1496,15 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                           Freiwillige Helfer & Externe Organisationen (ohne App-Zugang)
                         </span>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-amber-950 border border-amber-800 text-amber-300 text-xs font-bold">
+                      <span className="px-2 py-0.5 rounded bg-slate-50 dark:bg-[#0F172A]mber-950 border border-amber-800 text-amber-300 text-xs font-bold">
                         {externalVolunteersCount} Helfer
                       </span>
                     </div>
-                    <div className="text-xs text-slate-300 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                    <div className="text-xs text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
                       <strong>Dokumentierte Zuordnung / Gruppen:</strong>{' '}
                       {selectedOp.externalVolunteersNotes || 'Keine detaillierte Gruppenaufteilung hinterlegt'}
                     </div>
-                    <p className="text-[10px] text-slate-400 italic">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 italic">
                       ✓ Diese Helfer fließen in die Gesamteinsatzstärke und das Protokoll ein, ohne die digitale App-Nutzerliste zu verfälschen.
                     </p>
                   </div>
@@ -1515,8 +1515,8 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
             {/* SubTab 6: Funk & Chatverlauf (Archived Radio / Direct Protocol) */}
             {activeSubTab === 'chat' && (
               <div className="space-y-4 text-xs font-mono">
-                <div className="p-3 bg-slate-900 rounded-xl border border-slate-700 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-slate-300">
+                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-300 dark:border-slate-700 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                     <Radio className="w-4 h-4 text-blue-400" />
                     <span>Archivierter Funk- und Einsatz-Chat ({selectedOp.archivedChatMessages?.length || 0} Meldungen)</span>
                   </div>
@@ -1524,7 +1524,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                 </div>
 
                 {!selectedOp.archivedChatMessages || selectedOp.archivedChatMessages.length === 0 ? (
-                  <div className="p-12 text-center text-slate-500 bg-slate-900/40 rounded-xl border border-slate-800">
+                  <div className="p-12 text-center text-slate-500 bg-white dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-800">
                     Für diesen Einsatz wurden keine gesonderten Chat-Nachrichten im Archiv erfasst.
                   </div>
                 ) : (
@@ -1534,15 +1534,15 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                         key={msg.id}
                         className={`p-3 rounded-xl border transition ${
                           msg.isAlert
-                            ? 'bg-amber-950/30 border-amber-500/50'
-                            : 'bg-slate-900 border-slate-700/80'
+                            ? 'bg-slate-50 dark:bg-[#0F172A]mber-950/30 border-amber-500/50'
+                            : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700/80'
                         }`}
                       >
                         <div className="flex items-center justify-between text-[11px] mb-1">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-cyan-300 font-mono">{msg.senderName}</span>
-                            <span className="text-slate-400 font-mono text-[10px]">({msg.senderCallSign})</span>
-                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 border border-slate-700 text-slate-300 uppercase">
+                            <span className="text-slate-500 dark:text-slate-400 font-mono text-[10px]">({msg.senderCallSign})</span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 uppercase">
                               {msg.channel}
                             </span>
                           </div>
@@ -1550,7 +1550,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                             {new Date(msg.timestamp).toLocaleString()}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-200 font-sans leading-relaxed pl-1">{msg.text}</p>
+                        <p className="text-xs text-slate-900 dark:text-slate-200 font-sans leading-relaxed pl-1">{msg.text}</p>
                       </div>
                     ))}
                   </div>
@@ -1565,7 +1565,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
       {operationToReactivate && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[5000] flex items-center justify-center p-4">
           <div className="bg-[#1E293B] border-2 border-emerald-500/70 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-2rem)] animate-in fade-in zoom-in-95 font-sans">
-            <div className="p-6 flex items-start justify-between gap-3 border-b border-slate-700/50">
+            <div className="p-6 flex items-start justify-between gap-3 border-b border-slate-300 dark:border-slate-700/50">
               <div className="flex items-center gap-2.5 text-emerald-400">
                 <div className="p-2 rounded-xl bg-emerald-950/80 border border-emerald-800/80">
                   <RotateCcw className="w-5 h-5 text-emerald-400" />
@@ -1581,7 +1581,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
               </div>
               <button
                 onClick={() => setOperationToReactivate(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+                className="text-slate-500 dark:text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-50 dark:bg-slate-800 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1589,14 +1589,14 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
             <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-5 custom-scrollbar">
               {/* Target Operation Info Box */}
-              <div className="p-3.5 bg-slate-900/90 rounded-xl border border-slate-700 text-xs font-mono space-y-1.5">
+              <div className="p-3.5 bg-white dark:bg-slate-900/90 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-mono space-y-1.5">
                 <div className="text-white font-bold font-sans text-sm flex items-center justify-between">
                   <span>{operationToReactivate.title}</span>
                   <span className="text-emerald-400 text-xs">
                     {operationToReactivate.sectors?.filter((s) => s.status === 'searched').length || 0} Sektoren bereits abgesucht
                   </span>
                 </div>
-                <div className="text-slate-400 text-[11px]">
+                <div className="text-slate-500 dark:text-slate-400 text-[11px]">
                   Vermisst: {operationToReactivate.missingPerson?.name || 'Unbekannt'} • Ursprungs-Einsatzleiter:{' '}
                   {operationToReactivate.commander}
                 </div>
@@ -1605,7 +1605,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
               <div className="space-y-4 text-xs">
                 {/* Field 1: Phase Title */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-300 font-mono uppercase mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 font-mono uppercase mb-1">
                     Bezeichnung der neuen Suchphase:
                   </label>
                   <input
@@ -1613,13 +1613,13 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                     value={reactivatePhaseTitle}
                     onChange={(e) => setReactivatePhaseTitle(e.target.value)}
                     placeholder="z.B. Suchphase 2 – Erweiterte Nachsuche"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-sans text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-white font-sans text-xs focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
                 {/* Field 2: Commander */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-300 font-mono uppercase mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 font-mono uppercase mb-1">
                     Einsatzleitung für diese Suchphase:
                   </label>
                   <input
@@ -1627,18 +1627,18 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                     value={reactivateCommander}
                     onChange={(e) => setReactivateCommander(e.target.value)}
                     placeholder="Name der Einsatzleitung"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-sans text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-white font-sans text-xs focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
                 {/* Field 3: Responder Selection (Kräfteauswahl) */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-[11px] font-bold text-slate-300 font-mono uppercase">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 font-mono uppercase">
                       Einsatzkräfte aktivieren (Nur Online-Nutzer anzeigen):
                     </label>
                   </div>
-                  <div className="max-h-40 overflow-y-auto bg-slate-950 border border-slate-700 rounded-xl p-2 space-y-1.5 font-mono text-[11px] custom-scrollbar">
+                  <div className="max-h-40 overflow-y-auto bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-2 space-y-1.5 font-mono text-[11px] custom-scrollbar">
                     {(() => {
                       const onlineUsers = allUsers.filter(u => u.isActive);
                       if (onlineUsers.length === 0) {
@@ -1654,7 +1654,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                         return (
                           <label
                             key={u.id}
-                            className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-900 cursor-pointer text-slate-200"
+                            className="flex items-center justify-between p-1.5 rounded-lg hover:bg-white dark:bg-slate-900 cursor-pointer text-slate-900 dark:text-slate-200"
                           >
                             <div className="flex items-center gap-2">
                               <input
@@ -1672,7 +1672,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                               <span className="font-sans font-medium text-white">{u.name}</span>
                               <span className="text-blue-400 text-[10px]">({u.callSign})</span>
                             </div>
-                            <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                            <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
                               {u.role === 'admin' ? 'Leitung' : u.role === 'einsatzleitung' ? 'EL' : u.equipment?.join(', ') || 'Sucher'}
                             </span>
                           </label>
@@ -1683,8 +1683,8 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                 </div>
 
                 {/* Toggles */}
-                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5 font-mono text-xs">
-                  <label className="flex items-center gap-2 text-slate-200 cursor-pointer">
+                <div className="bg-slate-100 dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5 font-mono text-xs">
+                  <label className="flex items-center gap-2 text-slate-900 dark:text-slate-200 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={keepSearchedSectors}
@@ -1694,7 +1694,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                     <span>✅ Bereits abgesuchte Sektoren (Grün) als erledigt beibehalten</span>
                   </label>
 
-                  <label className="flex items-center gap-2 text-slate-200 cursor-pointer">
+                  <label className="flex items-center gap-2 text-slate-900 dark:text-slate-200 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={preserveTracks}
@@ -1704,7 +1704,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                     <span>🏛️ Bisherige GPS-Suchspuren der 1. Phase als Referenzpfade auf Karte behalten</span>
                   </label>
 
-                  <label className="flex items-center gap-2 text-slate-200 cursor-pointer">
+                  <label className="flex items-center gap-2 text-slate-900 dark:text-slate-200 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={autoOpenMap}
@@ -1717,24 +1717,24 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
                 {/* Notes */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-300 font-mono uppercase mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 font-mono uppercase mb-1">
                     Einsatzbefehl / Taktische Hinweise:
                   </label>
                   <textarea
                     value={reactivateNotes}
                     onChange={(e) => setReactivateNotes(e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-sans text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-white font-sans text-xs focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="p-6 border-t border-slate-700 flex flex-col sm:flex-row items-center justify-end gap-2 font-mono text-xs font-bold bg-slate-900/50">
+            <div className="p-6 border-t border-slate-300 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-end gap-2 font-mono text-xs font-bold bg-white dark:bg-slate-900/50">
               <button
                 onClick={() => setOperationToReactivate(null)}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 uppercase tracking-wider cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 uppercase tracking-wider cursor-pointer"
               >
                 Abbrechen
               </button>
@@ -1753,14 +1753,14 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
       {/* ADD LOG ENTRY MODAL */}
       {showAddLogModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[5000] flex items-center justify-center p-4">
-          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh] font-sans animate-in fade-in zoom-in-95">
-            <div className="p-5 flex items-center justify-between border-b border-slate-700">
+          <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh] font-sans animate-in fade-in zoom-in-95">
+            <div className="p-5 flex items-center justify-between border-b border-slate-300 dark:border-slate-700">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
                 Eintrag ins Einsatztagebuch
               </h3>
               <button
                 onClick={() => setShowAddLogModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                className="text-slate-500 dark:text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-50 dark:bg-slate-800 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1768,11 +1768,11 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
             <div className="p-5 flex-1 overflow-y-auto space-y-4 text-xs font-mono custom-scrollbar">
               <div>
-                <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Kategorie:</label>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Kategorie:</label>
                 <select
                   value={newLogCategory}
                   onChange={(e) => setNewLogCategory(e.target.value as OperationLogEntry['category'])}
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
+                  className="w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-white text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
                 >
                   <option value="general">Allgemeine Lage</option>
                   <option value="status">Status & Führung</option>
@@ -1784,21 +1784,21 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">Ereignistext:</label>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Ereignistext:</label>
                 <textarea
                   value={newLogText}
                   onChange={(e) => setNewLogText(e.target.value)}
                   rows={5}
                   placeholder="Detaillierten Eintrag eingeben..."
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-sans text-xs focus:outline-none focus:border-blue-500 min-h-[120px]"
+                  className="w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-white font-sans text-xs focus:outline-none focus:border-blue-500 min-h-[120px]"
                 />
               </div>
             </div>
 
-            <div className="p-5 pt-3 border-t border-slate-700 flex justify-end gap-2 font-mono text-xs font-bold bg-slate-900/50">
+            <div className="p-5 pt-3 border-t border-slate-300 dark:border-slate-700 flex justify-end gap-2 font-mono text-xs font-bold bg-white dark:bg-slate-900/50">
               <button
                 onClick={() => setShowAddLogModal(false)}
-                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 cursor-pointer transition"
+                className="px-5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 cursor-pointer transition"
               >
                 Abbrechen
               </button>
@@ -1832,33 +1832,33 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
               </div>
               <button
                 onClick={() => setOperationToDelete(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+                className="text-slate-500 dark:text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-50 dark:bg-slate-800 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-3.5 bg-slate-900/90 rounded-xl border border-slate-700 text-xs font-mono space-y-2">
+            <div className="p-3.5 bg-white dark:bg-slate-900/90 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-mono space-y-2">
               <div className="text-white font-bold font-sans text-sm">{operationToDelete.title}</div>
-              <div className="text-slate-400 text-[11px]">
+              <div className="text-slate-500 dark:text-slate-400 text-[11px]">
                 Erstellt: {new Date(operationToDelete.createdAt).toLocaleDateString()} • {operationToDelete.commander}
               </div>
-              <div className="text-slate-400 text-[11px] pt-1 border-t border-slate-800 flex justify-between">
+              <div className="text-slate-500 dark:text-slate-400 text-[11px] pt-1 border-t border-slate-200 dark:border-slate-800 flex justify-between">
                 <span>{operationToDelete.sectors?.length || 0} Sektoren</span>
                 <span>{operationToDelete.findings?.length || 0} Funde</span>
                 <span>{operationToDelete.logs?.length || 0} Log-Einträge</span>
               </div>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed font-sans">
+            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
               Möchten Sie diesen Einsatz wirklich vollständig löschen? Alle zugehörigen Sektoren, Lagekarten-Pfade,
               Fundmeldungen und Einsatztagebücher werden auch aus der Einsatz-Cloud entfernt.
             </p>
 
-            <div className="pt-2 border-t border-slate-700/80 flex items-center justify-end gap-2 font-mono text-xs font-bold">
+            <div className="pt-2 border-t border-slate-300 dark:border-slate-700/80 flex items-center justify-end gap-2 font-mono text-xs font-bold">
               <button
                 onClick={() => setOperationToDelete(null)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 uppercase tracking-wider cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 uppercase tracking-wider cursor-pointer"
               >
                 Abbrechen
               </button>
@@ -1877,8 +1877,8 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
       {/* Print & PDF Export Options Dialog */}
       {showPrintOptions && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[5200] flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-slate-900 border border-slate-700 max-w-lg w-full rounded-2xl shadow-2xl p-6 space-y-6 font-mono text-xs">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 max-w-lg w-full rounded-2xl shadow-2xl p-6 space-y-6 font-mono text-xs">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <span className="text-sm font-bold text-white flex items-center gap-2">
                 <Printer className="w-5 h-5 text-blue-400 animate-pulse" />
                 <span>Bericht drucken & PDF exportieren</span>
@@ -1886,26 +1886,26 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
               <button
                 type="button"
                 onClick={() => setShowPrintOptions(false)}
-                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition cursor-pointer"
+                className="p-1.5 hover:bg-slate-50 dark:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 hover:text-white transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-slate-300 leading-relaxed font-sans">
+            <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
               Wähle die gewünschte Export- und Druckoption für den behördlichen Einsatzbericht.
             </p>
 
             <div className="space-y-4 font-sans text-[11px]">
               {/* Option 1: System Print (Recommended) */}
-              <div className="bg-slate-950/80 border border-blue-500/30 p-4 rounded-xl space-y-3 flex flex-col justify-between hover:border-blue-500/60 transition">
+              <div className="bg-slate-100 dark:bg-slate-950/80 border border-blue-500/30 p-4 rounded-xl space-y-3 flex flex-col justify-between hover:border-blue-500/60 transition">
                 <div className="flex items-start gap-3">
                   <div className="p-2.5 bg-blue-950/60 border border-blue-800 rounded-xl text-blue-400 shrink-0">
                     <Printer className="w-5 h-5" />
                   </div>
                   <div className="space-y-1">
                     <h4 className="font-bold text-white text-xs">System-Drucker & Native PDF (Empfohlen)</h4>
-                    <p className="text-slate-400 leading-normal">
+                    <p className="text-slate-500 dark:text-slate-400 leading-normal">
                       Öffnet den nativen Druckdialog. Erzeugt eine fehlerfreie, vektorscharfe PDF-Datei.
                       <strong> Die Karten-Screenshots werden vollflächig auf A4 skaliert und nicht zerschnitten.</strong>
                     </p>
@@ -1926,14 +1926,14 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
               </div>
 
               {/* Option 2: Live Screen Preview */}
-              <div className="bg-slate-950/80 border border-purple-500/30 p-4 rounded-xl space-y-3 flex flex-col justify-between hover:border-purple-500/60 transition">
+              <div className="bg-slate-100 dark:bg-slate-950/80 border border-purple-500/30 p-4 rounded-xl space-y-3 flex flex-col justify-between hover:border-purple-500/60 transition">
                 <div className="flex items-start gap-3">
                   <div className="p-2.5 bg-purple-950/60 border border-purple-800 rounded-xl text-purple-400 shrink-0">
                     <Eye className="w-5 h-5" />
                   </div>
                   <div className="space-y-1">
                     <h4 className="font-bold text-white text-xs">Druckvorschau auf dem Bildschirm</h4>
-                    <p className="text-slate-400 leading-normal">
+                    <p className="text-slate-500 dark:text-slate-400 leading-normal">
                       Aktiviert eine originalgetreue, hochauflösende DIN-A4-Papier-Vorschau des Einsatzberichts inklusive aller Karten direkt hier im Browser.
                     </p>
                   </div>
@@ -1957,14 +1957,14 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
               </div>
 
               {/* Option 3: Direct Download */}
-              <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-xl space-y-3 flex flex-col justify-between hover:border-slate-700 transition">
+              <div className="bg-slate-100 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 p-4 rounded-xl space-y-3 flex flex-col justify-between hover:border-slate-300 dark:border-slate-700 transition">
                 <div className="flex items-start gap-3">
-                  <div className="p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-slate-400 shrink-0">
+                  <div className="p-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 shrink-0">
                     <Download className="w-5 h-5" />
                   </div>
                   <div className="space-y-1">
-                    <h4 className="font-bold text-slate-300 text-xs">Direkter PDF-Download (Bild-Abbild)</h4>
-                    <p className="text-slate-400 leading-normal">
+                    <h4 className="font-bold text-slate-700 dark:text-slate-300 text-xs">Direkter PDF-Download (Bild-Abbild)</h4>
+                    <p className="text-slate-500 dark:text-slate-400 leading-normal">
                       Erzeugt im Hintergrund ein Abbild des gesamten Protokolls und lädt es direkt auf dein Gerät herunter.
                     </p>
                   </div>
@@ -1976,7 +1976,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                       handleDirectPdfDownload();
                     }}
                     disabled={isExportingPdf}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 rounded-xl font-bold font-mono text-xs cursor-pointer flex items-center gap-1.5 transition"
+                    className="px-4 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 disabled:opacity-40 text-slate-900 dark:text-slate-200 rounded-xl font-bold font-mono text-xs cursor-pointer flex items-center gap-1.5 transition"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>{isExportingPdf ? 'Erzeuge PDF...' : 'Download starten'}</span>
@@ -2016,7 +2016,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
               href={snapshotPreviewModal}
               download="lagekarte-snapshot.jpg"
               onClick={(e) => e.stopPropagation()}
-              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-mono font-bold border border-slate-600 flex items-center gap-1.5 cursor-pointer shadow-xl"
+              className="px-3 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-white rounded-xl text-xs font-mono font-bold border border-slate-400 dark:border-slate-600 flex items-center gap-1.5 cursor-pointer shadow-xl"
             >
               <Download className="w-4 h-4 text-cyan-400" />
               <span>Herunterladen</span>
@@ -2024,22 +2024,22 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
             <button
               type="button"
               onClick={() => setSnapshotPreviewModal(null)}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 cursor-pointer shadow-xl"
+              className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-white border border-slate-400 dark:border-slate-600 cursor-pointer shadow-xl"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           <div
-            className="max-w-5xl max-h-[88vh] rounded-2xl overflow-hidden shadow-2xl border border-slate-700 bg-slate-950 flex flex-col items-center"
+            className="max-w-5xl max-h-[88vh] rounded-2xl overflow-hidden shadow-2xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-950 flex flex-col items-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-full bg-slate-900 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between text-xs font-mono">
+            <div className="w-full bg-white dark:bg-slate-900 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs font-mono">
               <span className="text-purple-300 font-bold flex items-center gap-2">
                 <Camera className="w-4 h-4" />
                 <span>Gespeicherter Lagekarten-Screenshot (Abschluss)</span>
               </span>
-              <span className="text-slate-400">Originalauflösung</span>
+              <span className="text-slate-500 dark:text-slate-400">Originalauflösung</span>
             </div>
             <img
               src={snapshotPreviewModal}

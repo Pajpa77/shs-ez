@@ -246,18 +246,18 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
   // Explicit admin/EL guard clause
   if (currentUser?.role !== 'admin' && currentUser?.role !== 'einsatzleitung') {
     return (
-      <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-        <div className="bg-[#1E293B] border border-red-500/50 rounded-2xl p-6 max-w-md text-center space-y-4 shadow-2xl text-slate-100">
+      <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md font-sans">
+        <div className="bg-[#1E293B] border border-red-500/50 rounded-2xl p-6 max-w-md text-center space-y-4 shadow-2xl text-black dark:text-slate-100">
           <div className="w-12 h-12 rounded-full bg-red-600/20 text-red-400 mx-auto flex items-center justify-center border border-red-500/40">
             <Shield className="w-6 h-6" />
           </div>
           <h3 className="text-base font-bold text-white uppercase tracking-wide">Zugriff verweigert (Admin-Bereich)</h3>
-          <p className="text-xs text-slate-300 leading-relaxed">
+          <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
             Nur Einsatzleiter und Administratoren (Rolle: <span className="font-mono text-red-400 font-bold">admin</span> / <span className="font-mono text-blue-400 font-bold">einsatzleitung</span>) sind autorisiert, neue Sucheinsätze anzulegen oder bestehende Einsatzdaten zu bearbeiten.
           </p>
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold text-xs font-mono transition cursor-pointer border border-slate-700"
+            className="px-5 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-200 rounded-xl font-bold text-xs font-mono transition cursor-pointer border border-slate-300 dark:border-slate-700"
           >
             Schließen
           </button>
@@ -447,10 +447,10 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto font-sans">
-      <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl text-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md overflow-y-auto font-sans">
+      <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl text-black dark:text-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-slate-900/90 p-4 border-b border-slate-700 flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900/90 p-4 border-b border-slate-300 dark:border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold text-xl border ${
               mode === 'edit'
@@ -463,7 +463,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
               <h2 className="text-sm font-bold text-white uppercase tracking-wide">
                 {mode === 'edit' ? 'Laufenden Einsatz bearbeiten' : 'Neue Suchaktion starten'}
               </h2>
-              <p className="text-xs text-slate-400 font-mono">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                 {mode === 'edit'
                   ? 'Vermisstenprofil, Wohnadresse, Sichtort und Einsatzdaten aktualisieren'
                   : 'Einsatzleitung eröffnet Lage, erfasst Vermisstenprofil und setzt Einsatzschwerpunkte'}
@@ -472,9 +472,9 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center transition cursor-pointer"
+            className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 flex items-center justify-center transition cursor-pointer"
           >
-            <X className="w-4 h-4 text-slate-400" />
+            <X className="w-4 h-4 text-slate-500 dark:text-slate-400" />
           </button>
         </div>
 
@@ -488,7 +488,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
 
           {/* Operation Type Distinction: Realeinsatz vs Übung */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 font-mono">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 font-mono">
               Einsatzart / Typ auswählen *:
             </label>
             <div className="grid grid-cols-2 gap-3 font-mono">
@@ -498,13 +498,13 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 className={`p-3.5 rounded-xl border text-left transition cursor-pointer flex items-center gap-3 ${
                   type === 'live_search'
                     ? 'bg-red-500/20 border-red-500 text-red-200 ring-1 ring-red-500/40 shadow-lg'
-                    : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800'
+                    : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:bg-slate-800'
                 }`}
               >
                 <span className="text-2xl">🚨</span>
                 <div>
                   <div className="font-bold text-sm text-red-400 uppercase">REALEINSATZ</div>
-                  <div className="text-[10px] text-slate-300 font-sans">Akute Menschenrettung / Notfall</div>
+                  <div className="text-[10px] text-slate-700 dark:text-slate-300 font-sans">Akute Menschenrettung / Notfall</div>
                 </div>
               </button>
 
@@ -513,14 +513,14 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 onClick={() => setType('exercise')}
                 className={`p-3.5 rounded-xl border text-left transition cursor-pointer flex items-center gap-3 ${
                   type === 'exercise'
-                    ? 'bg-amber-500/20 border-amber-500 text-amber-200 ring-1 ring-amber-500/40 shadow-lg'
-                    : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800'
+                    ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 border-amber-500 text-amber-200 ring-1 ring-amber-500/40 shadow-lg'
+                    : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:bg-slate-800'
                 }`}
               >
                 <span className="text-2xl">🟠</span>
                 <div>
                   <div className="font-bold text-sm text-amber-400 uppercase">ÜBUNG / DRILL</div>
-                  <div className="text-[10px] text-slate-300 font-sans">Staffelübung, Training</div>
+                  <div className="text-[10px] text-slate-700 dark:text-slate-300 font-sans">Staffelübung, Training</div>
                 </div>
               </button>
             </div>
@@ -529,7 +529,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
           {/* Title & Commander */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono">
             <div>
-              <label className="block font-bold text-slate-300 mb-1 text-[11px] uppercase tracking-wider">
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 text-[11px] uppercase tracking-wider">
                 Einsatzbezeichnung *:
               </label>
               <input
@@ -538,12 +538,12 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="z.B. Vermisstensuche Forst Süd"
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-slate-300 mb-1 text-[11px] uppercase tracking-wider">
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 text-[11px] uppercase tracking-wider">
                 Einsatzleiter (EL) *:
               </label>
               <input
@@ -552,20 +552,20 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 value={commander}
                 onChange={(e) => setCommander(e.target.value)}
                 placeholder="z.B. Maria (Einsatzleitung)"
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>
           </div>
 
           {/* Missing Person Dossier */}
-          <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 space-y-3 font-mono">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-300 dark:border-slate-700 space-y-3 font-mono">
             <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider block">
               👤 PROFIL DER VERMISSTEN PERSON
             </span>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="sm:col-span-2">
-                <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
                   Name der Person *:
                 </label>
                 <input
@@ -574,12 +574,12 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                   value={personName}
                   onChange={(e) => setPersonName(e.target.value)}
                   placeholder="Vorname Nachname"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
                   Alter (Jahre):
                 </label>
                 <input
@@ -587,13 +587,13 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                   value={personAge}
                   onChange={(e) => setPersonAge(e.target.value === '' ? '' : Number(e.target.value))}
                   placeholder="z.B. 74"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
+              <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
                 Bekleidung / Signalfarben:
               </label>
               <input
@@ -601,12 +601,12 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 value={clothing}
                 onChange={(e) => setClothing(e.target.value)}
                 placeholder="z.B. Rote Regenjacke, dunkle Hose, weiße Mütze"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
+                className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
               />
             </div>
 
             <div>
-              <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
+              <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
                 Personenbeschreibung & Merkmale:
               </label>
               <input
@@ -614,13 +614,13 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Größe, Statur, Haare, Sehhilfe, Gehstock..."
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
+                className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
               />
             </div>
 
             {/* Missing Person Photo */}
-            <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 flex items-center gap-3">
-              <div className="w-14 h-14 rounded-lg bg-slate-900 border border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
+            <div className="bg-slate-100 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3">
+              <div className="w-14 h-14 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
                 {photoUrl ? (
                   <img src={photoUrl} alt="Vermisste Person" className="w-full h-full object-cover" />
                 ) : (
@@ -639,7 +639,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 <div className="flex items-center gap-2">
                   <label
                     htmlFor="missing-person-photo-input"
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-[11px] cursor-pointer inline-flex items-center gap-1.5 transition"
+                    className="px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-bold text-[11px] cursor-pointer inline-flex items-center gap-1.5 transition"
                   >
                     <Upload className="w-3.5 h-3.5" />
                     <span>{isCompressing ? 'Wird optimiert...' : 'Foto hochladen'}</span>
@@ -655,13 +655,13 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                     </button>
                   )}
                 </div>
-                <p className="text-[10px] text-slate-400">Aktuelles Lichtbild der vermissten Person</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">Aktuelles Lichtbild der vermissten Person</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
                   Medizinische Risiken / Vorerkrankungen:
                 </label>
                 <input
@@ -669,12 +669,12 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                   value={medicalConditions}
                   onChange={(e) => setMedicalConditions(e.target.value)}
                   placeholder="z.B. Demenz, Diabetes, Herzbeschwerden"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
                   Polizei-Aktenzeichen / Notruf-Ref:
                 </label>
                 <input
@@ -682,25 +682,25 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                   value={policeCaseId}
                   onChange={(e) => setPoliceCaseId(e.target.value)}
                   placeholder="z.B. POL-SLK-2026-9812"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
                 />
               </div>
             </div>
           </div>
 
           {/* 1. Wohnadresse der vermissten Person */}
-          <div className="bg-slate-900 p-4 rounded-xl border border-amber-500/40 space-y-3 font-mono">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-amber-500/40 space-y-3 font-mono">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Home className="w-3.5 h-3.5" />
                 🏠 1. WOHNADRESSE DER VERMISSTEN PERSON (HOME)
               </span>
-              <span className="text-[9px] text-slate-400">Wird mit Haus-Symbol auf Karte markiert</span>
+              <span className="text-[9px] text-slate-500 dark:text-slate-400">Wird mit Haus-Symbol auf Karte markiert</span>
             </div>
 
             <div className="space-y-2">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
                   Wohnanschrift / Straße, Hausnr, Ort:
                 </label>
                 <div className="flex gap-2">
@@ -712,13 +712,13 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                       setHomeGeocodeStatus('idle');
                     }}
                     placeholder="z.B. Markt 12, 39218 Schönebeck"
-                    className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-amber-500 font-sans"
+                    className="flex-1 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-amber-500 font-sans"
                   />
                   <button
                     type="button"
                     onClick={() => geocodeAddress(homeAddress, 'home')}
                     disabled={isGeocodingHome || !homeAddress.trim()}
-                    className="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition shrink-0"
+                    className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#0F172A]mber-600 hover:bg-slate-50 dark:bg-[#0F172A]mber-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition shrink-0"
                     title="Koordinaten automatisch über OpenStreetMap ermitteln"
                   >
                     <Search className="w-3.5 h-3.5" />
@@ -742,25 +742,25 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
-                  <label className="block text-slate-400 text-[10px] uppercase">GPS Breite (Latitude):</label>
+                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] uppercase">GPS Breite (Latitude):</label>
                   <input
                     type="number"
                     step="0.000001"
                     value={homeLat}
                     onChange={(e) => setHomeLat(e.target.value === '' ? '' : Number(e.target.value))}
                     placeholder="z.B. 51.848000"
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 text-xs font-mono"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 text-[10px] uppercase">GPS Länge (Longitude):</label>
+                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] uppercase">GPS Länge (Longitude):</label>
                   <input
                     type="number"
                     step="0.000001"
                     value={homeLng}
                     onChange={(e) => setHomeLng(e.target.value === '' ? '' : Number(e.target.value))}
                     placeholder="z.B. 11.628000"
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 text-xs font-mono"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-mono"
                   />
                 </div>
               </div>
@@ -768,18 +768,18 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
           </div>
 
           {/* 2. Letzter Sichtort (PLS / Point of Last Seen) */}
-          <div className="bg-slate-900 p-4 rounded-xl border border-blue-500/40 space-y-3 font-mono">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-blue-500/40 space-y-3 font-mono">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5" />
                 📍 2. LETZTER SICHTUNGSORT (POINT LAST SEEN / PLS)
               </span>
-              <span className="text-[9px] text-slate-400">Such-Ursprung mit Distanzringen (500m, 1km, 2km)</span>
+              <span className="text-[9px] text-slate-500 dark:text-slate-400">Such-Ursprung mit Distanzringen (500m, 1km, 2km)</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
-                <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
                   Letzter Ort / Adresse / Waldkante *:
                 </label>
                 <div className="flex gap-2">
@@ -792,7 +792,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                       setPlsGeocodeStatus('idle');
                     }}
                     placeholder="z.B. Wanderparkplatz Süd / Bierer Berg"
-                    className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
+                    className="flex-1 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
                   />
                   <button
                     type="button"
@@ -815,7 +815,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
               )}
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
                   Sichtungszeitpunkt *:
                 </label>
                 <input
@@ -824,12 +824,12 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                   value={lastSeenTime}
                   onChange={(e) => setLastSeenTime(e.target.value)}
                   placeholder="z.B. Heute 14:30 Uhr"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">
                   Geländebeschreibung (optional):
                 </label>
                 <input
@@ -837,41 +837,41 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                   value={lastSeenDesc}
                   onChange={(e) => setLastSeenDesc(e.target.value)}
                   placeholder="z.B. Dichter Mischwald, sumpfige Lichtung"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 text-[10px] uppercase">GPS Breite (Latitude):</label>
+                <label className="block text-slate-500 dark:text-slate-400 text-[10px] uppercase">GPS Breite (Latitude):</label>
                 <input
                   type="number"
                   step="0.000001"
                   value={lastSeenLat}
                   onChange={(e) => setLastSeenLat(Number(e.target.value))}
                   placeholder={String(VEREINSBUERO_LOCATION.lat)}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 text-xs font-mono"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-mono"
                 />
               </div>
               <div>
-                <label className="block text-slate-400 text-[10px] uppercase">GPS Länge (Longitude):</label>
+                <label className="block text-slate-500 dark:text-slate-400 text-[10px] uppercase">GPS Länge (Longitude):</label>
                 <input
                   type="number"
                   step="0.000001"
                   value={lastSeenLng}
                   onChange={(e) => setLastSeenLng(Number(e.target.value))}
                   placeholder={String(VEREINSBUERO_LOCATION.lng)}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 text-xs font-mono"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-mono"
                 />
               </div>
             </div>
           </div>
 
           {/* 3. Standort der EZ (EZ / Führung) */}
-          <div className="bg-slate-900/60 p-4 rounded-xl border border-indigo-500/40 space-y-3 font-sans">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <div className="bg-white dark:bg-slate-900/60 p-4 rounded-xl border border-indigo-500/40 space-y-3 font-sans">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5">
               <div className="flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-indigo-400" />
-                <span className="font-bold text-slate-200 uppercase tracking-wider text-xs font-mono">
+                <span className="font-bold text-slate-900 dark:text-slate-200 uppercase tracking-wider text-xs font-mono">
                   Standort der EZ (EZ / Führung)
                 </span>
               </div>
@@ -880,7 +880,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
               </span>
             </div>
 
-            <p className="text-[11px] text-slate-300 leading-relaxed">
+            <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">
               Bestimmt den festen Standort des EZ / der Einsatzleitung für diese Suche/Übung. Bleibt unabhängig vom GPS-Standort der Administratoren fixiert, da die Einsatzleitung selbst an der Suche teilnehmen kann.
             </p>
 
@@ -906,7 +906,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                   if (typeof lastSeenLng === 'number') setHqLng(lastSeenLng);
                   setHqDescription('EZ am letzten Sichtungsort (PLS)');
                 }}
-                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-mono transition cursor-pointer flex items-center gap-1.5"
+                className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-[11px] font-mono transition cursor-pointer flex items-center gap-1.5"
               >
                 <span>📍 Wie letzter Sichtort (PLS)</span>
               </button>
@@ -919,7 +919,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                     if (typeof homeLng === 'number') setHqLng(homeLng);
                     setHqDescription('EZ an Wohnanschrift');
                   }}
-                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-mono transition cursor-pointer flex items-center gap-1.5"
+                  className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-[11px] font-mono transition cursor-pointer flex items-center gap-1.5"
                 >
                   <span>🏠 Wie Wohnadresse</span>
                 </button>
@@ -941,7 +941,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                     );
                   }
                 }}
-                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-mono transition cursor-pointer flex items-center gap-1.5"
+                className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-[11px] font-mono transition cursor-pointer flex items-center gap-1.5"
               >
                 <span>🧭 Eigener GPS-Standort</span>
               </button>
@@ -949,7 +949,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
 
             {/* Adresse & Geocoding */}
             <div>
-              <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider font-mono">
+              <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider font-mono">
                 Adresse / Bereitstellungsraum:
               </label>
               <div className="flex gap-2">
@@ -961,13 +961,13 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                     setHqGeocodeStatus('idle');
                   }}
                   placeholder="z.B. Hohe Straße 15, 06449 Aschersleben oder Waldparkplatz Forsthaus"
-                  className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-indigo-500 font-sans"
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-indigo-500 font-sans"
                 />
                 <button
                   type="button"
                   disabled={isGeocodingHQ || !hqAddress.trim()}
                   onClick={() => geocodeAddress(hqAddress, 'hq')}
-                  className="px-3 py-2 rounded-xl bg-indigo-700 hover:bg-indigo-600 disabled:bg-slate-800 text-white text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                  className="px-3 py-2 rounded-xl bg-indigo-700 hover:bg-indigo-600 disabled:bg-slate-50 dark:bg-slate-800 text-white text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer shrink-0"
                 >
                   {isGeocodingHQ ? (
                     <Sparkles className="w-3.5 h-3.5 animate-spin" />
@@ -991,7 +991,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
 
             {/* Zusatzbemerkung EZ */}
             <div>
-              <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider font-mono">
+              <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider font-mono">
                 Bezeichnung / Lagehinweis (optional):
               </label>
               <input
@@ -999,43 +999,43 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 value={hqDescription}
                 onChange={(e) => setHqDescription(e.target.value)}
                 placeholder="z.B. Weißer Sprinter (SLK-EL 1) am Parkplatz Haupteingang"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-indigo-500 font-sans"
+                className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-indigo-500 font-sans"
               />
             </div>
 
             {/* Koordinaten */}
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div>
-                <label className="block text-slate-400 text-[10px] uppercase font-mono">EZ Breite (Latitude):</label>
+                <label className="block text-slate-500 dark:text-slate-400 text-[10px] uppercase font-mono">EZ Breite (Latitude):</label>
                 <input
                   type="number"
                   step="0.000001"
                   value={hqLat}
                   onChange={(e) => setHqLat(Number(e.target.value))}
                   placeholder={String(VEREINSBUERO_LOCATION.lat)}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 text-xs font-mono"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-mono"
                 />
               </div>
               <div>
-                <label className="block text-slate-400 text-[10px] uppercase font-mono">EZ Länge (Longitude):</label>
+                <label className="block text-slate-500 dark:text-slate-400 text-[10px] uppercase font-mono">EZ Länge (Longitude):</label>
                 <input
                   type="number"
                   step="0.000001"
                   value={hqLng}
                   onChange={(e) => setHqLng(Number(e.target.value))}
                   placeholder={String(VEREINSBUERO_LOCATION.lng)}
-                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 text-xs font-mono"
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-mono"
                 />
               </div>
             </div>
           </div>
 
           {/* Einsatzkräfte, Teilnehmer & Externe Helfer */}
-          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <div className="bg-white dark:bg-slate-900/60 p-4 rounded-xl border border-slate-300 dark:border-slate-700 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-emerald-400" />
-                <span className="font-bold text-slate-200 uppercase tracking-wider text-xs font-mono">
+                <span className="font-bold text-slate-900 dark:text-slate-200 uppercase tracking-wider text-xs font-mono">
                   Eingesetzte Kräfte & Helfer
                 </span>
               </div>
@@ -1047,7 +1047,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
             {/* App-Registrierte Kräfte */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider font-mono">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono">
                   App-Registrierte Einsatzkräfte ({selectedResponders.length} ausgewählt):
                 </label>
                 <div className="flex items-center gap-1.5 text-[10px] font-mono">
@@ -1057,21 +1057,21 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                       const activeIds = allUsers.filter((u) => u.isActive).map((u) => u.id);
                       setSelectedResponders(activeIds.length > 0 ? activeIds : allUsers.map((u) => u.id));
                     }}
-                    className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+                    className="px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 transition cursor-pointer"
                   >
                     Aktive wählen
                   </button>
                   <button
                     type="button"
                     onClick={() => setSelectedResponders(allUsers.filter((u) => u.role !== 'admin').map((u) => u.id))}
-                    className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+                    className="px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 transition cursor-pointer"
                   >
                     Nur Sucher
                   </button>
                   <button
                     type="button"
                     onClick={() => setSelectedResponders([])}
-                    className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 transition cursor-pointer"
+                    className="px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 transition cursor-pointer"
                   >
                     Keine
                   </button>
@@ -1093,7 +1093,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                       className={`flex items-center justify-between p-2 rounded-xl border text-left transition cursor-pointer ${
                         isChecked
                           ? 'bg-emerald-950/40 border-emerald-600/70 text-emerald-100 shadow-sm'
-                          : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                          : 'bg-slate-100 dark:bg-slate-950/60 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:border-slate-700'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -1105,9 +1105,9 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                         <div className="min-w-0">
                           <div className="font-bold text-xs truncate">
                             {u.callSign || u.name}
-                            {u.callSign && <span className="font-normal text-[10px] text-slate-400 ml-1.5">({u.name})</span>}
+                            {u.callSign && <span className="font-normal text-[10px] text-slate-500 dark:text-slate-400 ml-1.5">({u.name})</span>}
                           </div>
-                          <div className="text-[10px] text-slate-400 font-mono">
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                             {u.role === 'admin' ? '🛡️ Einsatzleitung' : '🚶 Suchkraft'} • {u.isActive ? '🟢 Bereit' : '⚪ Inaktiv'}
                           </div>
                         </div>
@@ -1119,17 +1119,17 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
             </div>
 
             {/* Externe & Freiwillige Helfer ohne App */}
-            <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 space-y-2">
+            <div className="bg-slate-100 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800/80 space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-bold text-amber-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
                   <span>👥 Freiwillige Helfer & Externe Kräfte (ohne App):</span>
                 </label>
-                <span className="text-[10px] text-slate-400 font-mono">z.B. Feuerwehr, Jagdpächter, Zivilpersonen</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">z.B. Feuerwehr, Jagdpächter, Zivilpersonen</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
                 <div className="sm:col-span-1">
-                  <label className="block text-slate-400 text-[10px] uppercase font-mono mb-1">
+                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] uppercase font-mono mb-1">
                     Anzahl Helfer:
                   </label>
                   <input
@@ -1139,11 +1139,11 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                     value={externalVolunteersCount}
                     onChange={(e) => setExternalVolunteersCount(e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0))}
                     placeholder="0"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-amber-300 font-bold text-sm font-mono focus:outline-none focus:border-amber-500"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-amber-300 font-bold text-sm font-mono focus:outline-none focus:border-amber-500"
                   />
                 </div>
                 <div className="sm:col-span-3">
-                  <label className="block text-slate-400 text-[10px] uppercase font-mono mb-1">
+                  <label className="block text-slate-500 dark:text-slate-400 text-[10px] uppercase font-mono mb-1">
                     Organisationen / Zuordnung / Notiz:
                   </label>
                   <input
@@ -1151,22 +1151,22 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                     value={externalVolunteersNotes}
                     onChange={(e) => setExternalVolunteersNotes(e.target.value)}
                     placeholder="z.B. 10 Kameraden FFW Aschersleben, 3 Jagdpächter, 5 Zivilhelfer"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-amber-500"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 text-xs focus:outline-none focus:border-amber-500"
                   />
                 </div>
               </div>
-              <p className="text-[10px] text-slate-400 italic">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 italic">
                 ℹ️ Diese externen Kräfte werden lückenlos im Einsatzprotokoll und Stärkenachweis erfasst, ohne doppelt gezählt zu werden.
               </p>
             </div>
           </div>
 
           {/* Einsatzausrüstung & Hilfsmittel (Auswählbar & Editierbar) */}
-          <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-700 space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div className="bg-white dark:bg-slate-900/60 p-4 rounded-xl border border-slate-300 dark:border-slate-700 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
               <div className="flex items-center gap-2">
                 <Wrench className="w-4 h-4 text-cyan-400" />
-                <span className="font-bold text-slate-200 uppercase tracking-wider text-xs font-mono">
+                <span className="font-bold text-slate-900 dark:text-slate-200 uppercase tracking-wider text-xs font-mono">
                   Einsatzmittel & Ausrüstung (Auswählbar & Editierbar)
                 </span>
               </div>
@@ -1191,13 +1191,13 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                     className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-2.5 ${
                       isSelected
                         ? 'bg-cyan-950/50 border-cyan-500/70 text-cyan-200 ring-1 ring-cyan-500/30 shadow-sm'
-                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                        : 'bg-slate-100 dark:bg-slate-950/60 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:border-slate-700'
                     }`}
                   >
                     <span className="text-lg leading-none">{item.icon}</span>
                     <div className="min-w-0">
                       <div className="font-bold text-xs truncate leading-snug">{item.label}</div>
-                      <div className="text-[9px] text-slate-400 truncate font-mono">{item.desc}</div>
+                      <div className="text-[9px] text-slate-500 dark:text-slate-400 truncate font-mono">{item.desc}</div>
                     </div>
                   </button>
                 );
@@ -1206,7 +1206,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
 
             {/* Freitext Notizen für Sonderausrüstung */}
             <div>
-              <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider font-mono">
+              <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider font-mono">
                 Zusätzliche Spezialausrüstung / Bemerkungen:
               </label>
               <input
@@ -1214,14 +1214,14 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 value={customEquipmentNotes}
                 onChange={(e) => setCustomEquipmentNotes(e.target.value)}
                 placeholder="z.B. 2x DJI Matrice 300 RTK mit Wärmebild, 1x Führungsfahrzeug EZ 1, 4x Handsprechfunkgeräte 2m"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-cyan-500 font-sans"
+                className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-cyan-500 font-sans"
               />
             </div>
 
             {/* Wetterbedingungen bei Einsatzstart */}
-            <div className="pt-2 border-t border-slate-800">
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-slate-300 font-semibold text-[11px] uppercase tracking-wider font-mono flex items-center gap-1">
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold text-[11px] uppercase tracking-wider font-mono flex items-center gap-1">
                   <Cloud className="w-3.5 h-3.5 text-blue-400" />
                   <span>Wetterbedingungen bei Einsatzstart:</span>
                 </label>
@@ -1243,7 +1243,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                       setWeatherConditions('⛅ Heiter, ca. 16°C, mäßiger Wind');
                     }
                   }}
-                  className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 border border-slate-700 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-pointer"
+                  className="px-2 py-0.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-cyan-400 hover:text-cyan-300 border border-slate-300 dark:border-slate-700 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-pointer"
                 >
                   <Sparkles className="w-2.5 h-2.5 text-cyan-400" />
                   <span>Wetter live abrufen</span>
@@ -1254,17 +1254,17 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 value={weatherConditions}
                 onChange={(e) => setWeatherConditions(e.target.value)}
                 placeholder="z.B. 🌤️ Leicht bewölkt, 16°C, Wind 12 km/h aus Nordost"
-                className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-cyan-500 font-sans"
+                className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-cyan-500 font-sans"
               />
             </div>
           </div>
 
           {/* EZ Admin Zuteilung (Muss-Admin) & Live User Monitor */}
-          <div className="bg-slate-900/80 p-4 rounded-xl border border-blue-500/30 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div className="bg-white dark:bg-slate-900/80 p-4 rounded-xl border border-blue-500/30 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4 text-blue-400" />
-                <span className="font-bold text-slate-200 uppercase tracking-wider text-xs font-mono">
+                <span className="font-bold text-slate-900 dark:text-slate-200 uppercase tracking-wider text-xs font-mono">
                   EZ-Zuteilung & Ankunftsmonitor (Muss-Admin erforderlich)
                 </span>
               </div>
@@ -1275,7 +1275,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
 
             {/* EZ Admins selection */}
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-300 font-mono uppercase">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 font-mono uppercase">
                 🛡️ EZ-Administratoren (Mindestens 1 Administrator muss zugeteilt werden):
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1295,11 +1295,11 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                       className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex items-center justify-between ${
                         isAssigned
                           ? 'bg-blue-950/50 border-blue-500 text-blue-100 ring-1 ring-blue-500/30'
-                          : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                          : 'bg-slate-100 dark:bg-slate-950/60 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:border-slate-700'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 rounded-lg overflow-hidden border border-slate-700 bg-slate-900">
+                        <div className="h-8 w-8 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
                           {adminUser.photoUrl ? (
                             <img src={adminUser.photoUrl} alt={adminUser.name} className="h-full w-full object-cover" />
                           ) : (
@@ -1309,8 +1309,8 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                           )}
                         </div>
                         <div>
-                          <div className="font-bold text-xs text-slate-200">{adminUser.callSign || adminUser.name}</div>
-                          <div className="text-[10px] text-slate-400">{adminUser.name} • {adminUser.isActive ? '🟢 Online' : '⚪ Offline'}</div>
+                          <div className="font-bold text-xs text-slate-900 dark:text-slate-200">{adminUser.callSign || adminUser.name}</div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400">{adminUser.name} • {adminUser.isActive ? '🟢 Online' : '⚪ Offline'}</div>
                         </div>
                       </div>
                       <div className="text-xs font-mono font-bold">
@@ -1326,7 +1326,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="pt-3 border-t border-slate-700 flex items-center justify-between gap-2">
+          <div className="pt-3 border-t border-slate-300 dark:border-slate-700 flex items-center justify-between gap-2">
             <div>
               {mode === 'edit' && targetOp && isAdmin && (
                 <div className="flex items-center gap-2">
@@ -1369,7 +1369,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition cursor-pointer border border-slate-700 uppercase tracking-wider font-mono text-xs"
+                className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 uppercase tracking-wider font-mono text-xs"
               >
                 Abbrechen
               </button>

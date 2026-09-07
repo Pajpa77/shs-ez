@@ -110,18 +110,18 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
 
   if (currentUser?.role !== 'admin') {
     return (
-      <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+      <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md">
         <div className="bg-[#1E293B] border border-red-500/50 rounded-2xl p-6 max-w-md text-center space-y-4">
           <div className="w-12 h-12 rounded-full bg-red-600/20 text-red-400 mx-auto flex items-center justify-center">
             <AlertTriangle className="w-6 h-6" />
           </div>
           <h3 className="text-base font-bold text-white">Zugriff verweigert</h3>
-          <p className="text-xs text-slate-300">
+          <p className="text-xs text-slate-700 dark:text-slate-300">
             Nur Einsatzleiter & Administratoren dürfen Suchsektoren zeichnen oder bearbeiten.
           </p>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold text-xs"
+            className="px-4 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-200 rounded-xl font-bold text-xs"
           >
             Schließen
           </button>
@@ -230,28 +230,28 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto font-sans">
-      <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl text-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md overflow-y-auto font-sans">
+      <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl text-black dark:text-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-slate-900/90 p-4 border-b border-slate-700 flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900/90 p-4 border-b border-slate-300 dark:border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-slate-800 text-blue-400 border border-slate-700 flex items-center justify-center font-bold text-xl">
+            <div className="h-10 w-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-blue-400 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-xl">
               <Layers className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-white uppercase tracking-wide">
                 {sector ? `Sektor bearbeiten: ${sector.name}` : 'Neuen Suchsektor anlegen'}
               </h2>
-              <p className="text-xs text-slate-400 font-mono">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                 Suchgebiet aufteilen, Kräfte zuteilen und Status verwalten
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center transition cursor-pointer"
+            className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 flex items-center justify-center transition cursor-pointer"
           >
-            <X className="w-4 h-4 text-slate-400" />
+            <X className="w-4 h-4 text-slate-500 dark:text-slate-400" />
           </button>
         </div>
 
@@ -266,7 +266,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
           {/* Sector Name & Hectares */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1 font-mono">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1 font-mono">
                 Sektor-Bezeichnung *:
               </label>
               <input
@@ -275,31 +275,31 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="z.B. Sektor Alpha - Waldstück Nord"
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1 font-mono">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1 font-mono">
                 Fläche (Hektar):
               </label>
               <input
                 type="number"
                 value={areaHectares}
                 onChange={(e) => setAreaHectares(Number(e.target.value))}
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>
           </div>
 
           {/* Sector Status (Key feature: Abgesucht = Green!) */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 font-mono">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 font-mono">
               Suchstatus des Sektors:
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono">
               {[
                 { id: 'open', label: 'Offen', icon: '⭕', color: 'border-blue-500/50 bg-blue-500/20 text-blue-300' },
-                { id: 'in_progress', label: 'In Suche', icon: '⏳', color: 'border-amber-500/50 bg-amber-500/20 text-amber-300' },
+                { id: 'in_progress', label: 'In Suche', icon: '⏳', color: 'border-amber-500/50 bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300' },
                 { id: 'searched', label: '✅ ABGESUCHT', icon: '✅', color: 'border-emerald-500 bg-emerald-500/20 text-emerald-300 font-bold' },
                 { id: 'suspicious', label: '⚠️ Verdacht', icon: '🚨', color: 'border-red-500/50 bg-red-500/20 text-red-300' },
               ].map((s) => (
@@ -310,7 +310,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
                   className={`p-2.5 rounded-xl border text-center transition cursor-pointer flex flex-col items-center justify-center gap-1 ${
                     status === s.id
                       ? `${s.color} ring-2 ring-white/30 shadow-lg`
-                      : 'border-slate-700 bg-slate-900 text-slate-500 hover:text-slate-300'
+                      : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   <span className="text-base">{s.icon}</span>
@@ -322,7 +322,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
 
           {/* Priority */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 font-mono">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 font-mono">
               Such-Priorität:
             </label>
             <div className="grid grid-cols-4 gap-2 font-mono">
@@ -336,9 +336,9 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
                       ? p === 'urgent'
                         ? 'bg-red-600 text-white border-red-500'
                         : p === 'high'
-                        ? 'bg-amber-600 text-white border-amber-500'
+                        ? 'bg-slate-50 dark:bg-[#0F172A]mber-600 text-white border-amber-500'
                         : 'bg-blue-600 text-white border-blue-500'
-                      : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
+                      : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                   }`}
                 >
                   {p === 'urgent' ? 'Dringend' : p === 'high' ? 'Hoch' : p === 'medium' ? 'Mittel' : 'Niedrig'}
@@ -349,12 +349,12 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
 
           {/* Assignment: Search Teams & Individual Users */}
           <div className="space-y-3">
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono">
               🐕‍🦺 Suchtrupps diesem Sektor zuteilen:
             </label>
 
             {currentOperation?.teams && currentOperation.teams.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1 bg-slate-900/60 rounded-xl border border-slate-700">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1 bg-white dark:bg-slate-900/60 rounded-xl border border-slate-300 dark:border-slate-700">
                 {currentOperation.teams.map((team) => {
                   const isSelected = assignedTeamIds.includes(team.id);
                   const leader = allUsers.find((u) => u.id === team.leaderUserId);
@@ -379,14 +379,14 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
                       className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex items-center justify-between font-mono ${
                         isSelected
                           ? 'bg-emerald-500/20 border-emerald-500 text-emerald-200 ring-1 ring-emerald-400/40'
-                          : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800'
+                          : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:bg-slate-800'
                       }`}
                     >
                       <div className="truncate">
                         <div className="font-bold text-xs text-white flex items-center gap-1.5 truncate">
                           <span>🎯</span> <span className="truncate">{team.name}</span>
                         </div>
-                        <div className="text-[10px] text-slate-300 mt-0.5 truncate">
+                        <div className="text-[10px] text-slate-700 dark:text-slate-300 mt-0.5 truncate">
                           Führer: {leader?.name || 'k.A.'} • {membersCount} Pers.
                         </div>
                       </div>
@@ -396,12 +396,12 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
                 })}
               </div>
             ) : (
-              <p className="text-xs text-slate-400 italic bg-slate-900/50 p-2.5 rounded-xl border border-slate-800 font-mono">
+              <p className="text-xs text-slate-500 dark:text-slate-400 italic bg-white dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 font-mono">
                 Keine Suchtrupps im Einsatz erstellt. Erstellen Sie zuerst Suchtrupps über das Suchtrupps-Menü.
               </p>
             )}
 
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider font-mono pt-1">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono pt-1">
               Zuweisung an Einheiten & Sucher:
             </label>
 
@@ -410,10 +410,10 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
               value={assignedGroupName}
               onChange={(e) => setAssignedGroupName(e.target.value)}
               placeholder="Gruppenname (z.B. Drohnenstaffel 1, Suchkette Bravo)"
-              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 mb-2 font-mono"
+              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 mb-2 font-mono"
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto p-1 bg-slate-900/60 rounded-xl border border-slate-700">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto p-1 bg-white dark:bg-slate-900/60 rounded-xl border border-slate-300 dark:border-slate-700">
               {allUsers.map((user) => {
                 const isAssigned = assignedUserIds.includes(user.id);
                 return (
@@ -424,11 +424,11 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
                     className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center justify-between font-mono ${
                       isAssigned
                         ? 'bg-blue-500/20 border-blue-500 text-blue-200 ring-1 ring-blue-400/40'
-                        : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800'
+                        : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:bg-slate-800'
                     }`}
                   >
                     <div className="flex items-center gap-2 truncate">
-                      <div className="h-7 w-7 rounded-lg overflow-hidden bg-slate-800 shrink-0 border border-slate-700">
+                      <div className="h-7 w-7 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-800 shrink-0 border border-slate-300 dark:border-slate-700">
                         {user.photoUrl ? (
                           <img src={user.photoUrl} alt={user.name} className="h-full w-full object-cover" />
                         ) : (
@@ -451,7 +451,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
 
           {/* Special Equipment / Assets required */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 font-mono">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 font-mono">
               Eingesetzte Hilfsmittel / Ausrüstung im Sektor:
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono">
@@ -464,8 +464,8 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
                     onClick={() => toggleEquipment(eq.id)}
                     className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-2 ${
                       isSelected
-                        ? 'bg-amber-500/20 border-amber-500 text-amber-200'
-                        : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
+                        ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 border-amber-500 text-amber-200'
+                        : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                     }`}
                   >
                     <span className="text-base">{eq.icon}</span>
@@ -478,7 +478,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
 
           {/* Notes */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1 font-mono">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1 font-mono">
               Einsatzhinweise / Besonderheiten:
             </label>
             <textarea
@@ -486,22 +486,22 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="z.B. Steiles Flussufer, dichtes Dickicht, Wärmebild-Rasterflug empfohlen..."
-              className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
+              className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
             />
           </div>
 
           {/* Polygon Drawing Action */}
           {onStartDrawing && (
-            <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="bg-white dark:bg-slate-900/90 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30">
                   <PenTool className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="font-bold text-slate-200 block text-xs font-mono uppercase">
+                  <span className="font-bold text-slate-900 dark:text-slate-200 block text-xs font-mono uppercase">
                     Suchsektor auf Karte einzeichnen (Pen / Freihand)
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                     {pendingPolygon
                       ? `✅ Gezeichnete Fläche: ${pendingPolygon.length} Punkte • ca. ${calculatePolygonHectares(pendingPolygon)} ha`
                       : 'Mit Apple Pencil, Stylus, Finger oder Maus freihand umranden'}
@@ -523,7 +523,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
           )}
 
           {/* Action Footer */}
-          <div className="pt-3 border-t border-slate-700 flex items-center justify-between">
+          <div className="pt-3 border-t border-slate-300 dark:border-slate-700 flex items-center justify-between">
             {sector ? (
               showDeleteConfirm ? (
                 <div className="flex items-center gap-2 bg-red-950/90 border border-red-600/80 p-2 rounded-xl text-xs animate-in fade-in duration-150">
@@ -541,7 +541,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowDeleteConfirm(false)}
-                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition cursor-pointer font-mono border border-slate-700"
+                    className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition cursor-pointer font-mono border border-slate-300 dark:border-slate-700"
                   >
                     Abbrechen
                   </button>
@@ -563,7 +563,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition cursor-pointer border border-slate-700 uppercase tracking-wider font-mono text-xs"
+                className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 uppercase tracking-wider font-mono text-xs"
               >
                 Abbrechen
               </button>

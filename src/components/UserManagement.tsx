@@ -122,18 +122,18 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   // Explicit admin-only guard clause
   if (currentUser?.role !== 'admin' && currentUser?.role !== 'einsatzleitung') {
     return (
-      <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-        <div className="bg-[#1E293B] border border-red-500/50 rounded-2xl p-6 max-w-md text-center space-y-4 shadow-2xl text-slate-100">
+      <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md font-sans">
+        <div className="bg-[#1E293B] border border-red-500/50 rounded-2xl p-6 max-w-md text-center space-y-4 shadow-2xl text-black dark:text-slate-100">
           <div className="w-12 h-12 rounded-full bg-red-600/20 text-red-400 mx-auto flex items-center justify-center border border-red-500/40">
             <Shield className="w-6 h-6" />
           </div>
           <h3 className="text-base font-bold text-white uppercase tracking-wide">Zugriff verweigert (Admin-Bereich)</h3>
-          <p className="text-xs text-slate-300 leading-relaxed">
+          <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
             Nur Administratoren und Einsatzleiter (Rolle: <span className="font-mono text-red-400 font-bold">admin</span> / <span className="font-mono text-blue-400 font-bold">einsatzleitung</span>) dürfen Einsatzkräfte verwalten, Accounts anlegen, Rollen zuweisen oder Profile löschen.
           </p>
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-bold text-xs font-mono transition cursor-pointer border border-slate-700"
+            className="px-5 py-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-200 rounded-xl font-bold text-xs font-mono transition cursor-pointer border border-slate-300 dark:border-slate-700"
           >
             Schließen
           </button>
@@ -283,49 +283,37 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto font-sans">
-      <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl text-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md overflow-y-auto font-sans">
+      <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl text-black dark:text-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-slate-900/90 p-4 border-b border-slate-700 flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900/90 p-4 border-b border-slate-300 dark:border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-slate-800 text-blue-400 border border-slate-700 flex items-center justify-center font-bold text-xl">
+            <div className="h-10 w-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-blue-400 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-xl">
               <Key className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-white uppercase tracking-wide">
                 {activeUser ? `Account bearbeiten: ${activeUser.name}` : 'Neuen Account anlegen & Zugangsdaten vergeben'}
               </h2>
-              <p className="text-xs text-slate-400 font-mono">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                 Einsatzleitung vergibt Logindaten, Funkrufnamen, KFZ und Hilfsmittel
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center transition cursor-pointer"
+            className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 flex items-center justify-center transition cursor-pointer"
           >
-            <X className="w-4 h-4 text-slate-400" />
+            <X className="w-4 h-4 text-slate-500 dark:text-slate-400" />
           </button>
         </div>
 
         {/* Account Selector Bar for Admins */}
-        <div className="bg-slate-950/60 p-2.5 border-b border-slate-700/80">
+        <div className="bg-slate-100 dark:bg-slate-950/60 p-2.5 border-b border-slate-300 dark:border-slate-700/80">
           <div className="flex items-center justify-between mb-1.5 px-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider font-mono">
               👥 Account auswählen ({allUsers.length} registriert):
             </span>
-            <button
-              type="button"
-              onClick={() => populateForm(null)}
-              className={`px-2 py-0.5 rounded-lg border text-[10px] font-bold font-mono transition cursor-pointer flex items-center gap-1 ${
-                !activeUser
-                  ? 'bg-blue-600 border-blue-400 text-white shadow'
-                  : 'bg-slate-900 border-blue-500/40 text-blue-300 hover:bg-blue-900/40'
-              }`}
-            >
-              <span>➕</span>
-              <span>Neuen Account anlegen</span>
-            </button>
           </div>
           <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
             <button
@@ -334,7 +322,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               className={`px-2.5 py-1.5 rounded-xl border text-left transition shrink-0 cursor-pointer font-mono text-[11px] flex items-center gap-2 ${
                 !activeUser
                   ? 'bg-blue-600/30 border-blue-400 text-white shadow ring-1 ring-blue-400'
-                  : 'bg-slate-900 border-dashed border-blue-500/50 text-blue-300 hover:bg-slate-800'
+                  : 'bg-white dark:bg-slate-900 border-dashed border-blue-500/50 text-blue-300 hover:bg-slate-50 dark:bg-slate-800'
               }`}
             >
               <div className="w-5 h-5 rounded-full bg-blue-600/40 text-blue-300 border border-blue-400/50 flex items-center justify-center font-bold text-xs">
@@ -342,7 +330,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               </div>
               <div>
                 <div className="font-bold">Neuer Account</div>
-                <div className="text-[9px] text-slate-400 font-normal">Formular leeren</div>
+                <div className="text-[9px] text-slate-500 dark:text-slate-400 font-normal">Formular leeren</div>
               </div>
             </button>
             {allUsers.map((u) => {
@@ -356,17 +344,17 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   className={`px-2.5 py-1.5 rounded-xl border text-left transition shrink-0 cursor-pointer font-mono text-[11px] flex items-center gap-2 ${
                     isSelected
                       ? isOwnerUser
-                        ? 'bg-amber-500/25 border-amber-400 text-white shadow ring-1 ring-amber-400/50'
+                        ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/25 border-amber-400 text-white shadow ring-1 ring-amber-400/50'
                         : 'bg-blue-500/25 border-blue-400 text-white shadow'
                       : isOwnerUser
-                      ? 'bg-amber-950/40 border-amber-500/50 text-amber-200 hover:bg-amber-900/40'
-                      : 'bg-slate-900 border-slate-700/80 text-slate-300 hover:bg-slate-800'
+                      ? 'bg-slate-50 dark:bg-[#0F172A]mber-950/40 border-amber-500/50 text-amber-200 hover:bg-slate-50 dark:bg-[#0F172A]mber-900/40'
+                      : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-800'
                   }`}
                 >
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[9px] uppercase border ${
                     isOwnerUser
-                      ? 'bg-amber-500/30 text-amber-200 border-amber-400/60'
-                      : 'bg-slate-800 text-slate-200 border border-slate-600'
+                      ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/30 text-amber-200 border-amber-400/60'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-200 border border-slate-400 dark:border-slate-600'
                   }`}>
                     {isOwnerUser ? '👑' : u.name.charAt(0)}
                   </div>
@@ -374,7 +362,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     <div className="font-bold flex items-center gap-1">
                       <span>{u.name}</span>
                       {isOwnerUser ? (
-                        <span className="text-[8px] px-1 py-0.2 rounded border font-mono font-bold bg-amber-500/20 text-amber-300 border-amber-400/60">
+                        <span className="text-[8px] px-1 py-0.2 rounded border font-mono font-bold bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border-amber-400/60">
                           OWNER
                         </span>
                       ) : (u.role === 'admin' || u.role === 'einsatzleitung' || u.isAdmin) ? (
@@ -382,14 +370,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                           u.role === 'admin'
                             ? 'bg-red-950 text-red-300 border-red-800'
                             : u.isAdmin
-                            ? 'bg-amber-950 text-amber-300 border-amber-800'
+                            ? 'bg-slate-50 dark:bg-[#0F172A]mber-950 text-amber-300 border-amber-800'
                             : 'bg-emerald-950 text-emerald-300 border-emerald-800'
                         }`}>
                           {u.role === 'admin' ? 'ADM' : u.isAdmin ? 'EL+ADM' : 'EL'}
                         </span>
                       ) : null}
                     </div>
-                    <div className="text-[9px] text-slate-400 font-normal">
+                    <div className="text-[9px] text-slate-500 dark:text-slate-400 font-normal">
                       {u.callSign}
                     </div>
                   </div>
@@ -402,14 +390,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto text-xs">
           {/* Owner Protection Notification Banner */}
           {isTargetOwnerProtected && (
-            <div className="p-3.5 rounded-xl bg-amber-950/80 border-2 border-amber-500/80 text-amber-200 text-xs font-mono flex items-start gap-3 shadow-lg">
-              <div className="p-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0 text-base">
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0F172A]mber-950/80 border-2 border-amber-500/80 text-amber-200 text-xs font-mono flex items-start gap-3 shadow-lg">
+              <div className="p-2 rounded-lg bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border border-amber-500/40 shrink-0 text-base">
                 👑
               </div>
               <div>
                 <div className="font-bold text-amber-300 uppercase tracking-wide flex items-center gap-2">
                   <span>FIRST ADMIN & APP-OWNER (UNANTASTBAR)</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/30 text-amber-200 border border-amber-400/60 font-bold">
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-50 dark:bg-[#0F172A]mber-500/30 text-amber-200 border border-amber-400/60 font-bold">
                     Schreibgeschützt
                   </span>
                 </div>
@@ -421,14 +409,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           )}
 
           {isTargetOwnerAndMe && (
-            <div className="p-3.5 rounded-xl bg-amber-950/60 border border-amber-500/60 text-amber-200 text-xs font-mono flex items-start gap-3 shadow-md">
-              <div className="p-2 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0 text-base">
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0F172A]mber-950/60 border border-amber-500/60 text-amber-200 text-xs font-mono flex items-start gap-3 shadow-md">
+              <div className="p-2 rounded-lg bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border border-amber-500/40 shrink-0 text-base">
                 👑
               </div>
               <div>
                 <div className="font-bold text-amber-300 uppercase tracking-wide flex items-center gap-2">
                   <span>DEIN FIRST-ADMIN ACCOUNT (APP-OWNER)</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/30 text-amber-200 border border-amber-400/60 font-bold">
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-50 dark:bg-[#0F172A]mber-500/30 text-amber-200 border border-amber-400/60 font-bold">
                     Unantastbar
                   </span>
                 </div>
@@ -453,32 +441,32 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           )}
 
           {/* Credentials Section */}
-          <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 space-y-3 font-mono">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-300 dark:border-slate-700 space-y-3 font-mono">
             <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider block">
               🔑 ZUGANGSDATEN FÜR EINSATZKRAFT
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">Benutzername (Login) *:</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">Benutzername (Login) *:</label>
                 <input
                   type="text"
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="z.B. drohne_nord"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">Passwort *:</label>
+                <label className="block text-slate-700 dark:text-slate-300 font-semibold mb-1 text-[11px] uppercase tracking-wider">Passwort *:</label>
                 <input
                   type="text"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Passwort eingeben"
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
                 />
               </div>
             </div>
@@ -487,107 +475,118 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           {/* Personal Info */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-slate-300 mb-1 font-mono uppercase tracking-wider">Vollständiger Name *:</label>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 font-mono uppercase tracking-wider">Vollständiger Name *:</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="z.B. Martin Huber"
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500"
               />
             </div>
 
             <div className="col-span-1 sm:col-span-2 space-y-1.5">
-              <label className="block font-bold text-slate-300 mb-1 font-mono uppercase tracking-wider text-[11px] flex items-center justify-between">
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 font-mono uppercase tracking-wider text-[11px] flex items-center justify-between">
                 <span>Rolle & Berechtigungsstufe im System *:</span>
-                <span className="text-[10px] text-slate-400 font-normal">Admins können Rollen jederzeit vergeben & entziehen</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Admins können Rollen jederzeit vergeben & entziehen</span>
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 font-mono">
                 <button
                   type="button"
-                  onClick={() => setRole('responder')}
+                  onClick={() => {
+                    setRole('responder');
+                    setIsAlsoAdmin(false);
+                  }}
                   className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1 ${
                     role === 'responder'
                       ? 'bg-blue-600/20 border-blue-500 text-blue-200 shadow-sm ring-1 ring-blue-500/40'
-                      : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800'
+                      : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:bg-slate-800'
                   }`}
                 >
                   <div className="flex items-center justify-between font-bold text-xs text-white">
                     <span>🦺 Sucher</span>
                     {role === 'responder' && <span className="text-[10px] text-blue-400">✓ Aktiv</span>}
                   </div>
-                  <span className="text-[10px] text-slate-400 leading-tight">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
                     Standard-Suchkraft mit GPS, Fundmeldungen & Chat.
                   </span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setRole('einsatzleitung')}
+                  onClick={() => {
+                    setRole('einsatzleitung');
+                  }}
                   className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1 ${
                     role === 'einsatzleitung'
                       ? 'bg-emerald-600/20 border-emerald-500 text-emerald-200 shadow-sm ring-1 ring-emerald-500/40'
-                      : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800'
+                      : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:bg-slate-800'
                   }`}
                 >
                   <div className="flex items-center justify-between font-bold text-xs text-emerald-300">
                     <span>📢 Einsatzleitung</span>
                     {role === 'einsatzleitung' && <span className="text-[10px] text-emerald-400">✓ Aktiv</span>}
                   </div>
-                  <span className="text-[10px] text-slate-400 leading-tight">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
                     Führungsrolle: Sektoren & Teamkoordinierung.
                   </span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setRole('admin')}
+                  onClick={() => {
+                    setRole('admin');
+                    setIsAlsoAdmin(false);
+                  }}
                   className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1 ${
                     role === 'admin'
                       ? 'bg-red-600/25 border-red-500 text-red-200 shadow-sm ring-1 ring-red-500/50'
-                      : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800'
+                      : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:bg-slate-800'
                   }`}
                 >
                   <div className="flex items-center justify-between font-bold text-xs text-red-300">
                     <span>🛡️ System-Admin</span>
                     {role === 'admin' && <span className="text-[10px] text-red-400">👑 Admin</span>}
                   </div>
-                  <span className="text-[10px] text-slate-400 leading-tight">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
                     Volle Rechte: Accounts, Rollen, System-Logs.
                   </span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setRole('observer')}
+                  onClick={() => {
+                    setRole('observer');
+                    setIsAlsoAdmin(false);
+                  }}
                   className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1 ${
                     role === 'observer'
                       ? 'bg-purple-600/25 border-purple-500 text-purple-200 shadow-sm ring-1 ring-purple-500/50'
-                      : 'bg-slate-900 border-slate-700 text-slate-400 hover:bg-slate-800'
+                      : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:bg-slate-800'
                   }`}
                 >
                   <div className="flex items-center justify-between font-bold text-xs text-purple-300">
                     <span>👁️ Betrachter</span>
                     {role === 'observer' && <span className="text-[10px] text-purple-400">✓ Aktiv</span>}
                   </div>
-                  <span className="text-[10px] text-slate-400 leading-tight">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
                     Nur Leseansicht (Polizei, Gast). Kein GPS auf Karte.
                   </span>
                 </button>
               </div>
 
               {/* Role Combination Feature (EL + Admin) */}
-              <div className="mt-3 p-3 rounded-xl bg-slate-900/90 border border-slate-700/80 flex items-start justify-between gap-3">
+              <div className="mt-3 p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 flex items-start justify-between gap-3">
                 <div className="flex items-start gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30 shrink-0 mt-0.5">
+                  <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-[#0F172A]mber-500/10 text-amber-400 border border-amber-500/30 shrink-0 mt-0.5">
                     <Shield className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-200 flex items-center gap-2 flex-wrap">
+                    <div className="text-xs font-bold text-slate-900 dark:text-slate-200 flex items-center gap-2 flex-wrap">
                       <span>Administrator-Rechte mit Einsatzleitung kombinieren</span>
                       {role === 'einsatzleitung' && isAlsoAdmin && (
-                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full">
+                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border border-amber-500/40 rounded-full">
                           Kombiniert: EL + Admin
                         </span>
                       )}
@@ -602,7 +601,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
                       Erlaubt dieser Person zusätzlich Benutzerkonten anzulegen, Rollen zu verwalten und System-Logs einzusehen.
                       Nicht jeder Einsatzleiter ist automatisch System-Administrator.
                     </p>
@@ -616,7 +615,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     onChange={(e) => setIsAlsoAdmin(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600 peer-disabled:opacity-60"></div>
+                  <div className="w-11 h-6 bg-slate-50 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-50 dark:bg-[#0F172A]mber-600 peer-disabled:opacity-60"></div>
                 </label>
               </div>
             </div>
@@ -625,53 +624,53 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           {/* Tactical Details: Callsign, License Plate, Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block font-bold text-slate-300 mb-1 font-mono uppercase tracking-wider">Funkrufname:</label>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 font-mono uppercase tracking-wider">Funkrufname:</label>
               <input
                 type="text"
                 value={callSign}
                 onChange={(e) => setCallSign(e.target.value)}
                 placeholder="z.B. Kater 4/1"
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-slate-300 mb-1 font-mono uppercase tracking-wider">KFZ-Kennzeichen:</label>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 font-mono uppercase tracking-wider">KFZ-Kennzeichen:</label>
               <input
                 type="text"
                 value={licensePlate}
                 onChange={(e) => setLicensePlate(e.target.value)}
                 placeholder="z.B. M-RD 112"
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-slate-300 mb-1 font-mono uppercase tracking-wider">Telefonnummer:</label>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 font-mono uppercase tracking-wider">Telefonnummer:</label>
               <input
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+49 171 1234567"
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>
           </div>
 
           <div>
-            <label className="block font-bold text-slate-300 mb-1 font-mono uppercase tracking-wider">Organisation / Staffel:</label>
+            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 font-mono uppercase tracking-wider">Organisation / Staffel:</label>
             <input
               type="text"
               value={organization}
               onChange={(e) => setOrganization(e.target.value)}
               placeholder="z.B. BRK Rettungshundestaffel, Feuerwehr Drohnenteam"
-              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500"
             />
           </div>
 
           {/* Equipment & Special Assets */}
           <div>
-            <label className="block font-bold text-slate-300 uppercase tracking-wider mb-1.5 font-mono">
+            <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 font-mono">
               Hilfsmittel & Spezialausstattung:
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono">
@@ -685,7 +684,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-2 ${
                       isSelected
                         ? 'bg-blue-500/20 border-blue-500 text-blue-200'
-                        : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
+                        : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                     }`}
                   >
                     <span className="text-base">{eq.icon}</span>
@@ -697,8 +696,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           </div>
 
           {/* Custom Equipment Tags */}
-          <div className="bg-slate-900/70 p-3 rounded-xl border border-slate-700 space-y-2">
-            <label className="block font-bold text-slate-300 uppercase tracking-wider font-mono text-[11px]">
+          <div className="bg-white dark:bg-slate-900/70 p-3 rounded-xl border border-slate-300 dark:border-slate-700 space-y-2">
+            <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono text-[11px]">
               Individuelle Hilfsmittel (Freitext-Tags):
             </label>
             <div className="flex gap-2">
@@ -708,7 +707,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 onChange={(e) => setNewTagInput(e.target.value)}
                 onKeyDown={handleAddCustomTag}
                 placeholder="z.B. Leichenspürhund, Wasserortungshund, Wärmebild FLIR"
-                className="flex-1 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                className="flex-1 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
               />
               <button
                 type="button"
@@ -730,7 +729,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleRemoveCustomTag(tag)}
-                      className="hover:text-red-400 text-slate-400 ml-0.5 cursor-pointer"
+                      className="hover:text-red-400 text-slate-500 dark:text-slate-400 ml-0.5 cursor-pointer"
                       title="Entfernen"
                     >
                       ×
@@ -747,7 +746,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
           {/* Equipment details */}
           <div>
-            <label className="block font-bold text-slate-300 mb-1 font-mono uppercase tracking-wider">
+            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 font-mono uppercase tracking-wider">
               Details zur Ausrüstung (z.B. Drohnenmodell, Hundename & Rasse):
             </label>
             <input
@@ -755,22 +754,22 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               value={customEquipmentNotes}
               onChange={(e) => setCustomEquipmentNotes(e.target.value)}
               placeholder="z.B. DJI Matrice 350 mit Wärmebildkamera, oder Suchhund 'Bella' (Mantrailer)"
-              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
             />
           </div>
 
           {/* Photo Avatar Picker with Upload */}
-          <div className="bg-slate-900/70 p-3.5 rounded-xl border border-slate-700 space-y-3">
+          <div className="bg-white dark:bg-slate-900/70 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700 space-y-3">
             <div className="flex items-center justify-between">
-              <label className="block font-bold text-slate-300 uppercase tracking-wider font-mono text-[11px]">
+              <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono text-[11px]">
                 Profilfoto:
               </label>
-              <span className="text-[10px] text-slate-400 font-mono">Eigenes Foto oder Initialen</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Eigenes Foto oder Initialen</span>
             </div>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="relative group shrink-0">
-                <div className="h-16 w-16 rounded-xl overflow-hidden border-2 border-blue-500 shadow-lg bg-slate-950 flex items-center justify-center">
+                <div className="h-16 w-16 rounded-xl overflow-hidden border-2 border-blue-500 shadow-lg bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
                   {photoUrl ? (
                     <img
                       src={photoUrl}
@@ -787,7 +786,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 <button
                   type="button"
                   onClick={() => userFileInputRef.current?.click()}
-                  className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-blue-300 transition rounded-xl cursor-pointer"
+                  className="absolute inset-0 bg-slate-100 dark:bg-slate-950/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-blue-300 transition rounded-xl cursor-pointer"
                   title="Foto hochladen"
                 >
                   <Camera className="w-4 h-4" />
@@ -828,7 +827,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowUrlInput(!showUrlInput)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition cursor-pointer flex items-center gap-1.5 font-mono text-[11px] border border-slate-700"
+                    className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold transition cursor-pointer flex items-center gap-1.5 font-mono text-[11px] border border-slate-300 dark:border-slate-700"
                   >
                     <LinkIcon className="w-3.5 h-3.5" />
                     <span>Bildlink</span>
@@ -842,7 +841,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                       value={customUrl}
                       onChange={(e) => setCustomUrl(e.target.value)}
                       placeholder="https://... (Bildlink)"
-                      className="flex-1 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                      className="flex-1 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
                     />
                     <button
                       type="button"
@@ -858,7 +857,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="pt-3 border-t border-slate-700 flex flex-wrap items-center justify-between gap-2">
+          <div className="pt-3 border-t border-slate-300 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -889,7 +888,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                           onClose();
                         }
                       }}
-                      className="px-3 py-2 rounded-xl bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 hover:text-white font-bold transition cursor-pointer border border-amber-800/80 flex items-center gap-1.5 uppercase tracking-wider font-mono text-xs shadow"
+                      className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#0F172A]mber-950/60 hover:bg-slate-50 dark:bg-[#0F172A]mber-900/80 text-amber-300 hover:text-white font-bold transition cursor-pointer border border-amber-800/80 flex items-center gap-1.5 uppercase tracking-wider font-mono text-xs shadow"
                       title="Benutzer aus dem aktuellen Einsatz abmelden (Account bleibt in Datenbank)"
                     >
                       <LogOut className="w-3.5 h-3.5 text-amber-400" />
@@ -898,16 +897,16 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   )}
 
                   <details className="relative group">
-                    <summary className="list-none px-2.5 py-2 rounded-xl bg-slate-900 hover:bg-red-950/40 text-slate-400 hover:text-red-400 border border-slate-700 transition cursor-pointer text-xs font-mono flex items-center gap-1">
+                    <summary className="list-none px-2.5 py-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-red-950/40 text-slate-500 dark:text-slate-400 hover:text-red-400 border border-slate-300 dark:border-slate-700 transition cursor-pointer text-xs font-mono flex items-center gap-1">
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Gefahrenzone: Löschen...</span>
                     </summary>
-                    <div className="absolute bottom-full left-0 mb-2 p-3 bg-slate-900 border border-red-500/80 rounded-xl shadow-2xl z-20 w-64 text-xs font-mono space-y-2">
+                    <div className="absolute bottom-full left-0 mb-2 p-3 bg-white dark:bg-slate-900 border border-red-500/80 rounded-xl shadow-2xl z-20 w-64 text-xs font-mono space-y-2">
                       <div className="text-red-300 font-bold flex items-center gap-1.5">
                         <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
                         <span>Account unwiderruflich löschen</span>
                       </div>
-                      <p className="text-[10px] text-slate-400">
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
                         Dies löscht den Account komplett aus der Datenbank. Wenn Sie die Person nur aus dem Einsatz abmelden wollen, nutzen Sie stattdessen &quot;Aus Einsatz entfernen&quot;.
                       </p>
                       <button
@@ -927,7 +926,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition cursor-pointer border border-slate-700 uppercase tracking-wider font-mono text-xs"
+                className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 uppercase tracking-wider font-mono text-xs"
               >
                 Abbrechen
               </button>
@@ -936,7 +935,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 disabled={isTargetOwnerProtected}
                 className={`px-5 py-2 rounded-xl text-white font-bold transition flex items-center gap-1.5 shadow uppercase tracking-wider font-mono text-xs ${
                   isTargetOwnerProtected
-                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600'
+                    ? 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed border border-slate-400 dark:border-slate-600'
                     : 'bg-blue-600 hover:bg-blue-500 cursor-pointer'
                 }`}
               >

@@ -2073,7 +2073,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         senderPhotoUrl: targetUser.photoUrl,
         channel: 'system',
         isDirect: false,
-        text: `🟢 EINGELOGGT: ${targetUser.name} (${targetUser.callSign}) ist online und wartet auf Koordination (Suchtrupp + Sektor zuteilen).`,
+        text: targetUser.role === 'observer' ? `🟢 EINGELOGGT: ${targetUser.name} (${targetUser.callSign}) liest als Gast/Behörde mit.` : `🟢 EINGELOGGT: ${targetUser.name} (${targetUser.callSign}) ist online und wartet auf Koordination (Suchtrupp + Sektor zuteilen).`,
         timestamp: new Date().toISOString(),
         isAlert: false,
       };
@@ -2092,7 +2092,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
           authorName: targetUser.name,
           authorRole: targetUser.role,
           category: 'status',
-          text: `EINGELOGGT: ${targetUser.name} (${targetUser.callSign}) hat sich angemeldet.`,
+          text: targetUser.role === 'observer' ? `EINGELOGGT: ${targetUser.name} (${targetUser.callSign}) hat sich als Gast/Betrachter angemeldet.` : `EINGELOGGT: ${targetUser.name} (${targetUser.callSign}) hat sich angemeldet.`,
         };
         updateOperation(currentOperation.id, {
           logs: [logEntry, ...(currentOperation.logs || [])],

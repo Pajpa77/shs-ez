@@ -257,10 +257,10 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#1E293B] border border-blue-500/50 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden font-sans text-slate-100">
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-[#1E293B] border border-blue-500/50 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden font-sans text-black dark:text-slate-100">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700 bg-slate-900/60">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30">
               <Scissors className="w-5 h-5" />
@@ -272,7 +272,7 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
                   {generatedSectors.length} Teilsektoren
                 </span>
               </h2>
-              <p className="text-xs text-slate-400 font-mono mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
                 {boundingBox.isFromPolygon
                   ? `Aus gezeichnetem Umriss (${polygonPoints?.length} Punkte) • Gesamtfläche ca. ${totalHectares.toFixed(1)} ha`
                   : `Planquadrat-Raster um Einsatzort • Gesamtfläche ca. ${totalHectares.toFixed(1)} ha`}
@@ -281,7 +281,7 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-white hover:bg-slate-50 dark:bg-slate-800 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -291,7 +291,7 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
         <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs font-mono">
           {/* Preset Buttons */}
           <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
               Schnellauswahl Raster-Aufteilung:
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -305,14 +305,14 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
                 className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col gap-1 ${
                   rows === 2 && cols === 2
                     ? 'bg-blue-600/30 border-blue-500 text-white ring-1 ring-blue-500'
-                    : 'bg-slate-900/80 border-slate-700 text-slate-300 hover:bg-slate-800'
+                    : 'bg-white dark:bg-slate-900/80 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm">4 Sektoren</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">2 × 2</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-normal">Quadranten (Alpha bis Delta)</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Quadranten (Alpha bis Delta)</span>
               </button>
 
               <button
@@ -325,14 +325,14 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
                 className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col gap-1 ${
                   rows === 2 && cols === 1
                     ? 'bg-blue-600/30 border-blue-500 text-white ring-1 ring-blue-500'
-                    : 'bg-slate-900/80 border-slate-700 text-slate-300 hover:bg-slate-800'
+                    : 'bg-white dark:bg-slate-900/80 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm">2 Sektoren</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">2 × 1</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-normal">Nord / Süd Halbierung</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Nord / Süd Halbierung</span>
               </button>
 
               <button
@@ -345,14 +345,14 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
                 className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col gap-1 ${
                   rows === 1 && cols === 2
                     ? 'bg-blue-600/30 border-blue-500 text-white ring-1 ring-blue-500'
-                    : 'bg-slate-900/80 border-slate-700 text-slate-300 hover:bg-slate-800'
+                    : 'bg-white dark:bg-slate-900/80 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm">2 Sektoren</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">1 × 2</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-normal">West / Ost Halbierung</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">West / Ost Halbierung</span>
               </button>
 
               <button
@@ -365,22 +365,22 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
                 className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col gap-1 ${
                   rows === 3 && cols === 2
                     ? 'bg-blue-600/30 border-blue-500 text-white ring-1 ring-blue-500'
-                    : 'bg-slate-900/80 border-slate-700 text-slate-300 hover:bg-slate-800'
+                    : 'bg-white dark:bg-slate-900/80 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm">6 Sektoren</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">3 × 2</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-normal">Matrix (A1 bis C2)</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Matrix (A1 bis C2)</span>
               </button>
             </div>
           </div>
 
           {/* Detailed Custom Grid Controls */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-900/60 p-3.5 rounded-xl border border-slate-700/80">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700/80">
             <div>
-              <label className="block text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 Zeilen (Nord ↔ Süd):
               </label>
               <div className="flex items-center gap-2">
@@ -390,14 +390,14 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
                   max="5"
                   value={rows}
                   onChange={(e) => setRows(parseInt(e.target.value))}
-                  className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
                 />
                 <span className="font-bold text-blue-400 w-6 text-center">{rows}</span>
               </div>
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 Spalten (West ↔ Ost):
               </label>
               <div className="flex items-center gap-2">
@@ -407,20 +407,20 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
                   max="5"
                   value={cols}
                   onChange={(e) => setCols(parseInt(e.target.value))}
-                  className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
                 />
                 <span className="font-bold text-blue-400 w-6 text-center">{cols}</span>
               </div>
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 Namensschema:
               </label>
               <select
                 value={namingPattern}
                 onChange={(e) => setNamingPattern(e.target.value as any)}
-                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
+                className="w-full px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 text-xs focus:outline-none focus:border-blue-500 cursor-pointer"
               >
                 <option value="nato">NATO (Alpha, Bravo, Charlie...)</option>
                 <option value="matrix">Planquadrate (A1, A2, B1, B2...)</option>
@@ -433,7 +433,7 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
           {/* Sektor-Präfix & Priorität */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 Basis-Name / Präfix:
               </label>
               <input
@@ -441,12 +441,12 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
                 value={basePrefix}
                 onChange={(e) => setBasePrefix(e.target.value)}
                 placeholder="z.B. Sektor, Wald Nord, Absuchbereich"
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-sans"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 Standard-Priorität:
               </label>
               <div className="flex gap-2">
@@ -460,9 +460,9 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
                         ? p === 'high'
                           ? 'bg-red-500/20 text-red-400 border-red-500'
                           : p === 'medium'
-                          ? 'bg-amber-500/20 text-amber-400 border-amber-500'
+                          ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-400 border-amber-500'
                           : 'bg-blue-500/20 text-blue-400 border-blue-500'
-                        : 'bg-slate-900 text-slate-400 border-slate-700 hover:bg-slate-800'
+                        : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:bg-slate-800'
                     }`}
                   >
                     {p === 'high' ? 'Hoch' : p === 'medium' ? 'Mittel' : 'Niedrig'}
@@ -475,17 +475,17 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
           {/* Generated Sectors Grid Preview */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5 text-blue-400" />
                 Vorschau der generierten Sektoren ({generatedSectors.length}):
               </label>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                 ca. {(totalHectares / generatedSectors.length).toFixed(1)} ha pro Sektor
               </span>
             </div>
 
             <div
-              className="grid gap-2 p-3 bg-slate-950/80 rounded-xl border border-slate-800 max-h-48 overflow-y-auto"
+              className="grid gap-2 p-3 bg-slate-100 dark:bg-slate-950/80 rounded-xl border border-slate-200 dark:border-slate-800 max-h-48 overflow-y-auto"
               style={{
                 gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
               }}
@@ -506,7 +506,7 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
                       style={{ backgroundColor: sector.color }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono mt-1">
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-1">
                     <span>📏 ca. {sector.areaHectares} ha</span>
                     <span className="text-slate-500">Offen</span>
                   </div>
@@ -517,11 +517,11 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="px-5 py-3.5 border-t border-slate-700 bg-slate-900/80 flex items-center justify-between gap-3">
+        <div className="px-5 py-3.5 border-t border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/80 flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition cursor-pointer border border-slate-700 text-xs uppercase tracking-wider"
+            className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 text-xs uppercase tracking-wider"
           >
             Abbrechen
           </button>
