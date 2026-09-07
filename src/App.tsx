@@ -137,6 +137,18 @@ const MainApp: React.FC = () => {
     }
   }, [isDarkMode]);
 
+  // Sync with OS Theme changes dynamically
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsDarkMode(e.matches);
+    };
+    
+    // Modern event listener
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
   // Automatically clear unread badge when opening chat
   useEffect(() => {
     if (activeTab === 'chat') {
