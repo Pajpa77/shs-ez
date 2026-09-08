@@ -73,8 +73,6 @@ const MainApp: React.FC = () => {
     uiScale,
     setUiScale,
     activeTrackingTest,
-    isQuotaExhausted,
-    setQuotaExhausted
   } = useRescue();
 
   // Initialize push notifications & vibration alerts

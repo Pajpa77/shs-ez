@@ -37,7 +37,15 @@ export interface User {
   lastHeartbeat?: number; // Timestamp des letzten Heartbeats in ms
   arrivalStatus?: 'in_transit' | 'ez_reached' | 'ready';
   currentLocation?: GpsPoint;
+  trackColor?: string; // Individuelle Suchspur-Farbe für die Lagekarte
   dogInfo?: { name?: string; breed?: string; qualification?: string };
+  lastTrackingTest?: {
+    passed: boolean;
+    date: string;
+    pointsCount: number;
+    distanceMeters: number;
+    durationMinutes: number;
+  };
   isFirstAdmin?: boolean; // First Admin & App-Owner (unantastbar)
   isOwner?: boolean; // App-Owner (unantastbar vor anderen Admins)
   updatedAt?: string;
@@ -290,4 +298,57 @@ export interface SearchOperation {
   archivedChatMessages?: ChatMessage[]; // Vollständig gesicherter Einsatz-Funk- und Chatverlauf
   notes?: string;
   updatedAt?: string;
+}
+
+// 16 hochkontrastreiche taktische Farben für Suchspuren (auf OSM-, Topo- und Satellitenkarten optimal unterscheidbar)
+export const TACTICAL_TRACK_COLORS = [
+  '#06b6d4', // 1. Türkis / Cyan (Standard maria)
+  '#f97316', // 2. Leuchtendes Orange
+  '#10b981', // 3. Smaragdgrün
+  '#a855f7', // 4. Kräftiges Violett
+  '#eab308', // 5. Warmer Bernsteingold
+  '#ec4899', // 6. Magenta / Pink
+  '#3b82f6', // 7. Klares Königsblau
+  '#14b8a6', // 8. Helles Teal / Minzgrün
+  '#ef4444', // 9. Signalrot
+  '#84cc16', // 10. Limette / Hellgrün
+  '#6366f1', // 11. Indigo
+  '#f43f5e', // 12. Koralle / Rose
+  '#ea580c', // 13. Rostorange
+  '#0284c7', // 14. Himmelblau
+  '#d946ef', // 15. Fuchsia
+  '#facc15', // 16. Sonnengelb
+];
+
+/**
+ * Liefert eine feste, unveränderliche Spurfarbe für einen Benutzer.
+ * 1. Priorität: Individuell gesetztes `user.trackColor`
+ * 2. Priorität: Fester Index in allUsers (Reihenfolge bleibt stabil)
+ * 3. Fallback: Deterministischer Hash des user.id Strings
+ */
+export function getUserTrackColor(user?: Partial<User> | string | null, allUsers?: User[]): string {
+  if (!user) return TACTICAL_TRACK_COLORS[0];
+
+  if (typeof user === 'object' && user.trackColor) {
+    return user.trackColor;
+  }
+
+  const userId = typeof user === 'string' ? user : user.id;
+  if (!userId) return TACTICAL_TRACK_COLORS[0];
+
+  if (allUsers && allUsers.length > 0) {
+    const idx = allUsers.findIndex((u) => u.id === userId);
+    if (idx !== -1) {
+      return TACTICAL_TRACK_COLORS[idx % TACTICAL_TRACK_COLORS.length];
+    }
+  }
+
+  // Deterministischer Hash des User-IDs für garantiert konsistente Farben
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = (hash << 5) - hash + userId.charCodeAt(i);
+    hash |= 0;
+  }
+  const colorIdx = Math.abs(hash) % TACTICAL_TRACK_COLORS.length;
+  return TACTICAL_TRACK_COLORS[colorIdx];
 }

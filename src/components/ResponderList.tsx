@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { User, EquipmentType, SearchTeam, isFirstAdmin, isOwner } from '../types';
+import { User, EquipmentType, SearchTeam, isFirstAdmin, isOwner, getUserTrackColor } from '../types';
 import {
   Users,
   Shield,
@@ -244,7 +244,14 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                         )}
                       </div>
                       <div>
-                        <div className="font-bold text-xs text-white leading-tight">{user.name}</div>
+                        <div className="font-bold text-xs text-white leading-tight flex items-center gap-1.5">
+                          <span>{user.name}</span>
+                          <span
+                            className="w-2.5 h-2.5 rounded-full inline-block shrink-0 border border-white/80 shadow-sm"
+                            style={{ backgroundColor: getUserTrackColor(user, allUsers) }}
+                            title={`Suchspur-Farbe: ${getUserTrackColor(user, allUsers)}`}
+                          />
+                        </div>
                         <div className="text-[10px] text-blue-400 font-mono">{user.callSign}</div>
                       </div>
                     </div>
@@ -253,19 +260,30 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                     </span>
                   </div>
 
+                  {user.lastTrackingTest && (
+                    <div className="text-[10px] font-mono flex items-center justify-between px-2.5 py-1 rounded bg-blue-950/40 border border-blue-800/40 text-blue-300">
+                      <span>🛰️ Gerätetest:</span>
+                      <span className="font-bold">
+                        {user.lastTrackingTest.passed ? '✓ Bestanden' : '⚠️ Unvollständig'} ({new Date(user.lastTrackingTest.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })})
+                      </span>
+                    </div>
+                  )}
+
                   <div className="text-[11px] text-slate-700 dark:text-slate-300 font-mono flex items-center justify-between bg-slate-50 dark:bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700/60">
                     <span>Entfernung zur EZ:</span>
                     <span className="font-bold text-white">{distText}</span>
                   </div>
 
-                  {canLead && status !== 'ready' && (
+                  {(canLead || currentUser?.id === user.id) && status !== 'ready' && (
                     <button
                       type="button"
                       onClick={() => confirmUserReady(user.id)}
                       className="w-full py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold font-mono transition cursor-pointer flex items-center justify-center gap-1.5 shadow"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      Als „Bereit“ bestätigen & Tracking starten
+                      {currentUser?.id === user.id && !canLead
+                        ? 'Ich bin bereit (Tracking starten)'
+                        : 'Als „Bereit“ bestätigen & Tracking starten'}
                     </button>
                   )}
                   {status === 'ready' && (

@@ -23,7 +23,7 @@ export const exportSectorAsKml = (sector: SearchSector) => {
     <description>
       Zugewiesenes Suchgebiet für Drohne / Flächensuche.
       Status: ${sector.status}
-      Erstellt: ${new Date(sector.createdAt).toLocaleString('de-DE')}
+      Exportiert: ${new Date().toLocaleString('de-DE')}
     </description>
     <Style id="sectorStyle">
       <LineStyle>

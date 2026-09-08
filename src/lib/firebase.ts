@@ -189,6 +189,8 @@ export function serializeUserForFirestore(user: User): Record<string, any> {
     isFirstAdmin: Boolean(user.isFirstAdmin || user.id === 'user-maria' || (user.username?.toLowerCase() === 'maria' && user.id === 'user-maria')),
     isOwner: Boolean(user.isOwner || user.id === 'user-maria' || (user.username?.toLowerCase() === 'maria' && user.id === 'user-maria')),
     arrivalStatus: user.arrivalStatus || '',
+    trackColor: user.trackColor || '',
+    lastTrackingTest: user.lastTrackingTest || null,
     updatedAt: new Date().toISOString(),
   };
   return cleanUndefinedFields(data);
@@ -226,6 +228,8 @@ export function deserializeUserFromFirestore(data: any): User {
     activeSessionId: data.activeSessionId || undefined,
     lastHeartbeat: data.lastHeartbeat !== undefined ? Number(data.lastHeartbeat) : undefined,
     arrivalStatus: data.arrivalStatus || undefined,
+    trackColor: data.trackColor || undefined,
+    lastTrackingTest: data.lastTrackingTest && typeof data.lastTrackingTest === 'object' ? data.lastTrackingTest : undefined,
     updatedAt: data.updatedAt || undefined,
   };
 }

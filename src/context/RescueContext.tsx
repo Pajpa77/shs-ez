@@ -18,7 +18,10 @@ import {
   TrackingTestSession,
   isFirstAdmin,
   isOwner,
+  getUserTrackColor,
+  TACTICAL_TRACK_COLORS,
 } from '../types';
+import { useWakeLock } from '../hooks/useWakeLock';
 import {
   INITIAL_USERS,
   INITIAL_OPERATIONS,
@@ -660,6 +663,9 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     lng: 0,
   });
 
+  // Maximum GPS track points stored per responder (10,000 points = approx. 30-50 km search movement without data loss)
+  const MAX_TRACK_POINTS = 10000;
+
   // Track global quota exhaustion changes
   useEffect(() => {
     const unsub = onQuotaExhaustedChange((exhausted) => {
@@ -676,6 +682,15 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!currentUserId || allUsers.length === 0) return null;
     return allUsers.find((u) => u.id === currentUserId) || null;
   }, [currentUserId, allUsers]);
+
+  // Keep mobile screen awake via Screen Wake Lock API during active GPS recording (Status Grün) or Tracking Test
+  const isTrackingWakeLockActive = Boolean(
+    (isRealGpsActive &&
+      (currentUser?.arrivalStatus === 'ready' ||
+        (currentUser?.id && userArrivalStatuses[currentUser.id] === 'ready'))) ||
+      activeTrackingTest?.isActive
+  );
+  useWakeLock(isTrackingWakeLockActive);
 
   // Single active device session ID to prevent double login / session conflicts
   const deviceSessionId = useMemo(() => {
@@ -1693,16 +1708,16 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         // Record for tracking test if active
         const currentTest = activeTrackingTestRef.current;
         if (currentTest && currentTest.isActive && !currentTest.isCompleted) {
-          setActiveTrackingTest(prev => {
+          setActiveTrackingTest((prev) => {
             if (!prev) return null;
             const lastPt = prev.trackPoints[prev.trackPoints.length - 1];
             if (lastPt) {
               const d = calculateDistanceMeters(lastPt.lat, lastPt.lng, point.lat, point.lng);
-              if (d < 1) return prev; // Deduplicate stationary points
+              if (d < 1.5) return prev; // Deduplicate stationary points
             }
             return {
               ...prev,
-              trackPoints: [...prev.trackPoints, point]
+              trackPoints: [...prev.trackPoints, point].slice(-MAX_TRACK_POINTS),
             };
           });
         }
@@ -1718,16 +1733,16 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               trackHistory: [],
             };
 
-            // Filter out dummy/mock jump or extreme teleport (> 1000m jump from previous point)
+            // Safely handle track history: only drop the solitary initial seed mock point if present.
+            // NEVER wipe recorded tracks on distance jumps (> 1000m) – the map cleanly segments polylines!
             let cleanHistory = [...(userLoc.trackHistory || [])];
-            if (cleanHistory.length > 0) {
-              const lastPoint = cleanHistory[cleanHistory.length - 1];
-              const dist = calculateDistanceMeters(lastPoint.lat, lastPoint.lng, point.lat, point.lng);
+            if (cleanHistory.length === 1) {
+              const pt0 = cleanHistory[0];
               const isNearDummy =
-                (Math.abs(lastPoint.lat - 51.845) < 0.01 && Math.abs(lastPoint.lng - 11.635) < 0.01) ||
-                (Math.abs(lastPoint.lat - VEREINSBUERO_LOCATION.lat) < 0.001 &&
-                  Math.abs(lastPoint.lng - VEREINSBUERO_LOCATION.lng) < 0.001);
-              if (dist > 1000 || (isNearDummy && dist > 150)) {
+                (Math.abs(pt0.lat - 51.845) < 0.01 && Math.abs(pt0.lng - 11.635) < 0.01) ||
+                (Math.abs(pt0.lat - VEREINSBUERO_LOCATION.lat) < 0.001 &&
+                  Math.abs(pt0.lng - VEREINSBUERO_LOCATION.lng) < 0.001);
+              if (isNearDummy) {
                 cleanHistory = [];
               }
             }
@@ -1737,8 +1752,20 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             let nextHistory = cleanHistory;
             if (isUserReady) {
               const lastHistorical = cleanHistory[cleanHistory.length - 1];
-              const shouldAdd = !lastHistorical || calculateDistanceMeters(lastHistorical.lat, lastHistorical.lng, point.lat, point.lng) >= 1;
-              nextHistory = shouldAdd ? [...cleanHistory, point].slice(-500) : cleanHistory;
+              const distMoved = lastHistorical
+                ? calculateDistanceMeters(lastHistorical.lat, lastHistorical.lng, point.lat, point.lng)
+                : 999;
+              const timeSinceLast = lastHistorical
+                ? Math.abs(new Date(point.timestamp).getTime() - new Date(lastHistorical.timestamp).getTime())
+                : 99999;
+              // Accept points with good accuracy (<= 40m) or if no accuracy metadata available
+              const isAccurate = !point.accuracy || point.accuracy <= 40;
+              // Record point if moved >= 2.0m (filters out stationary jitter) or every 20s if moved >= 1.0m
+              const shouldAdd =
+                !lastHistorical ||
+                (isAccurate && (distMoved >= 2.0 || (timeSinceLast >= 20000 && distMoved >= 1.0)));
+
+              nextHistory = shouldAdd ? [...cleanHistory, point].slice(-MAX_TRACK_POINTS) : cleanHistory;
             } else if (cleanHistory.length === 0) {
               nextHistory = [point];
             }
@@ -1788,15 +1815,16 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     );
 
     // Background GPS fallback tick: when screen or tab is in background,
-    // explicitly query position to keep GPS stream alive
+    // explicitly query position to keep GPS stream alive during operations AND during tracking tests
     const bgGpsInterval = setInterval(() => {
-      if (
+      const isTestRunning = activeTrackingTestRef.current?.isActive && !activeTrackingTestRef.current?.isCompleted;
+      const shouldRunBgGps =
         document.visibilityState === 'hidden' &&
         isRealGpsActive &&
-        currentUser &&
-        currentUser.role !== 'observer' &&
-        'geolocation' in navigator
-      ) {
+        'geolocation' in navigator &&
+        ((currentUser && currentUser.role !== 'observer') || isTestRunning);
+
+      if (shouldRunBgGps) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             const bgPoint: GpsPoint = {
@@ -1817,11 +1845,11 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 const lastPt = prev.trackPoints[prev.trackPoints.length - 1];
                 if (lastPt) {
                   const d = calculateDistanceMeters(lastPt.lat, lastPt.lng, bgPoint.lat, bgPoint.lng);
-                  if (d < 1) return prev; // Deduplicate stationary points
+                  if (d < 1.5) return prev; // Deduplicate stationary points
                 }
                 return {
                   ...prev,
-                  trackPoints: [...prev.trackPoints, bgPoint],
+                  trackPoints: [...prev.trackPoints, bgPoint].slice(-MAX_TRACK_POINTS),
                 };
               });
             }
@@ -1834,8 +1862,12 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               let nextHistory = uLoc.trackHistory || [];
               if (isReady) {
                 const lastPt = nextHistory[nextHistory.length - 1];
-                const shouldAdd = !lastPt || calculateDistanceMeters(lastPt.lat, lastPt.lng, bgPoint.lat, bgPoint.lng) >= 1;
-                nextHistory = shouldAdd ? [...nextHistory, bgPoint].slice(-500) : nextHistory;
+                const distMoved = lastPt
+                  ? calculateDistanceMeters(lastPt.lat, lastPt.lng, bgPoint.lat, bgPoint.lng)
+                  : 999;
+                const isAccurate = !bgPoint.accuracy || bgPoint.accuracy <= 40;
+                const shouldAdd = !lastPt || (isAccurate && distMoved >= 2.0);
+                nextHistory = shouldAdd ? [...nextHistory, bgPoint].slice(-MAX_TRACK_POINTS) : nextHistory;
               }
               const updatedState: UserLocationState = {
                 ...uLoc,
@@ -1900,7 +1932,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
           const isUserReady = userArrivalStatuses[uid] === 'ready';
           const history = isUserReady
-            ? [...(current.trackHistory || []), newPoint].slice(-500)
+            ? [...(current.trackHistory || []), newPoint].slice(-MAX_TRACK_POINTS)
             : [];
 
           next[uid] = {
@@ -2828,9 +2860,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         const existingForUser = updatedArchived.filter(t => t.userId === userId);
         const alreadySaved = existingForUser.some(t => t.points.length >= locState.trackHistory.length);
         if (!alreadySaved) {
-          const userIdx = allUsers.findIndex((u) => u.id === userId);
-          const COLORS = ['#06b6d4', '#f97316', '#10b981', '#a855f7', '#eab308', '#ec4899', '#3b82f6', '#14b8a6'];
-          const color = userIdx !== -1 ? COLORS[userIdx % COLORS.length] : '#3b82f6';
+          const color = getUserTrackColor(user || userId, allUsers);
           updatedArchived.push({
             id: `track-${userId}-${Date.now()}`,
             userId,
@@ -3108,7 +3138,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 userId,
                 userName: user?.name || 'Sucher',
                 callSign: user?.callSign || 'Unit',
-                color: user ? ['#06b6d4', '#f97316', '#10b981', '#a855f7', '#eab308', '#ec4899', '#3b82f6', '#14b8a6'][allUsers.indexOf(user) % 8] : '#3b82f6',
+                color: getUserTrackColor(user || userId, allUsers),
                 phaseLabel: `Suchphase 1 (${new Date(op.createdAt).toLocaleDateString()})`,
                 recordedAt: now,
                 points: [...locState.trackHistory],
@@ -3240,12 +3270,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState]) => {
       if (locState?.trackHistory && locState.trackHistory.length > 1) {
         const user = allUsers.find((u) => u.id === userId);
-        const existingForUser = updatedArchived.filter(t => t.userId === userId);
-        const alreadySaved = existingForUser.some(t => t.points.length >= locState.trackHistory.length);
+        const existingForUser = updatedArchived.filter((t) => t.userId === userId);
+        const alreadySaved = existingForUser.some((t) => t.points.length >= locState.trackHistory.length);
         if (!alreadySaved) {
-          const COLORS = ['#06b6d4', '#f97316', '#10b981', '#a855f7', '#eab308', '#ec4899', '#3b82f6', '#14b8a6'];
-          const userIdx = allUsers.findIndex(u => u.id === userId);
-          const color = userIdx !== -1 ? COLORS[userIdx % COLORS.length] : '#3b82f6';
+          const color = getUserTrackColor(user || userId, allUsers);
           
           updatedArchived.push({
             id: `track-${userId}-${Date.now()}`,
@@ -3253,7 +3281,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             userName: user?.name || 'Sucher',
             callSign: user?.callSign || 'Unit',
             color,
-            phaseLabel: op.completedAt ? `Suchphase 1 (${new Date(op.completedAt).toLocaleDateString()})` : 'Phase 1',
+            phaseLabel: op.completedAt ? `Suchphase 1 (${new Date(op.completedAt).toLocaleDateString('de-DE')})` : 'Phase 1',
             recordedAt: now,
             points: [...locState.trackHistory],
           });
@@ -3261,7 +3289,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       }
     });
 
-    const phaseTitle = options?.phaseTitle?.trim() || `Suchphase ${(updatedArchived.length > 0 ? 2 : 1)} (Fortsetzung)`;
+    const shouldPreserve = options?.preserveHistoricalTracks !== false;
+    const finalArchived = shouldPreserve ? updatedArchived : [];
+
+    const phaseTitle = options?.phaseTitle?.trim() || `Suchphase ${(finalArchived.length > 0 ? 2 : 1)} (Fortsetzung)`;
 
     // 2. Add rich log entry
     const logEntry: OperationLogEntry = {
@@ -3271,11 +3302,14 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       authorName: currentUser?.name || 'Einsatzleitung',
       authorRole: currentUser?.role || 'admin',
       category: 'status',
-      text: `🔄 EINSATZ REAKTIVIERT: "${phaseTitle}". Suche wird mit angepasster Kräfteaufteilung fortgesetzt. Bisher abgesuchte Sektoren (${op.sectors.filter((s) => s.status === 'searched').length}) und Bewegungsprofile der 1. Suche bleiben als Referenz auf der Lagekarte erhalten. ${options?.notes ? `Hinweis: "${options.notes}"` : ''}`,
+      text: `🔄 EINSATZ REAKTIVIERT: "${phaseTitle}". Suche wird mit angepasster Kräfteaufteilung fortgesetzt. Bisherige Suchspuren (${finalArchived.length}) und abgesuchte Sektoren (${op.sectors.filter((s) => s.status === 'searched').length}) bleiben als Referenz auf der Lagekarte erhalten. ${options?.notes ? `Hinweis: "${options.notes}"` : ''}`,
     };
 
-    // 3. Keep searched sectors as 'searched' (green) or reset open ones if requested
-    const sectors = op.sectors.map((sec) => ({ ...sec }));
+    // 3. Keep searched sectors as 'searched' (green) or reset to 'open' if explicitly requested
+    const sectors = op.sectors.map((sec) => ({
+      ...sec,
+      status: options?.keepSearchedSectors === false && sec.status === 'searched' ? ('open' as SectorStatus) : sec.status,
+    }));
 
     const updated: SearchOperation = {
       ...op,
@@ -3285,14 +3319,14 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       closingNotes: undefined,
       commander: options?.newCommander || currentUser?.name || op.commander,
       sectors,
-      archivedTracks: updatedArchived,
+      archivedTracks: finalArchived,
       logs: [logEntry, ...op.logs],
       updatedAt: now,
     };
 
     // Update state
     setAllOperations((prev) => {
-      const next = prev.map(o => o.id === id ? updated : o);
+      const next = prev.map((o) => (o.id === id ? updated : o));
       try {
         localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify(next));
       } catch { /* ignore */ }
@@ -3305,29 +3339,31 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     // 4. Set as active operation
     setCurrentOperationId(id);
 
-    // Restore and prepare trackHistory for responders so new GPS recordings extend the movement profile
-    setUserLocations((prev) => {
-      const next = { ...prev };
-      (updatedArchived || []).forEach((t) => {
-        if (t.userId && t.points && t.points.length > 0) {
-          const currentLoc = next[t.userId];
-          const currentLen = currentLoc?.trackHistory?.length || 0;
-          if (currentLen < t.points.length) {
-            next[t.userId] = {
-              userId: t.userId,
-              isLive: true,
-              lastUpdated: now,
-              currentPosition: t.points[t.points.length - 1],
-              trackHistory: [...t.points],
-            };
+    // Restore and prepare trackHistory for responders so new GPS recordings extend the movement profile seamlessly
+    if (shouldPreserve) {
+      setUserLocations((prev) => {
+        const next = { ...prev };
+        (finalArchived || []).forEach((t) => {
+          if (t.userId && t.points && t.points.length > 0) {
+            const currentLoc = next[t.userId];
+            const currentLen = currentLoc?.trackHistory?.length || 0;
+            if (currentLen < t.points.length) {
+              next[t.userId] = {
+                userId: t.userId,
+                isLive: true,
+                lastUpdated: now,
+                currentPosition: t.points[t.points.length - 1],
+                trackHistory: [...t.points],
+              };
+            }
           }
-        }
+        });
+        try {
+          localStorage.setItem(STORAGE_KEY_LOCATIONS, JSON.stringify(next));
+        } catch {}
+        return next;
       });
-      try {
-        localStorage.setItem(STORAGE_KEY_LOCATIONS, JSON.stringify(next));
-      } catch {}
-      return next;
-    });
+    }
 
     // 5. Activate selected users if provided
     if (options?.activatedUserIds && options.activatedUserIds.length > 0) {
@@ -4192,9 +4228,28 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   }, []);
 
   const saveTrackingTestResult = useCallback((save: boolean) => {
-    // Requirements say: automatisches logout des users erfolgt als letztes
     const testSession = activeTrackingTestRef.current;
     if (testSession && testSession.userId) {
+      if (save) {
+        const pts = testSession.trackPoints || [];
+        let totalDist = 0;
+        for (let i = 1; i < pts.length; i++) {
+          totalDist += calculateDistanceMeters(pts[i - 1].lat, pts[i - 1].lng, pts[i].lat, pts[i].lng);
+        }
+        updateUser(testSession.userId, {
+          lastTrackingTest: {
+            passed: pts.length >= 5,
+            date: new Date().toISOString(),
+            pointsCount: pts.length,
+            distanceMeters: Math.round(totalDist),
+            durationMinutes: testSession.durationMinutes,
+          },
+          isActive: false,
+        });
+      } else {
+        updateUser(testSession.userId, { isActive: false });
+      }
+
       setUserLocations((prev) => {
         const target = prev[testSession.userId];
         if (!target) return prev;
@@ -4209,7 +4264,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
     setActiveTrackingTest(null);
     confirmLogout();
-  }, [confirmLogout]);
+  }, [confirmLogout, updateUser, syncLocationToCloud]);
 
   // Tracking Test Timer Logic
   useEffect(() => {

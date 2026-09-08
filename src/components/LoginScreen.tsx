@@ -630,42 +630,31 @@ export const LoginScreen: React.FC = () => {
                       
                       <button
                         type="button"
-                        disabled={hasActiveOps}
                         onClick={() => setShowTestDuration(!showTestDuration)}
-                        className={`w-full p-4 rounded-xl bg-white dark:bg-slate-900 border-2 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-md ${
-                          hasActiveOps 
-                            ? 'border-slate-200 dark:border-slate-800 opacity-40 cursor-not-allowed grayscale' 
-                            : 'hover:bg-slate-50 dark:bg-slate-800 border-blue-500/60 hover:border-blue-400'
-                        }`}
+                        className="w-full p-4 rounded-xl bg-white dark:bg-slate-900 border-2 border-blue-500/60 hover:border-blue-400 hover:bg-slate-50 dark:bg-slate-800 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-md"
                       >
                         <div>
                           <div className="flex items-center justify-between">
-                            <span className={`text-sm font-bold uppercase flex items-center gap-2 ${hasActiveOps ? 'text-slate-500' : 'text-blue-200'}`}>
-                              <span>🛰️</span> Trackingtest
+                            <span className="text-sm font-bold uppercase flex items-center gap-2 text-blue-200">
+                              <span>🛰️</span> Persönlicher Trackingtest
                             </span>
-                            <span className={`text-[10px] px-2 py-0.5 rounded font-mono border font-bold ${
-                              hasActiveOps 
-                                ? 'bg-slate-100 dark:bg-slate-950 text-slate-600 border-slate-200 dark:border-slate-800' 
-                                : 'bg-blue-950 text-blue-300 border-blue-700'
-                            }`}>
-                              {hasActiveOps ? 'Deaktiviert' : 'Testmodus'}
+                            <span className="text-[10px] px-2 py-0.5 rounded font-mono border font-bold bg-blue-950 text-blue-300 border-blue-700">
+                              Testmodus
                             </span>
                           </div>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-sans leading-relaxed">
-                            {hasActiveOps 
-                              ? 'Nicht verfügbar, da ein Einsatz aktiv ist.' 
-                              : 'Testet die GPS-Aufzeichnung für eine gewählte Dauer (10-30 Min).'}
+                            Überprüft die GPS-Funktion und Genauigkeit deines Geräts im Vorfeld (10-30 Min). Erstellt am Ende ein Prüfprotokoll mit Karte zur Bestätigung.
                           </p>
                         </div>
-                        {!hasActiveOps && !showTestDuration && (
+                        {!showTestDuration && (
                           <div className="w-full py-2.5 px-3 rounded-lg bg-blue-600 group-hover:bg-blue-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
-                            <span>Testdauer wählen</span>
+                            <span>Testdauer wählen & starten</span>
                             <ChevronDown className="w-3.5 h-3.5" />
                           </div>
                         )}
                       </button>
 
-                      {!hasActiveOps && showTestDuration && (
+                      {showTestDuration && (
                         <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-950 border border-blue-500/40 animate-in slide-in-from-top-2 duration-200">
                           <span className="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-3 text-center">
                             Wähle die Testdauer:

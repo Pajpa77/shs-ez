@@ -2,7 +2,17 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import L from 'leaflet';
 import { captureTacticalMapScreenshot } from '../lib/mapSnapshotHelper';
 import { useRescue } from '../context/RescueContext';
-import { SearchSector, Finding, User, EquipmentType, SectorStatus, UserLocationState, SearchOperation } from '../types';
+import {
+  SearchSector,
+  Finding,
+  User,
+  EquipmentType,
+  SectorStatus,
+  UserLocationState,
+  SearchOperation,
+  getUserTrackColor,
+  TACTICAL_TRACK_COLORS,
+} from '../types';
 import { VEREINSBUERO_LOCATION } from '../mockData';
 import { TacticalWeatherOverlay } from './TacticalWeatherOverlay';
 import {
@@ -138,17 +148,8 @@ function getEquipmentBadge(equipment: EquipmentType[] = []): { icon: string; lab
   return { icon: '👤', label: 'Einsatzkraft', color: '#64748b' };
 }
 
-// User track color mapping
-const USER_COLORS = [
-  '#06b6d4', // Cyan
-  '#f97316', // Orange
-  '#10b981', // Emerald
-  '#a855f7', // Purple
-  '#eab308', // Amber
-  '#ec4899', // Pink
-  '#3b82f6', // Blue
-  '#14b8a6', // Teal
-];
+// User track color mapping - expanded to 16 high-contrast tactical colors
+const USER_COLORS = TACTICAL_TRACK_COLORS;
 
 export const TacticalMap: React.FC<TacticalMapProps> = ({
   operation: propOperation,
@@ -210,7 +211,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const [isWeatherModalOpenMobile, setIsWeatherModalOpenMobile] = useState(false);
   const [isLayersOpenMobile, setIsLayersOpenMobile] = useState(false);
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false);
-  const [desktopSidebarTab, setDesktopSidebarTab] = useState<'layers' | 'actions'>('layers');
+  const [desktopSidebarTab, setDesktopSidebarTab] = useState<'layers' | 'tracks' | 'actions'>('layers');
   const [drawnPoints, setDrawnPoints] = useState<[number, number][]>([]);
   const [drawMode, setDrawMode] = useState<'pen' | 'click'>('pen');
   const [strokeHistory, setStrokeHistory] = useState<[number, number][][]>([]);
@@ -261,6 +262,96 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       title: 'Vereinsbüro Aschersleben',
     };
   }, [currentOperation]);
+
+  interface TrackSummaryItem {
+    userId: string;
+    name: string;
+    callSign: string;
+    color: string;
+    pointCount: number;
+    distanceMeters: number;
+    isLive: boolean;
+    isDrone: boolean;
+    equipmentIcon: string;
+    boundsPoints: [number, number][];
+  }
+
+  // Aggregated summary of all search tracks on map (Live and Archived)
+  const trackSummaries = useMemo<TrackSummaryItem[]>(() => {
+    const list: TrackSummaryItem[] = [];
+    const seenUserIds = new Set<string>();
+
+    // 1. Live tracks from userLocations
+    Object.entries(userLocations).forEach(([userId, locState]) => {
+      const history = locState.trackHistory || [];
+      if (history.length < 2) return;
+      seenUserIds.add(userId);
+
+      const user = allUsers.find((u) => u.id === userId);
+      const color = getUserTrackColor(user || userId, allUsers);
+      const isDrone = Boolean(user?.equipment?.includes('drone'));
+
+      let totalDist = 0;
+      for (let i = 1; i < history.length; i++) {
+        const d = calculateDistanceMeters(history[i - 1].lat, history[i - 1].lng, history[i].lat, history[i].lng);
+        if (d <= 1200) totalDist += d;
+      }
+
+      list.push({
+        userId,
+        name: user?.name || 'Suchkraft',
+        callSign: user?.callSign || 'Unit',
+        color,
+        pointCount: history.length,
+        distanceMeters: totalDist,
+        isLive: locState.isLive,
+        isDrone,
+        equipmentIcon: isDrone ? '🚁' : user?.equipment?.includes('k9_mantrailer') ? '🐕' : '🚶',
+        boundsPoints: history.map((p) => [p.lat, p.lng]),
+      });
+    });
+
+    // 2. Archived tracks from currentOperation
+    if (currentOperation?.archivedTracks) {
+      currentOperation.archivedTracks.forEach((t) => {
+        if (!t.points || t.points.length < 2) return;
+        if (seenUserIds.has(t.userId)) return;
+        seenUserIds.add(t.userId);
+
+        const user = allUsers.find((u) => u.id === t.userId);
+        const color = t.color || getUserTrackColor(user || t.userId, allUsers);
+        const isDrone = Boolean(user?.equipment?.includes('drone'));
+
+        let totalDist = 0;
+        for (let i = 1; i < t.points.length; i++) {
+          const d = calculateDistanceMeters(t.points[i - 1].lat, t.points[i - 1].lng, t.points[i].lat, t.points[i].lng);
+          if (d <= 1200) totalDist += d;
+        }
+
+        list.push({
+          userId: t.userId,
+          name: t.userName || user?.name || 'Suchkraft',
+          callSign: t.callSign || user?.callSign || 'Unit',
+          color,
+          pointCount: t.points.length,
+          distanceMeters: totalDist,
+          isLive: false,
+          isDrone,
+          equipmentIcon: isDrone ? '🚁' : '🚶',
+          boundsPoints: t.points.map((p) => [p.lat, p.lng]),
+        });
+      });
+    }
+
+    return list;
+  }, [userLocations, allUsers, currentOperation]);
+
+  const zoomToTrack = useCallback((points: [number, number][]) => {
+    if (!mapInstanceRef.current || points.length < 2) return;
+    const bounds = L.latLngBounds(points.map(([lat, lng]) => [lat, lng]));
+    mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+  }, []);
+
 
   // Universal navigation launcher (Google Maps, Apple Maps, Android Geo Intent)
   const handleOpenNavigation = useCallback((lat: number, lng: number, label: string) => {
@@ -1139,7 +1230,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
         segments.forEach((seg) => {
           const polyline = L.polyline(seg, {
-            color: archivedTrack.color || '#38bdf8',
+            color: archivedTrack.color || getUserTrackColor(archivedTrack.userId, allUsers),
             weight: 3.5,
             opacity: 0.85,
             dashArray: isPhase1 && currentOperation.status === 'active' ? '8, 6' : undefined,
@@ -1157,7 +1248,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
     // 2. Render user tracks from userLocations (in active or paused mode, keeping all recorded movement profiles visible!)
     if (!isArchiveMode || (currentOperation?.archivedTracks?.length || 0) === 0) {
-      (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState], idx) => {
+      (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState]) => {
         // If tracking test is active, skip (section 3 below renders activeTrackingTest specifically)
         if (activeTrackingTest?.isActive) {
           return;
@@ -1173,7 +1264,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
         const user = allUsers.find((u) => u.id === userId);
         const isDrone = user?.equipment?.includes('drone');
-        const trackColor = USER_COLORS[idx % USER_COLORS.length];
+        const trackColor = getUserTrackColor(user || userId, allUsers);
 
         // Segment track to prevent drawing straight lines across extreme GPS jump/teleport (> 1200m)
         const segments: [number, number][][] = [];
@@ -1283,7 +1374,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         idx,
         isOnline,
         isMe: user.id === currentUser?.id,
-        trackColor: USER_COLORS[idx % USER_COLORS.length],
+        trackColor: getUserTrackColor(user || userId, allUsers),
         origLat: locState.currentPosition.lat,
         origLng: locState.currentPosition.lng,
       });
@@ -1961,6 +2052,52 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               </div>
             </div>
 
+            {/* Suchspuren-Legende Mobile */}
+            {trackSummaries.length > 0 && (
+              <div className="pt-2 border-t border-slate-300 dark:border-slate-700 space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">
+                  <span>🗺️ SUCHSPUREN ({trackSummaries.length}):</span>
+                  <span className="text-emerald-400 font-bold">
+                    {(trackSummaries.reduce((sum, t) => sum + t.distanceMeters, 0) / 1000).toFixed(1)} km
+                  </span>
+                </div>
+                <div className="max-h-36 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
+                  {trackSummaries.map((item) => (
+                    <div
+                      key={item.userId}
+                      className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="w-3 h-3 rounded-full shrink-0 border border-white/80"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <div className="truncate text-[11px]">
+                          <span className="font-bold text-white">{item.name}</span>
+                          <span className="text-slate-500 dark:text-slate-400 font-mono ml-1">({item.callSign})</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 font-mono text-[10px]">
+                        <span className="text-white font-bold">
+                          {item.distanceMeters >= 1000 ? `${(item.distanceMeters / 1000).toFixed(1)} km` : `${Math.round(item.distanceMeters)} m`}
+                        </span>
+                        <button
+                          onClick={() => {
+                            zoomToTrack(item.boundsPoints);
+                            setIsLayersOpenMobile(false);
+                          }}
+                          className="px-1.5 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold text-[9px] cursor-pointer"
+                          title="Fokus auf Spur"
+                        >
+                          🔍
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button
               onClick={() => setIsLayersOpenMobile(false)}
               className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl uppercase tracking-wider font-mono cursor-pointer transition shadow"
@@ -2003,6 +2140,18 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               >
                 <Layers className="w-3.5 h-3.5" />
                 Ebenen
+              </button>
+              <button
+                onClick={() => setDesktopSidebarTab('tracks')}
+                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1 ${
+                  desktopSidebarTab === 'tracks'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200 hover:bg-slate-50 dark:bg-slate-800'
+                }`}
+                title="Suchspuren-Legende & Kräfte"
+              >
+                <span>🗺️</span>
+                Spuren {trackSummaries.length > 0 && `(${trackSummaries.length})`}
               </button>
               <button
                 onClick={() => setDesktopSidebarTab('actions')}
@@ -2139,7 +2288,104 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             </div>
           )}
 
-          {/* TAB 2: ACTIONS */}
+          {/* TAB 2: SUCHSPUREN / TRACKS LEGENDE */}
+          {desktopSidebarTab === 'tracks' && (
+            <div className="bg-[#1E293B]/95 backdrop-blur-md p-3 rounded-xl border border-slate-300 dark:border-slate-700 shadow-xl flex flex-col gap-2.5 text-xs text-slate-700 dark:text-slate-300">
+              <div className="flex items-center justify-between pb-1.5 border-b border-slate-300 dark:border-slate-700">
+                <div className="flex items-center gap-1.5 font-bold text-white text-[11px] uppercase tracking-wider font-mono">
+                  <span>🗺️</span>
+                  <span>Suchspuren ({trackSummaries.length})</span>
+                </div>
+                <button
+                  onClick={() => setShowTracks((v) => !v)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono transition cursor-pointer ${
+                    showTracks
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700'
+                  }`}
+                  title={showTracks ? 'Suchspuren auf Karte ausblenden' : 'Suchspuren einblenden'}
+                >
+                  {showTracks ? '✓ Sichtbar' : 'Aus'}
+                </button>
+              </div>
+
+              {trackSummaries.length === 0 ? (
+                <div className="p-3 bg-white dark:bg-slate-900/50 border border-slate-300 dark:border-slate-800 rounded-lg text-center text-slate-500 dark:text-slate-400 text-[11px] font-mono leading-relaxed">
+                  Noch keine Suchspuren aufgezeichnet. Einsatzkräfte mit Status Grün zeichnen automatisch ihre Wege auf.
+                </div>
+              ) : (
+                <div className="space-y-1.5 max-h-[320px] overflow-y-auto pr-0.5 scrollbar-thin">
+                  {trackSummaries.map((item) => {
+                    const distKm = (item.distanceMeters / 1000).toFixed(2);
+                    const distLabel = item.distanceMeters >= 1000 ? `${distKm} km` : `${Math.round(item.distanceMeters)} m`;
+
+                    return (
+                      <div
+                        key={item.userId}
+                        className="bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800/90 border border-slate-300 dark:border-slate-700/80 rounded-lg p-2 transition flex flex-col gap-1.5 shadow-sm"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {/* Distinct color swatch */}
+                            <span
+                              className="w-3.5 h-3.5 rounded-full shrink-0 border-2 border-white/80 shadow"
+                              style={{ backgroundColor: item.color }}
+                              title={`Spurfarbe: ${item.color}`}
+                            />
+                            <div className="min-w-0">
+                              <div className="font-bold text-white text-xs truncate flex items-center gap-1">
+                                <span>{item.equipmentIcon}</span>
+                                <span className="truncate">{item.name}</span>
+                              </div>
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                                {item.callSign}
+                              </div>
+                            </div>
+                          </div>
+
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 border ${
+                              item.isLive
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                            }`}
+                          >
+                            {item.isLive ? '🟢 Live' : '📁 Phase 1'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-300 dark:border-slate-800/80 text-[10px] font-mono">
+                          <div className="text-slate-700 dark:text-slate-300">
+                            <span className="font-bold text-white">{distLabel}</span>
+                            <span className="text-slate-500 dark:text-slate-400"> ({item.pointCount} Pkt.)</span>
+                          </div>
+                          <button
+                            onClick={() => zoomToTrack(item.boundsPoints)}
+                            className="px-2 py-0.5 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white rounded text-[10px] font-bold font-mono transition cursor-pointer border border-blue-500/40 flex items-center gap-1"
+                            title="Auf diese Suchspur zentrieren"
+                          >
+                            <span>🔍 Fokus</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Total distance footer */}
+              {trackSummaries.length > 0 && (
+                <div className="pt-2 border-t border-slate-300 dark:border-slate-700 flex items-center justify-between font-mono text-[10px]">
+                  <span className="text-slate-500 dark:text-slate-400">Gesamte Suchstrecke:</span>
+                  <span className="font-bold text-emerald-400 text-[11px]">
+                    {(trackSummaries.reduce((sum, t) => sum + t.distanceMeters, 0) / 1000).toFixed(2)} km
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: ACTIONS */}
           {desktopSidebarTab === 'actions' && (
             <div className="bg-[#1E293B]/95 backdrop-blur-md p-3 rounded-xl border border-slate-300 dark:border-slate-700 shadow-xl flex flex-col gap-2 text-xs text-slate-700 dark:text-slate-300">
               <div className="grid grid-cols-2 gap-1.5">

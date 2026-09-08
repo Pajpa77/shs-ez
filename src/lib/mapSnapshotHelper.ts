@@ -1,5 +1,5 @@
 import html2canvas from 'html2canvas';
-import { SearchOperation, UserLocationState, TrackingTestSession, GpsPoint } from '../types';
+import { SearchOperation, UserLocationState, TrackingTestSession, GpsPoint, getUserTrackColor } from '../types';
 
 /**
  * Captures a high-resolution screenshot of the tactical map container.
@@ -223,16 +223,20 @@ export function generateTacticalCanvasFallback(
   if (userLocations) {
     Object.entries(userLocations).forEach(([uId, locState]) => {
       if (locState.trackHistory && locState.trackHistory.length > 1) {
-        allTracks.push({
-          id: `live-${uId}`,
-          userId: uId,
-          userName: 'Einsatzkraft',
-          callSign: 'Unit',
-          color: '#38bdf8',
-          phaseLabel: 'Suchspur',
-          recordedAt: new Date().toISOString(),
-          points: locState.trackHistory,
-        });
+        // Skip if archived already covers this user with more or equal points
+        const alreadyArchived = allTracks.some((t) => t.userId === uId && t.points.length >= locState.trackHistory.length);
+        if (!alreadyArchived) {
+          allTracks.push({
+            id: `live-${uId}`,
+            userId: uId,
+            userName: 'Einsatzkraft',
+            callSign: 'Unit',
+            color: getUserTrackColor(uId),
+            phaseLabel: 'Suchspur',
+            recordedAt: new Date().toISOString(),
+            points: locState.trackHistory,
+          });
+        }
       }
     });
   }
@@ -250,7 +254,7 @@ export function generateTacticalCanvasFallback(
       if (i === 0) ctx.moveTo(tx, ty);
       else ctx.lineTo(tx, ty);
     });
-    ctx.strokeStyle = track.color || '#38bdf8';
+    ctx.strokeStyle = track.color || getUserTrackColor(track.userId);
     ctx.lineWidth = 3;
     ctx.stroke();
   });

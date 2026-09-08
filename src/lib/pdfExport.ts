@@ -30,7 +30,7 @@ export const generateOperationPDF = async (
     yPos += 10;
   } else {
     operation.findings.forEach((finding, idx) => {
-      pdf.text(`${idx + 1}. [${new Date(finding.timestamp).toLocaleTimeString()}] ${finding.reportedByUsername}`, 20, yPos);
+      pdf.text(`${idx + 1}. [${new Date(finding.timestamp).toLocaleTimeString()}] ${finding.userName || 'Suchkraft'}`, 20, yPos);
       yPos += 6;
       const desc = pdf.splitTextToSize(finding.description || 'Keine Details', 170);
       pdf.text(desc, 25, yPos);

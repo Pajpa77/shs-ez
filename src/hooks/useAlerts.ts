@@ -43,9 +43,10 @@ export function useAlerts(currentOperation: SearchOperation | null) {
     if (currentFindings.length > prevFindings.length && prevFindings.length > 0) {
       const newFinding = currentFindings.find(f => !prevFindings.some(pf => pf.id === f.id));
       if (newFinding) {
-        const title = newFinding.isCrucial ? '🚨 WICHTIGER FUND!' : '⚠️ Neuer Fund';
+        const isCrucial = newFinding.urgency === 'critical';
+        const title = isCrucial ? '🚨 WICHTIGER FUND!' : '⚠️ Neuer Fund';
         const body = newFinding.description || 'Ohne Beschreibung';
-        const pattern = newFinding.isCrucial ? [200, 100, 200, 100, 200, 500, 500, 100, 500, 100, 500] : [300, 150, 300];
+        const pattern = isCrucial ? [200, 100, 200, 100, 200, 500, 500, 100, 500, 100, 500] : [300, 150, 300];
         triggerAlert(title, body, pattern);
       }
     }
