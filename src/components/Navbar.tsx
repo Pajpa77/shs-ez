@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { User, isFirstAdmin } from '../types';
 import {
@@ -37,9 +37,147 @@ import {
   QrCode,
 } from 'lucide-react';
 
+export interface OpStatusTheme {
+  type: 'standby' | 'exercise' | 'operation' | 'archived';
+  colorName: string;
+  emoji: string;
+  label: string;
+  dotBg: string;
+  pingBg: string;
+  animatePing: boolean;
+  ring: string;
+  border: string;
+  text: string;
+  badge: string;
+}
+
+const ACTIVE_OP_PALETTES = [
+  {
+    name: 'Blau',
+    emoji: '🔵',
+    dotBg: 'bg-blue-500',
+    pingBg: 'bg-blue-400',
+    ring: 'ring-blue-500/60 shadow-[0_0_15px_rgba(59,130,246,0.5)]',
+    border: 'border-blue-500',
+    text: 'text-blue-400',
+    badge: 'bg-blue-950/80 text-blue-300 border-blue-700',
+  },
+  {
+    name: 'Lila',
+    emoji: '🟣',
+    dotBg: 'bg-purple-500',
+    pingBg: 'bg-purple-400',
+    ring: 'ring-purple-500/60 shadow-[0_0_15px_rgba(168,85,247,0.5)]',
+    border: 'border-purple-500',
+    text: 'text-purple-400',
+    badge: 'bg-purple-950/80 text-purple-300 border-purple-700',
+  },
+  {
+    name: 'Pink',
+    emoji: '🌸',
+    dotBg: 'bg-pink-500',
+    pingBg: 'bg-pink-400',
+    ring: 'ring-pink-500/60 shadow-[0_0_15px_rgba(236,72,153,0.5)]',
+    border: 'border-pink-500',
+    text: 'text-pink-400',
+    badge: 'bg-pink-950/80 text-pink-300 border-pink-700',
+  },
+  {
+    name: 'Cyan',
+    emoji: '🔷',
+    dotBg: 'bg-cyan-400',
+    pingBg: 'bg-cyan-300',
+    ring: 'ring-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.5)]',
+    border: 'border-cyan-400',
+    text: 'text-cyan-400',
+    badge: 'bg-cyan-950/80 text-cyan-300 border-cyan-700',
+  },
+];
+
+export const getOpTheme = (
+  op: any | null,
+  activeOpsList: any[]
+): OpStatusTheme => {
+  if (!op) {
+    return {
+      type: 'standby',
+      colorName: 'Weiß',
+      emoji: '⚪',
+      label: 'Bereitschaft (Kein aktiver Einsatz)',
+      dotBg: 'bg-slate-100',
+      pingBg: 'bg-white',
+      animatePing: false,
+      ring: 'ring-slate-300/50 shadow-[0_0_10px_rgba(255,255,255,0.25)]',
+      border: 'border-slate-300',
+      text: 'text-slate-200',
+      badge: 'bg-slate-800 text-slate-300 border-slate-700',
+    };
+  }
+
+  if (op.status === 'completed' || op.status === 'archived') {
+    return {
+      type: 'archived',
+      colorName: 'Rot',
+      emoji: '🔴',
+      label: `Archiviert (${op.title})`,
+      dotBg: 'bg-red-500',
+      pingBg: 'bg-red-400',
+      animatePing: false,
+      ring: 'ring-red-500/60 shadow-[0_0_15px_rgba(239,68,68,0.5)]',
+      border: 'border-red-500',
+      text: 'text-red-400',
+      badge: 'bg-red-950/80 text-red-300 border-red-800',
+    };
+  }
+
+  if (op.type === 'exercise') {
+    return {
+      type: 'exercise',
+      colorName: 'Gelb',
+      emoji: '🟡',
+      label: `Übung (${op.title})`,
+      dotBg: 'bg-amber-400',
+      pingBg: 'bg-amber-300',
+      animatePing: true,
+      ring: 'ring-amber-400/60 shadow-[0_0_15px_rgba(251,191,36,0.5)]',
+      border: 'border-amber-400',
+      text: 'text-amber-300',
+      badge: 'bg-amber-950/80 text-amber-300 border-amber-800',
+    };
+  }
+
+  // Active or paused real operations (stable sort by createdAt)
+  const realActiveOps = activeOpsList
+    .filter((o) => (o.status === 'active' || o.status === 'paused') && o.type !== 'exercise')
+    .sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeA - timeB;
+    });
+
+  let idx = realActiveOps.findIndex((o) => o.id === op.id);
+  if (idx < 0) idx = 0;
+  const palette = ACTIVE_OP_PALETTES[idx % ACTIVE_OP_PALETTES.length];
+
+  return {
+    type: 'operation',
+    colorName: palette.name,
+    emoji: palette.emoji,
+    label: `Einsatz (${palette.name}) - ${op.title}`,
+    dotBg: palette.dotBg,
+    pingBg: palette.pingBg,
+    animatePing: op.status === 'active',
+    ring: palette.ring,
+    border: palette.border,
+    text: palette.text,
+    badge: palette.badge,
+  };
+};
+
 interface NavbarProps {
   activeTab: 'map' | 'sectors' | 'chat' | 'responders' | 'log' | 'archive' | 'admin' | 'reports';
   setActiveTab: (tab: 'map' | 'sectors' | 'chat' | 'responders' | 'log' | 'archive' | 'admin' | 'reports') => void;
+  selectedArchiveOpId?: string;
   onOpenFindingModal: () => void;
   onOpenProfileModal: () => void;
   onOpenLoginModal: () => void;
@@ -59,6 +197,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
+  selectedArchiveOpId,
   onOpenFindingModal,
   onOpenProfileModal,
   onOpenLoginModal,
@@ -145,6 +284,57 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isEL = currentUser?.role === 'einsatzleitung' || Boolean(currentUser?.canLeadOperations);
   const canManageOps = true;
 
+  // Active real operations list sorted deterministically by creation time
+  const activeRealOps = useMemo(() => {
+    return allOperations
+      .filter((o) => (o.status === 'active' || o.status === 'paused') && o.type !== 'exercise')
+      .sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeA - timeB;
+      });
+  }, [allOperations]);
+
+  // Current dynamic operation status theme for the SHS central button and UI
+  const currentOpTheme = useMemo<OpStatusTheme>(() => {
+    if (activeTab === 'archive') {
+      const archivedOp = selectedArchiveOpId
+        ? allOperations.find((o) => o.id === selectedArchiveOpId)
+        : null;
+      return {
+        type: 'archived',
+        colorName: 'Rot',
+        emoji: '🔴',
+        label: archivedOp ? `Archiv: ${archivedOp.title}` : 'Einsatzarchiv',
+        dotBg: 'bg-red-500',
+        pingBg: 'bg-red-400',
+        animatePing: false,
+        ring: 'ring-red-500/60 shadow-[0_0_15px_rgba(239,68,68,0.5)]',
+        border: 'border-red-500',
+        text: 'text-red-400',
+        badge: 'bg-red-950/80 text-red-300 border-red-800',
+      };
+    }
+
+    if (!currentOperation) {
+      return {
+        type: 'standby',
+        colorName: 'Weiß',
+        emoji: '⚪',
+        label: 'Bereitschaft (Kein aktiver Einsatz)',
+        dotBg: 'bg-slate-100',
+        pingBg: 'bg-white',
+        animatePing: false,
+        ring: 'ring-slate-300/50 shadow-[0_0_10px_rgba(255,255,255,0.25)]',
+        border: 'border-slate-300',
+        text: 'text-slate-200',
+        badge: 'bg-slate-800 text-slate-300 border-slate-700',
+      };
+    }
+
+    return getOpTheme(currentOperation, allOperations);
+  }, [activeTab, selectedArchiveOpId, currentOperation, allOperations]);
+
   return (
     <header className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-5 bg-[#1E293B] border-b border-slate-700 shadow-lg shrink-0 sticky top-0 z-[1000] text-slate-200">
       {/* Brand & Central SHS Leitstellen Menu Button */}
@@ -163,12 +353,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 return next;
               });
             }}
-            className="w-9 h-9 sm:w-11 sm:h-11 bg-white hover:bg-slate-100 active:scale-95 rounded-xl flex items-center justify-center font-black text-slate-950 shadow-md border border-slate-300 tracking-wider text-xs sm:text-sm shrink-0 cursor-pointer transition-all duration-150 relative group"
-            title="SHS EZ (Klicken für Einsatz- und Admin-Steuerung)"
+            className={`w-9 h-9 sm:w-11 sm:h-11 bg-white hover:bg-slate-100 active:scale-95 rounded-xl flex items-center justify-center font-black text-slate-950 shadow-md border border-slate-300 tracking-wider text-xs sm:text-sm shrink-0 cursor-pointer transition-all duration-200 relative group ring-2 ${currentOpTheme.ring}`}
+            title={`SHS EZ • ${currentOpTheme.emoji} ${currentOpTheme.label} (Klicken für Menü)`}
           >
             <span className="font-black tracking-widest text-slate-950">SHS</span>
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 border-2 border-slate-900 rounded-full animate-ping"></span>
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 border-2 border-slate-900 rounded-full"></span>
+            {currentOpTheme.animatePing && (
+              <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 ${currentOpTheme.pingBg} border-2 border-slate-900 rounded-full animate-ping opacity-75`}></span>
+            )}
+            <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 ${currentOpTheme.dotBg} border-2 border-slate-900 rounded-full shadow-sm`}></span>
           </button>
 
           {/* Central SHS EZ & Admin Dropdown Popover */}
@@ -182,20 +374,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain bg-[#1E293B] border border-slate-600 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md">
                 {/* Menu Header */}
                 <div className="flex items-center justify-between px-2 py-1.5 border-b border-slate-700/80 mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-white text-slate-950 flex items-center justify-center font-black text-xs shadow border border-slate-300">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className={`w-7 h-7 rounded-lg bg-white text-slate-950 flex items-center justify-center font-black text-xs shadow border border-slate-300 shrink-0 ring-2 ${currentOpTheme.ring}`}>
                       SHS
                     </div>
-                    <div>
-                      <div className="font-bold text-white text-xs uppercase tracking-wider">
-                        SHS EZ
+                    <div className="min-w-0">
+                      <div className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <span>SHS EZ</span>
+                        <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border font-bold shrink-0 ${currentOpTheme.badge}`}>
+                          {currentOpTheme.emoji} {currentOpTheme.colorName}
+                        </span>
                       </div>
-                      <div className="text-[10px] text-slate-400 font-mono">
-                        EZ & Admin-Steuerung
+                      <div className="text-[10px] text-slate-400 font-mono truncate max-w-[200px]">
+                        {currentOpTheme.label}
                       </div>
                     </div>
                   </div>
-                  <span className="px-1.5 py-0.5 rounded bg-blue-950/70 border border-blue-800 text-blue-300 font-mono text-[9px] uppercase font-bold">
+                  <span className="px-1.5 py-0.5 rounded bg-blue-950/70 border border-blue-800 text-blue-300 font-mono text-[9px] uppercase font-bold shrink-0">
                     {currentUser?.role === 'admin' ? 'EL / Admin' : 'Helfer'}
                   </span>
                 </div>
@@ -425,8 +620,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer text-[10px] font-mono font-bold shadow-sm shrink-0"
                 title="Einsatz wechseln oder archivierte Einsätze ansehen"
               >
-                <span>
-                  {currentOperation ? `#${currentOperation.id.slice(-4).toUpperCase()}` : 'EINSÄTZE'}
+                <span className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${currentOpTheme.dotBg} shrink-0`} />
+                  <span>
+                    {activeTab === 'archive'
+                      ? 'ARCHIV'
+                      : currentOperation
+                      ? `#${currentOperation.id.slice(-4).toUpperCase()}`
+                      : 'EINSÄTZE'}
+                  </span>
                 </span>
                 <ChevronDown className="w-3 h-3 text-blue-400 shrink-0" />
               </button>
@@ -438,8 +640,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="fixed inset-0 z-[2100]"
                     onClick={() => setShowOpDropdown(false)}
                   />
-                  <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150">
-                    <div className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 px-2 py-1 border-b border-slate-300 dark:border-slate-700 uppercase tracking-wider text-[10px] font-mono">
+                  <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150">
+                    <div className="flex items-center justify-between font-bold text-slate-300 px-2 py-1 border-b border-slate-700 uppercase tracking-wider text-[10px] font-mono">
                       <span>Einsatz-Auswahl & Status</span>
                       {isAdmin && onOpenCreateOperationModal && (
                         <button
@@ -457,90 +659,105 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="space-y-2 my-1.5 pr-1">
                       {/* Section 1: Aktive Einsätze */}
                       <div>
-                        <div className="text-[10px] font-bold text-emerald-400 uppercase font-mono px-2 py-1 flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                          <span>Aktive Einsätze ({allOperations.filter((o) => o.status === 'active').length})</span>
+                        <div className="text-[10px] font-bold text-emerald-400 uppercase font-mono px-2 py-1 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span>Aktive Einsätze ({allOperations.filter((o) => o.status === 'active').length})</span>
+                          </div>
+                          <span className="text-[9px] text-slate-400 font-mono">Farbcodiert</span>
                         </div>
                         {allOperations.filter((o) => o.status === 'active').length === 0 ? (
-                          <div className="px-3 py-2 bg-white dark:bg-slate-900/60 rounded-xl text-[11px] text-slate-500 dark:text-slate-400 font-mono text-center">
-                            Kein aktiver Einsatz läuft.
+                          <div className="px-3 py-2 bg-slate-900/60 rounded-xl text-[11px] text-slate-400 font-mono text-center border border-slate-800">
+                            Kein aktiver Einsatz läuft. (Bereitschaft ⚪)
                           </div>
                         ) : (
                           <div className="space-y-1">
                             {allOperations
                               .filter((o) => o.status === 'active')
-                              .map((op) => (
-                                <div
-                                  key={op.id}
-                                  onClick={() => {
-                                    setCurrentOperationId(op.id);
-                                    setActiveTab('map');
-                                    setShowOpDropdown(false);
-                                  }}
-                                  className={`w-full text-left p-2 rounded-xl flex items-center justify-between transition cursor-pointer group ${
-                                    op.id === currentOperation?.id
-                                      ? 'bg-blue-600/30 text-blue-200 border border-blue-400'
-                                      : 'hover:bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700/60'
-                                  }`}
-                                >
-                                  <div className="truncate flex-1 mr-2">
-                                    <div className="font-semibold flex items-center gap-1.5">
-                                      <span>{op.type === 'operation' ? '🔴' : '🟠'}</span>
-                                      <span className="truncate">{op.title}</span>
+                              .map((op) => {
+                                const opTheme = getOpTheme(op, allOperations);
+                                const isSelected = op.id === currentOperation?.id && activeTab !== 'archive';
+                                return (
+                                  <div
+                                    key={op.id}
+                                    onClick={() => {
+                                      setCurrentOperationId(op.id);
+                                      setActiveTab('map');
+                                      setShowOpDropdown(false);
+                                    }}
+                                    className={`w-full text-left p-2 rounded-xl flex items-center justify-between transition cursor-pointer group ${
+                                      isSelected
+                                        ? `bg-blue-950/90 border ${opTheme.border} shadow-md`
+                                        : 'bg-slate-900/70 hover:bg-slate-800 text-slate-300 border border-slate-700/60'
+                                    }`}
+                                  >
+                                    <div className="truncate flex-1 mr-2">
+                                      <div className="font-semibold flex items-center gap-1.5 text-xs">
+                                        <span className="shrink-0">{opTheme.emoji}</span>
+                                        <span className={`truncate font-bold ${isSelected ? 'text-white' : 'text-slate-200'}`}>
+                                          {op.title}
+                                        </span>
+                                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border shrink-0 ${opTheme.badge}`}>
+                                          {opTheme.colorName}
+                                        </span>
+                                      </div>
+                                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono truncate">
+                                        Vermisst: {op.missingPerson?.name || 'Unbekannt'} • #{op.id.slice(-4).toUpperCase()}
+                                      </div>
                                     </div>
-                                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-mono truncate">
-                                      Vermisst: {op.missingPerson?.name || 'Unbekannt'} • #{op.id.slice(-4).toUpperCase()}
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <span className={`text-[9px] uppercase font-mono px-2 py-0.5 rounded font-bold border ${opTheme.badge}`}>
+                                        {op.type === 'exercise' ? 'Übung' : 'Aktiv'}
+                                      </span>
+                                      {onOpenOperationDetailModal && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCurrentOperationId(op.id);
+                                            setShowOpDropdown(false);
+                                            onOpenOperationDetailModal();
+                                          }}
+                                          className="p-1 text-slate-400 hover:text-blue-300 hover:bg-blue-950/60 rounded border border-transparent hover:border-blue-700 transition cursor-pointer"
+                                          title="Vermisstendossier & Einsatzdetails anzeigen"
+                                        >
+                                          <FileText className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
+                                      {isAdmin && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const confirmed = window.confirm(
+                                              `🚨 Einsatz "${op.title}" wirklich endgültig löschen?\n\nAlle Sektoren, Funde und Protokolle werden gelöscht.`
+                                            );
+                                            if (confirmed) {
+                                              deleteOperation(op.id);
+                                            }
+                                          }}
+                                          className="p-1 text-slate-400 hover:text-red-400 hover:bg-red-950/60 rounded border border-transparent hover:border-red-800 transition cursor-pointer"
+                                          title="Einsatz löschen"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-1.5 shrink-0">
-                                    <span className="text-[9px] uppercase font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">
-                                      Aktiv
-                                    </span>
-                                    {onOpenOperationDetailModal && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setCurrentOperationId(op.id);
-                                          setShowOpDropdown(false);
-                                          onOpenOperationDetailModal();
-                                        }}
-                                        className="p-1 text-slate-500 dark:text-slate-400 hover:text-blue-300 hover:bg-blue-950/60 rounded border border-transparent hover:border-blue-700 transition cursor-pointer"
-                                        title="Vermisstendossier & Einsatzdetails anzeigen"
-                                      >
-                                        <FileText className="w-3.5 h-3.5" />
-                                      </button>
-                                    )}
-                                    {isAdmin && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const confirmed = window.confirm(
-                                            `🚨 Einsatz "${op.title}" wirklich endgültig löschen?\n\nAlle Sektoren, Funde und Protokolle werden gelöscht.`
-                                          );
-                                          if (confirmed) {
-                                            deleteOperation(op.id);
-                                          }
-                                        }}
-                                        className="p-1 text-slate-500 hover:text-red-400 hover:bg-red-950/60 rounded border border-transparent hover:border-red-800 transition cursor-pointer"
-                                        title="Einsatz löschen"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                           </div>
                         )}
                       </div>
 
                       {/* Section 2: Beendete Einsätze im Archiv */}
                       {allOperations.filter((o) => o.status === 'completed').length > 0 && (
-                        <div className="pt-2 border-t border-slate-300 dark:border-slate-700/80">
-                          <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase font-mono px-2 py-1 flex items-center justify-between">
-                            <span>📦 Archivierte Einsätze ({allOperations.filter((o) => o.status === 'completed').length})</span>
+                        <div className="pt-2 border-t border-slate-700/80">
+                          <div className="text-[10px] font-bold text-slate-400 uppercase font-mono px-2 py-1 flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                              <span>📦 Archivierte Einsätze ({allOperations.filter((o) => o.status === 'completed').length})</span>
+                            </div>
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => {
@@ -565,75 +782,86 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <div className="space-y-1">
                             {allOperations
                               .filter((o) => o.status === 'completed')
-                              .slice(0, 3)
-                              .map((op) => (
-                                <div
-                                  key={op.id}
-                                  onClick={() => {
-                                    if (onSelectArchiveOp) {
-                                      onSelectArchiveOp(op.id);
-                                    } else {
-                                      setActiveTab('archive');
-                                    }
-                                    setShowOpDropdown(false);
-                                  }}
-                                  className="w-full text-left p-2 rounded-xl flex items-center justify-between transition cursor-pointer bg-white dark:bg-slate-900/50 hover:bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 group"
-                                >
-                                  <div className="truncate flex-1 mr-2">
-                                    <div className="font-medium text-xs text-slate-700 dark:text-slate-300 truncate">
-                                      {op.title}
+                              .slice(0, 4)
+                              .map((op) => {
+                                const isSelected = activeTab === 'archive' && selectedArchiveOpId === op.id;
+                                return (
+                                  <div
+                                    key={op.id}
+                                    onClick={() => {
+                                      if (onSelectArchiveOp) {
+                                        onSelectArchiveOp(op.id);
+                                      } else {
+                                        setActiveTab('archive');
+                                      }
+                                      setShowOpDropdown(false);
+                                    }}
+                                    className={`w-full text-left p-2 rounded-xl flex items-center justify-between transition cursor-pointer group ${
+                                      isSelected
+                                        ? 'bg-red-950/80 border border-red-600 text-red-200'
+                                        : 'bg-slate-900/60 hover:bg-slate-800 text-slate-400 border border-slate-800'
+                                    }`}
+                                  >
+                                    <div className="truncate flex-1 mr-2">
+                                      <div className="font-medium text-xs text-slate-300 truncate flex items-center gap-1.5">
+                                        <span>🔴</span>
+                                        <span className="truncate">{op.title}</span>
+                                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-red-950/80 border border-red-800 text-red-400 font-bold shrink-0">
+                                          Rot
+                                        </span>
+                                      </div>
+                                      <div className="text-[10px] text-slate-500 font-mono truncate">
+                                        Beendet: {op.completedAt ? new Date(op.completedAt).toLocaleDateString() : 'Archiv'} • #{op.id.slice(-4).toUpperCase()}
+                                      </div>
                                     </div>
-                                    <div className="text-[10px] text-slate-500 font-mono truncate">
-                                      Beendet: {op.completedAt ? new Date(op.completedAt).toLocaleDateString() : 'Archiv'}
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-red-950/80 text-red-300 border border-red-800 font-bold">
+                                        Archiv
+                                      </span>
+                                      {canManageOps && (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              const confirmed = window.confirm(
+                                                `🔄 Einsatz "${op.title}" reaktivieren und neue Suchphase starten?\n\nBisherige Sektoren & GPS-Suchspuren bleiben erhalten.`
+                                              );
+                                              if (confirmed) {
+                                                reactivateOperation(op.id, {
+                                                  phaseTitle: 'Suchphase 2 (Reaktiviert)',
+                                                });
+                                                setActiveTab('map');
+                                                setShowOpDropdown(false);
+                                              }
+                                            }}
+                                            className="p-1 text-slate-400 hover:text-emerald-400 hover:bg-emerald-950/60 rounded border border-transparent hover:border-emerald-800 transition cursor-pointer"
+                                            title="Einsatz reaktivieren & neue Suchphase starten"
+                                          >
+                                            <RotateCcw className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              const confirmed = window.confirm(
+                                                `🚨 Archivierten Einsatz "${op.title}" wirklich endgültig löschen?`
+                                              );
+                                              if (confirmed) {
+                                                deleteOperation(op.id);
+                                              }
+                                            }}
+                                            className="p-1 text-slate-400 hover:text-red-400 hover:bg-red-950/60 rounded border border-transparent hover:border-red-800 transition cursor-pointer"
+                                            title="Einsatz löschen"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </>
+                                      )}
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-1.5 shrink-0">
-                                    <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
-                                      Archiv
-                                    </span>
-                                    {canManageOps && (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            const confirmed = window.confirm(
-                                              `🔄 Einsatz "${op.title}" reaktivieren und neue Suchphase starten?\n\nBisherige Sektoren & GPS-Suchspuren bleiben erhalten.`
-                                            );
-                                            if (confirmed) {
-                                              reactivateOperation(op.id, {
-                                                phaseTitle: 'Suchphase 2 (Reaktiviert)',
-                                              });
-                                              setActiveTab('map');
-                                              setShowOpDropdown(false);
-                                            }
-                                          }}
-                                          className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-400 hover:bg-emerald-950/60 rounded border border-transparent hover:border-emerald-800 transition cursor-pointer"
-                                          title="Einsatz reaktivieren & neue Suchphase starten"
-                                        >
-                                          <RotateCcw className="w-3.5 h-3.5" />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            const confirmed = window.confirm(
-                                              `🚨 Archivierten Einsatz "${op.title}" wirklich endgültig löschen?`
-                                            );
-                                            if (confirmed) {
-                                              deleteOperation(op.id);
-                                            }
-                                          }}
-                                          className="p-1 text-slate-500 dark:text-slate-400 hover:text-red-400 hover:bg-red-950/60 rounded border border-transparent hover:border-red-800 transition cursor-pointer"
-                                          title="Einsatz löschen"
-                                        >
-                                          <Trash2 className="w-3.5 h-3.5" />
-                                        </button>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                           </div>
                         </div>
                       )}
@@ -795,7 +1023,25 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5 min-w-0">
-            {currentOperation && currentOperation.status === 'active' ? (
+            {activeTab === 'archive' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOpDropdown(true);
+                  setShowSarAdminMenu(false);
+                  setShowUserDropdown(false);
+                  setShowResponderListDropdown(false);
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-950/70 hover:bg-red-900/80 text-red-300 hover:text-white border border-red-700/60 transition cursor-pointer text-left shadow-sm group font-mono text-[10px] sm:text-xs font-bold shrink-0"
+                title="Archivierte Einsätze anzeigen (Klicken zum Wechseln)"
+              >
+                <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                <span className="font-bold text-red-300">ARCHIV 🔴</span>
+                <span className="text-red-300/80 text-[10px] hidden sm:inline truncate max-w-[160px]">
+                  {currentOpTheme.label}
+                </span>
+              </button>
+            ) : currentOperation && currentOperation.status === 'active' ? (
               <button
                 type="button"
                 onClick={() => {
@@ -808,12 +1054,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <span className="flex items-center gap-1 shrink-0">
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      isExercise ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400 animate-pulse'
+                    className={`w-2 h-2 rounded-full ${currentOpTheme.dotBg} ${
+                      currentOpTheme.animatePing ? 'animate-pulse' : ''
                     }`}
                   />
                   <span className="font-bold tracking-tight font-mono text-[9px] text-blue-400 group-hover:text-blue-200 hidden sm:inline">
-                    {isExercise ? 'ÜBUNG:' : 'AKTIV:'}
+                    {isExercise ? 'ÜBUNG:' : `${currentOpTheme.colorName.toUpperCase()}:`}
                   </span>
                 </span>
 
@@ -856,9 +1102,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer text-left shadow-sm group font-mono text-[10px] sm:text-xs font-bold shrink-0"
                 title="Bereitschaftsmodus - Klicken zum Wählen oder Starten eines Einsatzes"
               >
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                <span className="font-bold text-amber-300">Bereitschaft</span>
-                <span className="text-blue-300/70 text-[10px] hidden sm:inline">(Kein aktiver Einsatz)</span>
+                <span className="w-2 h-2 rounded-full bg-slate-200 shrink-0 shadow-sm" />
+                <span className="font-bold text-slate-200">Bereitschaft</span>
+                <span className="text-blue-300/70 text-[10px] hidden sm:inline">(Kein aktiver Einsatz ⚪)</span>
               </button>
             )}
           </div>

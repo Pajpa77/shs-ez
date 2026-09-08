@@ -392,6 +392,7 @@ const MainApp: React.FC = () => {
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        selectedArchiveOpId={selectedArchiveOpId}
         onSelectArchiveOp={(opId) => {
           setSelectedArchiveOpId(opId);
           setActiveTab('archive');
