@@ -51,7 +51,9 @@ const VoiceMessagePlayer: React.FC<{ audioUrl: string; duration?: number; isMe?:
     if (isPlaying) {
       audioRef.current.pause();
     } else {
-      audioRef.current.play().catch(() => {});
+      audioRef.current.play().catch((err) => {
+        console.warn('Audio play failed:', err);
+      });
     }
   };
 
@@ -74,16 +76,31 @@ const VoiceMessagePlayer: React.FC<{ audioUrl: string; duration?: number; isMe?:
     }
   };
 
+  const effectiveDuration = duration || audioRef.current?.duration || 0;
+
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const fraction = Math.max(0, Math.min(1, clickX / rect.width));
+    const targetTime = fraction * (effectiveDuration || 1);
+    audioRef.current.currentTime = targetTime;
+    setCurrentTime(targetTime);
+  };
+
   const formatSec = (sec: number) => {
-    if (isNaN(sec)) return '0:00';
+    if (isNaN(sec) || !isFinite(sec)) return '0:00';
     const mins = Math.floor(sec / 60);
     const secs = Math.floor(sec % 60);
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  const progress = effectiveDuration > 0 ? Math.min(1, currentTime / effectiveDuration) : 0;
+  const waveformBars = [40, 70, 30, 90, 60, 100, 50, 80, 40, 90, 60, 30, 70, 50, 80, 40];
+
   return (
     <div
-      className={`mt-2 p-2.5 rounded-xl border flex flex-col gap-2 ${
+      className={`mt-2 p-2.5 rounded-xl border flex flex-col gap-2 select-none ${
         isMe
           ? 'bg-blue-700/60 border-blue-400/40 text-white'
           : 'bg-white dark:bg-slate-900/90 border-amber-500/30 text-black dark:text-slate-100'
@@ -104,36 +121,52 @@ const VoiceMessagePlayer: React.FC<{ audioUrl: string; duration?: number; isMe?:
           className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition cursor-pointer ${
             isMe
               ? 'bg-white text-blue-700 hover:bg-slate-100 shadow'
-              : 'bg-slate-50 dark:bg-[#0F172A]mber-500 text-slate-950 hover:bg-slate-50 dark:bg-[#0F172A]mber-400 shadow'
+              : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow'
           }`}
         >
           {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
         </button>
 
-        <div className="flex-1 flex flex-col gap-1">
+        <div className="flex-1 flex flex-col gap-1.5">
           <div className="flex items-center justify-between text-[10px] font-mono opacity-80">
             <span className="flex items-center gap-1 font-bold">
               <Radio className="w-3 h-3 text-amber-400" />
               CB-Funk Audio
             </span>
             <span>
-              {formatSec(currentTime)} / {formatSec(duration || audioRef.current?.duration || 0)}
+              {formatSec(currentTime)} / {formatSec(effectiveDuration)}
             </span>
           </div>
 
-          {/* Animated Waveform Visualizer */}
-          <div className="h-4 flex items-center gap-0.5">
-            {[40, 70, 30, 90, 60, 100, 50, 80, 40, 90, 60, 30, 70, 50, 80, 40].map((h, i) => (
-              <div
-                key={i}
-                className={`flex-1 rounded-full transition-all duration-150 ${
-                  isPlaying ? 'bg-slate-50 dark:bg-[#0F172A]mber-400 animate-pulse' : isMe ? 'bg-blue-200/60' : 'bg-slate-600'
-                }`}
-                style={{
-                  height: isPlaying ? `${Math.max(25, (h * Math.sin(i + currentTime * 6) + 100) / 2)}%` : `${h}%`,
-                }}
-              />
-            ))}
+          {/* Interactive Waveform / Scrubber */}
+          <div
+            onClick={handleSeek}
+            title="Klicken zum Vor- oder Zurückspulen"
+            className="h-5 flex items-center gap-0.5 cursor-pointer group py-0.5"
+          >
+            {waveformBars.map((h, i) => {
+              const barFraction = (i + 1) / waveformBars.length;
+              const isPast = progress >= barFraction;
+              return (
+                <div
+                  key={i}
+                  className={`flex-1 rounded-full transition-all duration-150 ${
+                    isPast
+                      ? isMe
+                        ? 'bg-white shadow-sm'
+                        : 'bg-amber-400 dark:bg-amber-400 shadow-sm'
+                      : isMe
+                      ? 'bg-blue-300/40 group-hover:bg-blue-200/60'
+                      : 'bg-slate-300 dark:bg-slate-700 group-hover:bg-slate-400'
+                  } ${isPlaying && isPast ? 'animate-pulse' : ''}`}
+                  style={{
+                    height: isPlaying
+                      ? `${Math.max(25, (h * Math.sin(i + currentTime * 6) + 100) / 2)}%`
+                      : `${h}%`,
+                  }}
+                />
+              );
+            })}
           </div>
         </div>
 
@@ -190,8 +223,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaRecorderMimeTypeRef = useRef<string>('audio/webm');
+  const streamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pttPressStartTimeRef = useRef<number>(0);
+  const isHoldModeRef = useRef<boolean>(false);
+  const suppressNextClickRef = useRef<boolean>(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef<number>(chatMessages.length);
@@ -230,7 +268,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         ) {
           playAlertSound('cb_tx_start');
           const audio = new Audio(newestMsg.audioUrl);
-          audio.play().catch(() => {});
+          audio.play().catch((err) => {
+            console.warn('CB-Funk AutoPlay durch Browser-Richtlinie blockiert:', err);
+          });
         }
       }
     }
@@ -253,19 +293,28 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         return;
       }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       audioChunksRef.current = [];
-      let options: MediaRecorderOptions = {};
+
+      let chosenMimeType = '';
+      let options: MediaRecorderOptions = { audioBitsPerSecond: 16000 };
       if (typeof MediaRecorder.isTypeSupported === 'function') {
         if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 16000 };
+          chosenMimeType = 'audio/webm;codecs=opus';
+          options.mimeType = chosenMimeType;
         } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          options = { mimeType: 'audio/mp4', audioBitsPerSecond: 16000 };
-        } else {
-          options = { audioBitsPerSecond: 16000 };
+          chosenMimeType = 'audio/mp4';
+          options.mimeType = chosenMimeType;
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          chosenMimeType = 'audio/webm';
+          options.mimeType = chosenMimeType;
+        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+          chosenMimeType = 'audio/ogg;codecs=opus';
+          options.mimeType = chosenMimeType;
         }
-      } else {
-        options = { audioBitsPerSecond: 16000 };
       }
+
+      mediaRecorderMimeTypeRef.current = chosenMimeType || 'audio/webm';
       const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
 
@@ -276,7 +325,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       };
 
       mediaRecorder.onstop = () => {
-        stream.getTracks().forEach((track) => track.stop());
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+        }
       };
 
       playAlertSound('cb_tx_start');
@@ -296,20 +348,31 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     } catch (err) {
       console.error('Mikrofon Fehler:', err);
       alert('Mikrofonzugriff nicht gewährt. Bitte erlauben Sie den Zugriff auf Ihr Mikrofon.');
+      setIsRecording(false);
+      isHoldModeRef.current = false;
     }
   };
 
   const stopAndSendRecording = () => {
-    if (!mediaRecorderRef.current || !isRecording) return;
+    if (!mediaRecorderRef.current || !isRecording) {
+      isHoldModeRef.current = false;
+      return;
+    }
 
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     playAlertSound('cb_tx_end');
 
     const recorder = mediaRecorderRef.current;
     const finalDuration = recordingTime || 1;
+    const effectiveMimeType = recorder.mimeType || mediaRecorderMimeTypeRef.current || 'audio/webm';
 
     recorder.onstop = () => {
-      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+
+      const audioBlob = new Blob(audioChunksRef.current, { type: effectiveMimeType });
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
       reader.onloadend = () => {
@@ -317,6 +380,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         const isDirect =
           activeChannel !== 'all' &&
           activeChannel !== 'admins' &&
+          activeChannel !== 'general' &&
           !activeChannel.startsWith('sec-');
 
         sendChatMessage({
@@ -333,6 +397,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         setIsRecording(false);
         setRecordingTime(0);
         setIncludeLocation(false);
+        isHoldModeRef.current = false;
       };
     };
 
@@ -340,12 +405,65 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
   };
 
   const cancelRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-    }
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    if (mediaRecorderRef.current) {
+      try {
+        if (mediaRecorderRef.current.state !== 'inactive') {
+          mediaRecorderRef.current.stop();
+        }
+      } catch {}
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    audioChunksRef.current = [];
     setIsRecording(false);
     setRecordingTime(0);
+    isHoldModeRef.current = false;
+  };
+
+  // Push-To-Talk Pointer Handlers (Hold-to-Talk and Tap-to-Toggle)
+  const handlePttPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    pttPressStartTimeRef.current = Date.now();
+    if (!isRecording) {
+      isHoldModeRef.current = true;
+      startRecording();
+    }
+  };
+
+  const handlePttPointerUp = () => {
+    const pressDuration = Date.now() - pttPressStartTimeRef.current;
+    if (isRecording && isHoldModeRef.current) {
+      if (pressDuration > 400) {
+        // Held down -> release to send
+        stopAndSendRecording();
+        suppressNextClickRef.current = true;
+      } else {
+        // Quick tap -> leave recording in hands-free / toggle mode
+        isHoldModeRef.current = false;
+      }
+    }
+  };
+
+  const handlePttPointerCancel = () => {
+    if (isRecording && isHoldModeRef.current) {
+      cancelRecording();
+    }
+    isHoldModeRef.current = false;
+  };
+
+  const handlePttButtonClick = () => {
+    if (suppressNextClickRef.current) {
+      suppressNextClickRef.current = false;
+      return;
+    }
+    if (isRecording) {
+      stopAndSendRecording();
+    } else {
+      startRecording();
+    }
   };
 
   // Resolved effective operation for operation chat
@@ -538,11 +656,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
               </div>
               <button
                 type="button"
-                onClick={() => setAutoPlayAudio(!autoPlayAudio)}
+                onClick={() => {
+                  playAlertSound('notification');
+                  setAutoPlayAudio(!autoPlayAudio);
+                }}
                 title={autoPlayAudio ? 'CB-Lautsprecher aktiv (Auto-Play)' : 'CB-Lautsprecher stumm'}
                 className={`px-2 py-1 rounded-lg text-[10px] font-mono flex items-center gap-1 border transition cursor-pointer ${
                   autoPlayAudio
-                    ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 border-amber-500/50 text-amber-300 font-bold'
+                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 font-bold'
                     : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400'
                 }`}
               >
@@ -718,7 +839,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                     onClick={() => handleSelectChannel(sec.id)}
                     className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer text-left ${
                       activeChannel === sec.id
-                        ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 border border-amber-500 text-amber-100 font-bold'
+                        ? 'bg-amber-500/20 border border-amber-500 text-amber-900 dark:text-amber-100 font-bold'
                         : 'hover:bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700/50'
                     }`}
                   >
@@ -933,7 +1054,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 title={isMaximized ? 'Normale Ansicht' : 'Großansicht / Vollbild aktivieren'}
                 className={`p-2 rounded-xl border transition cursor-pointer flex items-center gap-1.5 font-mono text-xs font-bold ${
                   isMaximized
-                    ? 'bg-slate-50 dark:bg-[#0F172A]mber-500 text-slate-950 border-amber-400 shadow-md'
+                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
                     : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-white'
                 }`}
               >
@@ -962,11 +1083,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
             onClick={() => setActiveFilter('voice')}
             className={`px-2.5 py-1 rounded-lg transition cursor-pointer shrink-0 flex items-center gap-1 ${
               activeFilter === 'voice'
-                ? 'bg-slate-50 dark:bg-[#0F172A]mber-500 text-slate-950 font-bold'
+                ? 'bg-amber-500 text-slate-950 font-bold'
                 : 'bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
             }`}
           >
-            🎙️ CB-Funk ({chatMessages.filter((m) => m.isVoiceMessage && m.operationId === currentOperation.id).length})
+            🎙️ CB-Funk ({chatMessages.filter((m) => m.isVoiceMessage && (activeScope === 'general' ? m.operationId === 'general' : m.operationId === (effectiveOperation?.id || currentOperation?.id))).length})
           </button>
           <button
             onClick={() => setActiveFilter('alert')}
@@ -1078,11 +1199,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
         {/* Recording Overlay / Live Push-to-Talk Indicator */}
         {isRecording && (
-          <div className="bg-slate-50 dark:bg-[#0F172A]mber-950/90 border-t border-amber-500/50 p-3 flex items-center justify-between animate-pulse text-amber-200 text-xs font-mono">
+          <div className="bg-amber-950/90 border-t border-amber-500/50 p-3 flex items-center justify-between animate-pulse text-amber-200 text-xs font-mono">
             <div className="flex items-center gap-3">
               <div className="w-4 h-4 rounded-full bg-red-600 animate-ping" />
               <span className="font-bold uppercase tracking-wider">🎙️ CB-Funk Übertragung läuft...</span>
-              <span className="px-2 py-0.5 rounded bg-slate-50 dark:bg-[#0F172A]mber-900 border border-amber-600 text-amber-100 font-mono font-bold">
+              <span className="px-2 py-0.5 rounded bg-amber-900 border border-amber-600 text-amber-100 font-mono font-bold">
                 0:{recordingTime < 10 ? `0${recordingTime}` : recordingTime} / 0:30s
               </span>
             </div>
@@ -1091,7 +1212,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
               <button
                 type="button"
                 onClick={cancelRecording}
-                className="px-3 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer flex items-center gap-1"
+                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs cursor-pointer flex items-center gap-1"
               >
                 <X className="w-3.5 h-3.5" /> Abbrechen
               </button>
@@ -1127,7 +1248,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
             </div>
 
             <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono hidden sm:block">
-              Sprechtaste halten zum Senden einer Sprachnachricht
+              {isRecording ? '🔴 Übertragung läuft (Loslassen oder Senden drücken)' : '📻 Sprechtaste halten zum Senden (oder tippen)'}
             </div>
           </div>
 
@@ -1135,12 +1256,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
             {/* CB Funk Push-to-Talk Microphone Button */}
             <button
               type="button"
-              onClick={isRecording ? stopAndSendRecording : startRecording}
-              title="CB-Funk Sprachnachricht aufnehmen"
-              className={`h-10 px-3.5 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition cursor-pointer shrink-0 border ${
+              onPointerDown={handlePttPointerDown}
+              onPointerUp={handlePttPointerUp}
+              onPointerCancel={handlePttPointerCancel}
+              onClick={handlePttButtonClick}
+              onContextMenu={(e) => e.preventDefault()}
+              title={isRecording ? "Klicken zum Beenden und Senden" : "Gedrückt halten zum Sprechen (oder einmal tippen)"}
+              className={`h-10 px-3.5 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition cursor-pointer shrink-0 border select-none touch-none ${
                 isRecording
-                  ? 'bg-red-600 text-white border-red-400 animate-pulse shadow-lg'
-                  : 'bg-slate-50 dark:bg-[#0F172A]mber-500 hover:bg-slate-50 dark:bg-[#0F172A]mber-400 text-slate-950 border-amber-400/80 shadow'
+                  ? 'bg-red-600 text-white border-red-400 animate-pulse shadow-lg ring-2 ring-red-400/50'
+                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-400/80 shadow active:scale-95'
               }`}
             >
               <Mic className="w-4 h-4" />
