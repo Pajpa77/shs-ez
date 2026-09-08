@@ -351,33 +351,36 @@ export const LoginScreen: React.FC = () => {
 
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-12 gap-6 relative z-10 py-4 mb-12">
         {/* Left Side: System Branding & Mission Overview */}
-        <div className="md:col-span-5 bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl">
-          <div className="space-y-5">
-            <div className="flex flex-col items-start gap-4">
-              <img 
-                src="/logo-shs.jpg" 
-                alt="Spürhunde Salzlandkreis" 
-                className="w-24 h-24 object-contain invert mix-blend-screen opacity-90"
-              />
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-blue-400 text-xs font-bold font-mono">
-                <span className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
-                <span>SPÜRHUNDE-SALZLANDKREIS E.V.</span>
+        <div className="md:col-span-5 bg-[#1E293B] border border-slate-700 rounded-2xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl overflow-hidden relative">
+          {/* Subtle background glow */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.07)_0%,transparent_70%)] pointer-events-none" />
+
+          <div className="space-y-6 relative z-10">
+            {/* Logo Block */}
+            <div className="flex items-center gap-5">
+              <div className="rounded-2xl bg-slate-900/80 border border-slate-600/60 p-3 shadow-lg ring-1 ring-blue-500/10 shrink-0">
+                <img
+                  src="/logo-shs.jpg"
+                  alt="Spürhunde Salzlandkreis"
+                  className="w-20 h-20 sm:w-24 sm:h-24 object-contain grayscale brightness-[0.85] contrast-125"
+                  style={{ filter: 'grayscale(1) brightness(0.88) contrast(1.2) drop-shadow(0 0 6px rgba(148,163,184,0.3))' }}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-950/60 border border-blue-700/50 text-blue-300 text-xs font-bold font-mono">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-ping" />
+                  <span>SPÜRHUNDE-SALZLANDKREIS E.V.</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight uppercase">
+                  Einsatzzentrale
+                </h1>
+                <h2 className="text-base sm:text-lg font-bold text-blue-400 uppercase tracking-widest font-mono">
+                  SHS-EZ
+                </h2>
               </div>
             </div>
 
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight uppercase">
-                Einsatzzentrale
-              </h1>
-              <h2 className="text-xl sm:text-2xl font-bold text-blue-400 mt-1 uppercase tracking-wider font-mono">
-                (SHS-EZ)
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed font-mono">
-                Taktisches Einsatzleitsystem für Rettungshunde, Mantrailing und Geländesuche.
-              </p>
-            </div>
-
-            <div className="space-y-3 pt-4 border-t border-slate-300 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300">
+            <div className="space-y-3 pt-4 border-t border-slate-700/60 text-xs text-slate-300">
               <div className="flex items-center gap-2.5">
                 <div className="h-7 w-7 rounded-lg bg-red-500/20 text-red-400 border border-red-500/40 flex items-center justify-center font-bold text-xs shrink-0">
                   🚨
