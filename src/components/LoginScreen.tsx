@@ -345,15 +345,15 @@ export const LoginScreen: React.FC = () => {
   const hasActiveOps = activeOperations.length > 0;
 
   return (
-    <div className="h-screen w-full bg-[#0F172A] text-black dark:text-slate-100 flex flex-col justify-start items-center p-3 sm:p-6 relative overflow-y-auto font-sans pt-8 sm:pt-16 pb-24 sm:pb-32">
+    <div className="h-screen w-full bg-[#5A6D7A] text-slate-100 flex flex-col justify-start items-center p-3 sm:p-6 relative overflow-y-auto font-sans pt-8 sm:pt-16 pb-24 sm:pb-32">
       {/* Background ambient tactical styling */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08)_0%,rgba(15,23,42,0)_75%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06)_0%,rgba(75,93,105,0.4)_85%)] pointer-events-none" />
 
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-12 gap-6 relative z-10 py-4 mb-12">
         {/* Left Side: System Branding & Mission Overview */}
-        <div className="md:col-span-5 bg-[#1E293B] border border-slate-700 rounded-2xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl overflow-hidden relative">
+        <div className="md:col-span-5 bg-[#475763] border border-[#6B7E8C] rounded-2xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl overflow-hidden relative">
           {/* Subtle background glow */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.07)_0%,transparent_70%)] pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.05)_0%,transparent_70%)] pointer-events-none" />
 
           <div className="space-y-6 relative z-10">
             {/* Logo Block */}
@@ -422,7 +422,7 @@ export const LoginScreen: React.FC = () => {
         </div>
 
         {/* Right Side: Login Form & Quick Profile Selection */}
-        <div className="md:col-span-7 bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl p-5 sm:p-7 shadow-2xl flex flex-col justify-between">
+        <div className="md:col-span-7 bg-[#475763] border border-[#6B7E8C] rounded-2xl p-5 sm:p-7 shadow-2xl flex flex-col justify-between">
           <div>
             {/* Auth Notification / Logout Banner */}
             {authNotification && (
