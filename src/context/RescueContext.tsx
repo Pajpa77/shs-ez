@@ -2055,8 +2055,13 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       syncLocationToCloud(userId, updatedLoc);
     }
 
-    // If user went from active to inactive (logged out / offline), notify admins & log in current operation
-    if (!isActive && wasActive && targetUser) {
+    const isTrackingTestUser = Boolean(
+      (activeTrackingTestRef.current && activeTrackingTestRef.current.userId === userId) ||
+      (activeTrackingTest && activeTrackingTest.userId === userId)
+    );
+
+    // If user went from active to inactive (logged out / offline), notify admins & log in current operation (skip for TrackingTest)
+    if (!isActive && wasActive && targetUser && !isTrackingTestUser) {
       // Archive their track history immediately so that their track remains saved on the tactical map!
       if (currentOperation && userLocations[userId]?.trackHistory && userLocations[userId].trackHistory.length > 1) {
         const locState = userLocations[userId];
@@ -2133,8 +2138,8 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       }
     }
 
-    // If user went from inactive to active (logged in), notify admins & log in target/current operation
-    if (isActive && !wasActive && targetUser) {
+    // If user went from inactive to active (logged in), notify admins & log in target/current operation (skip for TrackingTest)
+    if (isActive && !wasActive && targetUser && !isTrackingTestUser) {
       playAlertSound('notification');
       setActiveAlertNotification({
         title: '🟢 Neuer Benutzer angemeldet',
@@ -4281,8 +4286,15 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     }
 
     setActiveTrackingTest(null);
-    confirmLogout();
-  }, [confirmLogout, updateUser, syncLocationToCloud]);
+    // Guaranteed logout for tracking test completion
+    setUserActiveStatus(testSession?.userId || '', false);
+    setCurrentUserId('');
+    setIsLogoutConfirmOpen(false);
+    try {
+      localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
+      localStorage.removeItem('rescue_app_remembered_device_user_id_slk_v4');
+    } catch {}
+  }, [updateUser, syncLocationToCloud]);
 
   // Tracking Test Timer Logic
   useEffect(() => {

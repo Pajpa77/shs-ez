@@ -310,7 +310,354 @@ export function generateTacticalCanvasFallback(
   return canvas.toDataURL('image/jpeg', 0.85);
 }
 
+// ─── OSM Tile Helpers ────────────────────────────────────────────────────────
+
+/** Convert lat/lng to OSM tile x/y at given zoom */
+function latLngToTile(lat: number, lng: number, zoom: number): { x: number; y: number } {
+  const n = Math.pow(2, zoom);
+  const x = Math.floor(((lng + 180) / 360) * n);
+  const latRad = (lat * Math.PI) / 180;
+  const y = Math.floor(((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n);
+  return { x, y };
+}
+
+/** Convert OSM tile x/y to lat/lng (top-left corner of tile) */
+function tileToLatLng(x: number, y: number, zoom: number): { lat: number; lng: number } {
+  const n = Math.pow(2, zoom);
+  const lng = (x / n) * 360 - 180;
+  const latRad = Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / n)));
+  const lat = (latRad * 180) / Math.PI;
+  return { lat, lng };
+}
+
+/** Pick a zoom level so the bounding box covers the canvas well */
+function pickZoom(minLat: number, maxLat: number, minLng: number, maxLng: number, canvasW: number, canvasH: number): number {
+  for (let z = 17; z >= 10; z--) {
+    const tl = latLngToTile(maxLat, minLng, z);
+    const br = latLngToTile(minLat, maxLng, z);
+    const tilesX = br.x - tl.x + 1;
+    const tilesY = br.y - tl.y + 1;
+    // Target: tiles fill at most 3× the canvas size, but at least 1 tile each side
+    if (tilesX >= 1 && tilesY >= 1 && tilesX * 256 <= canvasW * 3 && tilesY * 256 <= canvasH * 3) {
+      return z;
+    }
+  }
+  return 13;
+}
+
+/** Load a single OSM tile as HTMLImageElement */
+function loadTileImage(z: number, x: number, y: number): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    // Use OSM's standard tile server (CORS-enabled)
+    img.src = `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null); // graceful failure
+    // Timeout after 5s
+    setTimeout(() => resolve(null), 5000);
+  });
+}
+
 /**
+ * Generates a tracking-test snapshot with a **real OpenStreetMap tile background**.
+ * Loads OSM tiles for the GPS bounding box, draws them on canvas, then overlays
+ * the GPS track, direction arrows, start/end markers and the info legend.
+ *
+ * Returns a JPEG data-URL.  Falls back to the plain canvas if tiles cannot be loaded.
+ */
+export async function generateTrackingTestSnapshotWithMap(session: TrackingTestSession): Promise<string> {
+  const CANVAS_W = 1200;
+  const CANVAS_H = 750;
+  const canvas = document.createElement('canvas');
+  canvas.width = CANVAS_W;
+  canvas.height = CANVAS_H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '';
+
+  const points: GpsPoint[] = session.trackPoints.filter(
+    (p) => typeof p.lat === 'number' && typeof p.lng === 'number' && !isNaN(p.lat) && !isNaN(p.lng)
+  );
+
+  // ── Compute bounding box with padding ────────────────────────────────────
+  let minLat: number, maxLat: number, minLng: number, maxLng: number;
+  const PAD_FACTOR = 0.35; // generous padding so markers are never clipped
+
+  if (points.length >= 2) {
+    minLat = Math.min(...points.map((p) => p.lat));
+    maxLat = Math.max(...points.map((p) => p.lat));
+    minLng = Math.min(...points.map((p) => p.lng));
+    maxLng = Math.max(...points.map((p) => p.lng));
+  } else {
+    // fallback: small area around first point (or default)
+    const clat = points.length === 1 ? points[0].lat : 51.75;
+    const clng = points.length === 1 ? points[0].lng : 11.45;
+    minLat = clat - 0.003; maxLat = clat + 0.003;
+    minLng = clng - 0.005; maxLng = clng + 0.005;
+  }
+
+  const latSpanRaw = Math.max(0.002, maxLat - minLat);
+  const lngSpanRaw = Math.max(0.002, maxLng - minLng);
+  const cLat = (minLat + maxLat) / 2;
+  const cLng = (minLng + maxLng) / 2;
+  minLat = cLat - latSpanRaw / 2 * (1 + PAD_FACTOR);
+  maxLat = cLat + latSpanRaw / 2 * (1 + PAD_FACTOR);
+  minLng = cLng - lngSpanRaw / 2 * (1 + PAD_FACTOR);
+  maxLng = cLng + lngSpanRaw / 2 * (1 + PAD_FACTOR);
+
+  // ── Choose zoom and gather tile grid ─────────────────────────────────────
+  const zoom = pickZoom(minLat, maxLat, minLng, maxLng, CANVAS_W, CANVAS_H);
+  const tileTopLeft = latLngToTile(maxLat, minLng, zoom);
+  const tileBottomRight = latLngToTile(minLat, maxLng, zoom);
+
+  // Pixel origin: top-left corner of tile (tileTopLeft) in canvas-space
+  // We'll figure out where the bounding-box top-left falls in tile pixels,
+  // then offset the canvas so the bbox is centered.
+  const TILE_SIZE = 256;
+
+  // Top-left tile's top-left corner in "world tile pixels"
+  const originTilePixX = tileTopLeft.x * TILE_SIZE;
+  const originTilePixY = tileTopLeft.y * TILE_SIZE;
+
+  // Where does (maxLat, minLng) fall in world tile pixels?
+  function latLngToPixel(lat: number, lng: number): { px: number; py: number } {
+    const n = Math.pow(2, zoom);
+    const px = ((lng + 180) / 360) * n * TILE_SIZE;
+    const latRad = (lat * Math.PI) / 180;
+    const py = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n * TILE_SIZE;
+    return { px, py };
+  }
+
+  const topLeftWorld = latLngToPixel(maxLat, minLng);
+  const bottomRightWorld = latLngToPixel(minLat, maxLng);
+
+  // How many tiles do we need?
+  const tilesX = tileBottomRight.x - tileTopLeft.x + 1;
+  const tilesY = tileBottomRight.y - tileTopLeft.y + 1;
+
+  // Total pixel span of all tiles
+  const totalTilePxW = tilesX * TILE_SIZE;
+  const totalTilePxH = tilesY * TILE_SIZE;
+
+  // Scale to fit canvas (leaving room for header/footer)
+  const HEADER_H = 58;
+  const FOOTER_H = 70;
+  const availW = CANVAS_W;
+  const availH = CANVAS_H - HEADER_H - FOOTER_H;
+
+  const scaleX = availW / totalTilePxW;
+  const scaleY = availH / totalTilePxH;
+  const scale = Math.min(scaleX, scaleY, 1.5); // don't over-magnify
+
+  const scaledTileW = TILE_SIZE * scale;
+  const scaledTileH = TILE_SIZE * scale;
+
+  // Canvas offset so tiles are centered horizontally, placed below header
+  const tileAreaW = tilesX * scaledTileW;
+  const tileAreaH = tilesY * scaledTileH;
+  const tileOffsetX = (CANVAS_W - tileAreaW) / 2;
+  const tileOffsetY = HEADER_H + (availH - tileAreaH) / 2;
+
+  // Convert world lat/lng → canvas pixel
+  function toCanvas(lat: number, lng: number): [number, number] {
+    const { px, py } = latLngToPixel(lat, lng);
+    const cx = tileOffsetX + (px - originTilePixX) * scale;
+    const cy = tileOffsetY + (py - originTilePixY) * scale;
+    return [cx, cy];
+  }
+
+  // ── Background (while tiles load) ────────────────────────────────────────
+  ctx.fillStyle = '#d4d4d4'; // light grey placeholder
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // ── Load & draw OSM tiles ─────────────────────────────────────────────────
+  const tilePromises: Promise<void>[] = [];
+  for (let tx = 0; tx < tilesX; tx++) {
+    for (let ty = 0; ty < tilesY; ty++) {
+      const tileX = tileTopLeft.x + tx;
+      const tileY = tileTopLeft.y + ty;
+      tilePromises.push(
+        loadTileImage(zoom, tileX, tileY).then((img) => {
+          if (img) {
+            ctx.drawImage(
+              img,
+              tileOffsetX + tx * scaledTileW,
+              tileOffsetY + ty * scaledTileH,
+              scaledTileW,
+              scaledTileH
+            );
+          }
+        })
+      );
+    }
+  }
+
+  try {
+    await Promise.all(tilePromises);
+  } catch {
+    // partial failure – continue with whatever tiles loaded
+  }
+
+  // ── Semi-transparent overlay so track colours pop on light map ───────────
+  // (very subtle – just lifts contrast)
+  ctx.fillStyle = 'rgba(0,0,0,0.08)';
+  ctx.fillRect(tileOffsetX, tileOffsetY, tileAreaW, tileAreaH);
+
+  // ── Header bar ────────────────────────────────────────────────────────────
+  const headerGrad = ctx.createLinearGradient(0, 0, 0, HEADER_H);
+  headerGrad.addColorStop(0, '#1e3a5f');
+  headerGrad.addColorStop(1, '#0f2744');
+  ctx.fillStyle = headerGrad;
+  ctx.fillRect(0, 0, CANVAS_W, HEADER_H);
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(0, 0, CANVAS_W, HEADER_H);
+
+  ctx.fillStyle = '#f8fafc';
+  ctx.font = 'bold 20px monospace';
+  ctx.fillText('GPS TRACKING-TEST • PRÜFPROTOKOLL', 20, 36);
+
+  const dateStr = new Date(session.startTime).toLocaleDateString('de-DE', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  });
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = 'bold 13px monospace';
+  ctx.fillText(`${dateStr} • ${session.durationMinutes} Min.`, CANVAS_W - 260, 36);
+
+  // ── GPS Track line ────────────────────────────────────────────────────────
+  if (points.length >= 2) {
+    // Outer shadow/glow
+    ctx.shadowColor = '#1d4ed8';
+    ctx.shadowBlur = 10;
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    points.forEach((pt, i) => {
+      const [cx, cy] = toCanvas(pt.lat, pt.lng);
+      if (i === 0) ctx.moveTo(cx, cy); else ctx.lineTo(cx, cy);
+    });
+    ctx.stroke();
+
+    // Inner bright line
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#60a5fa';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    points.forEach((pt, i) => {
+      const [cx, cy] = toCanvas(pt.lat, pt.lng);
+      if (i === 0) ctx.moveTo(cx, cy); else ctx.lineTo(cx, cy);
+    });
+    ctx.stroke();
+
+    // Direction arrows
+    const step = Math.max(1, Math.floor(points.length / 14));
+    ctx.fillStyle = '#93c5fd';
+    for (let i = step; i < points.length - 1; i += step) {
+      const [ax, ay] = toCanvas(points[i].lat, points[i].lng);
+      const [bx, by] = toCanvas(points[i + 1].lat, points[i + 1].lng);
+      const angle = Math.atan2(by - ay, bx - ax);
+      ctx.save();
+      ctx.translate(ax, ay);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(9, 0); ctx.lineTo(-5, -4); ctx.lineTo(-5, 4); ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // ── Start Marker ──────────────────────────────────────────────────────────
+  if (points.length >= 1) {
+    const [sx, sy] = toCanvas(points[0].lat, points[0].lng);
+    ctx.shadowColor = '#10b981'; ctx.shadowBlur = 12;
+    ctx.fillStyle = '#10b981';
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(sx, sy, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+    // Label background
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(sx + 14, sy - 10, 44, 18);
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 11px monospace';
+    ctx.fillText('START', sx + 17, sy + 3);
+  }
+
+  // ── End Marker ────────────────────────────────────────────────────────────
+  if (points.length >= 2) {
+    const last = points[points.length - 1];
+    const [ex, ey] = toCanvas(last.lat, last.lng);
+    ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 12;
+    ctx.fillStyle = '#ef4444';
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(ex, ey, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(ex + 14, ey - 10, 38, 18);
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 11px monospace';
+    ctx.fillText('ZIEL', ex + 17, ey + 3);
+  }
+
+  // ── OSM Attribution (legally required) ───────────────────────────────────
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.fillRect(tileOffsetX + 2, tileOffsetY + tileAreaH - 16, 200, 14);
+  ctx.fillStyle = '#333';
+  ctx.font = '9px sans-serif';
+  ctx.fillText('© OpenStreetMap contributors', tileOffsetX + 5, tileOffsetY + tileAreaH - 5);
+
+  // ── Footer bar ────────────────────────────────────────────────────────────
+  const footerY = CANVAS_H - FOOTER_H;
+  const footerGrad = ctx.createLinearGradient(0, footerY, 0, CANVAS_H);
+  footerGrad.addColorStop(0, '#1e293b');
+  footerGrad.addColorStop(1, '#0f172a');
+  ctx.fillStyle = footerGrad;
+  ctx.fillRect(0, footerY, CANVAS_W, FOOTER_H);
+  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1;
+  ctx.strokeRect(0, footerY, CANVAS_W, FOOTER_H);
+
+  // Tester
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillRect(20, footerY + 10, 5, 40);
+  ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 13px monospace';
+  ctx.fillText(`TESTER: ${session.userName.toUpperCase()}`, 34, footerY + 27);
+  const startStr = new Date(session.startTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const endStr   = new Date(session.endTime).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  ctx.fillStyle = '#94a3b8'; ctx.font = '11px monospace';
+  ctx.fillText(`Zeitraum: ${startStr} – ${endStr}`, 34, footerY + 46);
+
+  // Stats
+  const totalDist = points.length >= 2
+    ? points.slice(1).reduce((sum, pt, i) => {
+        const prev = points[i];
+        const dLat = (pt.lat - prev.lat) * 111320;
+        const dLng = (pt.lng - prev.lng) * 111320 * Math.cos(prev.lat * Math.PI / 180);
+        return sum + Math.sqrt(dLat * dLat + dLng * dLng);
+      }, 0)
+    : 0;
+  const distLabel = totalDist > 1000 ? (totalDist / 1000).toFixed(2) + ' km' : Math.round(totalDist) + ' m';
+
+  ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 13px monospace';
+  ctx.fillText(`Distanz: ${distLabel}`, CANVAS_W / 2 - 100, footerY + 27);
+  ctx.fillStyle = '#94a3b8'; ctx.font = '11px monospace';
+  ctx.fillText(`${points.length} Wegpunkte`, CANVAS_W / 2 - 100, footerY + 46);
+
+  // Legend
+  ctx.fillStyle = '#2563eb';
+  ctx.fillRect(CANVAS_W - 180, footerY + 20, 30, 4);
+  ctx.fillStyle = '#94a3b8'; ctx.font = '11px monospace';
+  ctx.fillText('GPS-Spur', CANVAS_W - 140, footerY + 26);
+  ctx.fillStyle = '#10b981';
+  ctx.beginPath(); ctx.arc(CANVAS_W - 165, footerY + 46, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath(); ctx.arc(CANVAS_W - 145, footerY + 46, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText('Start / Ende', CANVAS_W - 133, footerY + 50);
+
+  return canvas.toDataURL('image/jpeg', 0.92);
+}
+
+/**
+ * @deprecated Use generateTrackingTestSnapshotWithMap instead.
  * Generates a standalone tactical canvas snapshot for a completed tracking test.
  * Uses pure Canvas 2D API – no html2canvas, no tile servers, no CORS issues.
  * Always produces a visible result regardless of map mount state.
