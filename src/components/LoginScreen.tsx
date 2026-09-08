@@ -357,24 +357,25 @@ export const LoginScreen: React.FC = () => {
 
           <div className="space-y-6 relative z-10">
             {/* Logo Block */}
-            <div className="flex items-center gap-5">
-              <div className="rounded-2xl bg-slate-900/80 border border-slate-600/60 p-3 shadow-lg ring-1 ring-blue-500/10 shrink-0">
+            <div className="flex flex-col items-center gap-4">
+              {/* Logo with white-bg removal via invert+screen */}
+              <div className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-2xl overflow-hidden bg-slate-950 border border-slate-700/60 shadow-xl ring-1 ring-blue-500/20 shrink-0 flex items-center justify-center">
                 <img
                   src="/logo-shs.jpg"
                   alt="Spürhunde Salzlandkreis"
-                  className="w-20 h-20 sm:w-24 sm:h-24 object-contain grayscale brightness-[0.85] contrast-125"
-                  style={{ filter: 'grayscale(1) brightness(0.88) contrast(1.2) drop-shadow(0 0 6px rgba(148,163,184,0.3))' }}
+                  className="w-full h-full object-contain"
+                  style={{ filter: 'invert(1) brightness(0.82) contrast(1.1)', mixBlendMode: 'screen' }}
                 />
               </div>
-              <div className="flex flex-col gap-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-950/60 border border-blue-700/50 text-blue-300 text-xs font-bold font-mono">
+              <div className="flex flex-col items-center gap-1.5 text-center">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-950/60 border border-blue-700/50 text-blue-300 text-[10px] font-bold font-mono whitespace-nowrap">
                   <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-ping" />
                   <span>SPÜRHUNDE-SALZLANDKREIS E.V.</span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight uppercase">
+                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight uppercase">
                   Einsatzzentrale
                 </h1>
-                <h2 className="text-base sm:text-lg font-bold text-blue-400 uppercase tracking-widest font-mono">
+                <h2 className="text-sm font-bold text-blue-400 uppercase tracking-widest font-mono">
                   SHS-EZ
                 </h2>
               </div>
