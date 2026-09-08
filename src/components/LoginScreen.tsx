@@ -141,16 +141,6 @@ export const LoginScreen: React.FC = () => {
     return allOperations.filter((op) => op.status === 'active' || op.status === 'paused');
   }, [allOperations]);
 
-  // Selected active operation when there are multiple
-  const [selectedOperationId, setSelectedOperationId] = useState<string>('');
-
-  // Set default selected operation ID when activeOperations is loaded
-  useEffect(() => {
-    if (activeOperations.length > 0 && !selectedOperationId) {
-      setSelectedOperationId(activeOperations[0].id);
-    }
-  }, [activeOperations, selectedOperationId]);
-
   // Device-level saved profile (personal smartphone / tablet)
   const [rememberedUserId, setRememberedUserId] = useState<string>(() => {
     try {
@@ -199,6 +189,10 @@ export const LoginScreen: React.FC = () => {
   const [showTestDuration, setShowTestDuration] = useState(false);
   const [testDuration, setTestDuration] = useState<10 | 20 | 30>(10);
 
+  // 2-step flow: pendingSessionMode is set when user picks role (active/observer) but there are
+  // multiple active operations → user must then pick which operation to join.
+  const [pendingSessionMode, setPendingSessionMode] = useState<'active' | 'observer' | null>(null);
+
   // Initialize selectedUser if in device unlock mode
   useEffect(() => {
     if (loginMode === 'device_unlock' && rememberedUser) {
@@ -206,6 +200,70 @@ export const LoginScreen: React.FC = () => {
       setUsername(rememberedUser.username);
     }
   }, [loginMode, rememberedUser]);
+
+  /**
+   * Called once both role (active/observer) AND target operation are known.
+   * Single canonical place for all login finalization state changes.
+   */
+  const handleFinalizeLogin = (user: User, sessionMode: 'active' | 'observer', targetOpId?: string) => {
+    // Update role first
+    if (sessionMode === 'observer') {
+      updateUser(user.id, { role: 'observer' });
+    } else {
+      if (user.role === 'observer') {
+        const isLead =
+          user.username.toLowerCase().includes('admin') ||
+          user.username.toLowerCase().includes('leitung') ||
+          user.name.toLowerCase().includes('admin');
+        const defaultLeadRole: UserRole = user.username.toLowerCase().includes('admin') ? 'admin' : 'einsatzleitung';
+        updateUser(user.id, { role: isLead ? defaultLeadRole : 'responder' });
+      }
+    }
+
+    const finalOpId = targetOpId || (activeOperations.length > 0 ? activeOperations[0].id : '');
+
+    if (finalOpId) {
+      allOperations.forEach((op) => {
+        if (op.status === 'active' || op.status === 'paused') {
+          const participantIds = op.participantIds || [];
+          if (op.id === finalOpId) {
+            if (!participantIds.includes(user.id)) {
+              updateOperation(op.id, { participantIds: [...participantIds, user.id] });
+            }
+          } else {
+            if (participantIds.includes(user.id)) {
+              updateOperation(op.id, {
+                participantIds: participantIds.filter((id) => id !== user.id),
+              });
+            }
+          }
+        }
+      });
+    }
+
+    const success = login(user.username, password, finalOpId || undefined);
+
+    if (success && rememberThisDevice) {
+      try {
+        localStorage.setItem(STORAGE_KEY_REMEMBERED_DEVICE, user.id);
+      } catch {}
+    }
+
+    setPendingSessionMode(null);
+    setVerifiedUser(null);
+  };
+
+  /**
+   * Role button click: if single op → finalize immediately, else → show op picker.
+   */
+  const handleRoleSelected = (mode: 'active' | 'observer') => {
+    if (!verifiedUser) return;
+    if (activeOperations.length <= 1) {
+      handleFinalizeLogin(verifiedUser, mode, activeOperations[0]?.id);
+    } else {
+      setPendingSessionMode(mode);
+    }
+  };
 
   const handleVerifyCredentials = (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,7 +299,7 @@ export const LoginScreen: React.FC = () => {
       return;
     }
 
-    // NEW: Check password BEFORE session check to ensure only authorized users can force logout
+    // Check password BEFORE session check
     if (foundUser.password && foundUser.password !== password.trim()) {
       handleFailedAttempt();
       return;
@@ -259,8 +317,6 @@ export const LoginScreen: React.FC = () => {
     }
 
     // Check for real double login from another active device
-    // A session is ONLY active if it has an active session ID different from ours,
-    // does not belong to the same local device ID, and has a fresh heartbeat (< 45 seconds).
     const deviceSessionId = sessionStorage.getItem('rescue_device_session_id') || '';
     const deviceId = localStorage.getItem('rescue_app_device_id_v1') || '';
     const now = Date.now();
@@ -282,10 +338,22 @@ export const LoginScreen: React.FC = () => {
       return;
     }
 
-    // Success! Reset security counters and show participation mode selector
+    // Success – reset security counters
     setFailedAttempts(0);
     setForceLogoutTarget(null);
-    setVerifiedUser(foundUser);
+
+    // Observer accounts skip the role picker – finalize directly as observer.
+    // For multiple ops show op picker, for single op finalize immediately.
+    if (foundUser.role === 'observer') {
+      if (activeOperations.length > 1) {
+        setVerifiedUser(foundUser);
+        setPendingSessionMode('observer');
+      } else {
+        handleFinalizeLogin(foundUser, 'observer', activeOperations[0]?.id);
+      }
+    } else {
+      setVerifiedUser(foundUser);
+    }
   };
 
   const handleFailedAttempt = () => {
@@ -300,60 +368,6 @@ export const LoginScreen: React.FC = () => {
       setErrorMsg(
         `Ungültiges Kennwort oder PIN (${nextAttempts}/3 Versuchen). Bitte prüfen Sie Ihre Eingabe.`
       );
-    }
-  };
-
-  const handleFinalizeLogin = (user: User, sessionMode: 'active' | 'observer', targetOpId?: string) => {
-    const usersToActivate = [user];
-    
-    if (sessionMode === 'observer') {
-      updateUser(user.id, { role: 'observer' });
-    } else {
-      // Restore active role if user was previously set to observer
-      if (user.role === 'observer') {
-        const isLead =
-          user.username.toLowerCase().includes('admin') ||
-          user.username.toLowerCase().includes('leitung') ||
-          user.name.toLowerCase().includes('admin');
-        const defaultLeadRole: UserRole = user.username.toLowerCase().includes('admin') ? 'admin' : 'einsatzleitung';
-        updateUser(user.id, { role: isLead ? defaultLeadRole : 'responder' });
-      }
-    }
-
-    const finalOpId = targetOpId || (activeOperations.length > 0 ? activeOperations[0].id : '');
-    if (finalOpId) {
-      setCurrentOperationId(finalOpId);
-      
-      // Update participants list for all active operations
-      allOperations.forEach((op) => {
-        if (op.status === 'active' || op.status === 'paused') {
-          const isTarget = op.id === finalOpId;
-          const participantIds = op.participantIds || [];
-          if (isTarget) {
-            const newUserIds = usersToActivate.map(u => u.id).filter(id => !participantIds.includes(id));
-            if (newUserIds.length > 0) {
-              updateOperation(op.id, { participantIds: [...participantIds, ...newUserIds] });
-            }
-          } else {
-            const userIdsToRemove = usersToActivate.map(u => u.id).filter(id => participantIds.includes(id));
-            if (userIdsToRemove.length > 0) {
-              updateOperation(op.id, { participantIds: participantIds.filter(id => !userIdsToRemove.includes(id)) });
-            }
-          }
-        }
-      });
-    }
-
-    // Activate all selected users in the system
-    // (Sammel-Anmeldung logic removed)
-
-    // Perform actual login for the main user
-    const success = login(user.username, password);
-
-    if (success && rememberThisDevice) {
-      try {
-        localStorage.setItem(STORAGE_KEY_REMEMBERED_DEVICE, user.id);
-      } catch {}
     }
   };
 
@@ -375,29 +389,32 @@ export const LoginScreen: React.FC = () => {
     }
 
     if (activeOperations.length > 1) {
+      // Multiple operations → set as verifiedUser and show the full selector
+      // (role is already known: observer → skip role picker, go straight to op picker)
       setVerifiedUser(guestUser);
+      setPendingSessionMode('observer');
     } else {
+      // Single operation → login directly
       const finalOpId = activeOperations[0]?.id || '';
       if (finalOpId) {
-        setCurrentOperationId(finalOpId);
-        // Add to participants list
         allOperations.forEach((op) => {
           if (op.status === 'active' || op.status === 'paused') {
-            const isTarget = op.id === finalOpId;
             const participantIds = op.participantIds || [];
-            if (isTarget) {
+            if (op.id === finalOpId) {
               if (!participantIds.includes(guestUser!.id)) {
                 updateOperation(op.id, { participantIds: [...participantIds, guestUser!.id] });
               }
             } else {
               if (participantIds.includes(guestUser!.id)) {
-                updateOperation(op.id, { participantIds: participantIds.filter(id => id !== guestUser!.id) });
+                updateOperation(op.id, {
+                  participantIds: participantIds.filter((id) => id !== guestUser!.id),
+                });
               }
             }
           }
         });
       }
-      login(guestUser.username, '');
+      login(guestUser.username, '', finalOpId || undefined);
     }
   };
 
@@ -407,6 +424,7 @@ export const LoginScreen: React.FC = () => {
     setPassword('');
     setErrorMsg('');
     setVerifiedUser(null);
+    setPendingSessionMode(null);
   };
 
   const handleDisconnectDevice = () => {
@@ -419,6 +437,7 @@ export const LoginScreen: React.FC = () => {
     setPassword('');
     setLoginMode('direct');
     setVerifiedUser(null);
+    setPendingSessionMode(null);
   };
 
   const hasActiveOps = activeOperations.length > 0;
@@ -586,11 +605,13 @@ export const LoginScreen: React.FC = () => {
               </div>
             )}
 
-            {/* VERIFIED USER STEP: Participation Choice */}
+            {/* VERIFIED USER STEP: Role Selection & Operation Picker */}
             {verifiedUser ? (
               <div className="space-y-4 font-mono animate-in fade-in duration-200">
                 <div className="p-4 rounded-2xl bg-blue-950/30 border-2 border-blue-500/70 space-y-4 shadow-xl">
-                  <div className="flex items-center justify-between border-b border-slate-300 dark:border-slate-700/80 pb-3">
+
+                  {/* Header: verified identity */}
+                  <div className="flex items-center justify-between border-b border-slate-700/80 pb-3">
                     <div className="flex items-center gap-2.5">
                       <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
                       <div>
@@ -598,186 +619,209 @@ export const LoginScreen: React.FC = () => {
                           Anmeldung erfolgreich
                         </span>
                         <span className="text-xs text-blue-300 font-sans">
-                          {verifiedUser.name} {verifiedUser.callSign ? `(${verifiedUser.callSign})` : ''}
+                          {verifiedUser.name}{verifiedUser.callSign ? ` (${verifiedUser.callSign})` : ''}
                         </span>
                       </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => setVerifiedUser(null)}
-                      className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200 underline cursor-pointer"
+                      onClick={handleClearSelection}
+                      className="text-xs text-slate-400 hover:text-slate-200 underline cursor-pointer"
                     >
                       Abbrechen
                     </button>
                   </div>
 
-                  {activeOperations.length > 1 && (
-                    <div className="space-y-3 pb-3 border-b border-slate-300 dark:border-slate-700/80">
-                      <span className="block text-[11px] font-bold text-amber-400 uppercase tracking-wider">
-                        ⚠️ Mehrere aktive Einsätze gefunden:
-                      </span>
-                      <p className="text-[10px] text-slate-700 dark:text-slate-300 font-sans leading-relaxed">
-                        Bitte wählen Sie den gewünschten Einsatz, für den Sie sich anmelden möchten:
+                  {/* ── STEP 2: Operation picker (only shown when pendingSessionMode is set) ── */}
+                  {pendingSessionMode !== null ? (
+                    <div className="space-y-3 animate-in fade-in duration-200">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">
+                          ⚠️ An welchem Einsatz / welcher Übung nimmst du teil?
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-300 font-sans leading-relaxed">
+                        Es sind mehrere Einsätze/Übungen gleichzeitig aktiv. Bitte wähle deinen:
                       </p>
-                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+
+                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                         {activeOperations.map((op) => {
-                          const isSelected = selectedOperationId === op.id;
+                          const isExercise = op.type === 'exercise';
                           return (
                             <button
                               key={op.id}
                               type="button"
-                              onClick={() => setSelectedOperationId(op.id)}
-                              className={`w-full p-3 rounded-xl border text-left transition cursor-pointer flex flex-col gap-1.5 ${
-                                isSelected
-                                  ? 'bg-blue-950/40 border-blue-500 ring-2 ring-blue-500/30 text-white'
-                                  : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:border-slate-700'
+                              onClick={() => handleFinalizeLogin(verifiedUser, pendingSessionMode, op.id)}
+                              className={`w-full p-3 rounded-xl border-2 text-left transition cursor-pointer flex flex-col gap-1.5 group shadow ${
+                                isExercise
+                                  ? 'bg-purple-950/40 border-purple-600/60 hover:border-purple-400 hover:bg-purple-950/60'
+                                  : 'bg-red-950/40 border-red-600/60 hover:border-red-400 hover:bg-red-950/60'
                               }`}
                             >
                               <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold truncate">
+                                <span className="text-xs font-bold text-white truncate flex-1 mr-2">
                                   {op.title}
                                 </span>
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                                  op.type === 'exercise'
-                                    ? 'bg-purple-950 text-purple-300 border border-purple-800'
-                                    : 'bg-red-950 text-red-300 border border-red-800'
+                                <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase border shrink-0 ${
+                                  isExercise
+                                    ? 'bg-purple-950 text-purple-300 border-purple-700'
+                                    : 'bg-red-950 text-red-300 border-red-700'
                                 }`}>
-                                  {op.type === 'exercise' ? 'Übung' : 'Einsatz'}
+                                  {isExercise ? '🟣 Übung' : '🚨 Einsatz'}
                                 </span>
                               </div>
-                              <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-sans">
+                              <div className="flex items-center justify-between text-[10px] text-slate-400 font-sans">
                                 <span>Leiter: {op.commander || 'Nicht angegeben'}</span>
                                 <span className="font-mono">{op.participantIds?.length || 0} Kräfte</span>
+                              </div>
+                              <div className={`w-full py-1.5 px-2 rounded-lg text-white font-bold text-[10px] uppercase font-mono text-center flex items-center justify-center gap-1 mt-1 ${
+                                isExercise ? 'bg-purple-700 group-hover:bg-purple-600' : 'bg-red-700 group-hover:bg-red-600'
+                              }`}>
+                                <span>
+                                  {pendingSessionMode === 'observer' ? '👁️ Als Betrachter beitreten' : '🦺 Als aktive Kraft beitreten'}
+                                </span>
+                                <ArrowRight className="w-3 h-3" />
                               </div>
                             </button>
                           );
                         })}
                       </div>
-                    </div>
-                  )}
 
-                  <p className="text-xs text-slate-700 dark:text-slate-300 font-sans">
-                    Bitte wählen Sie Ihre gewünschte Funktion für diese Einsatzsitzung:
-                  </p>
-
-                  <div className="grid grid-cols-1 gap-3 pt-1">
-                    {/* Option 1: Aktiver User */}
-                    <button
-                      type="button"
-                      onClick={() => handleFinalizeLogin(verifiedUser, 'active', selectedOperationId)}
-                      className="p-4 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:bg-slate-800 border-2 border-emerald-500/60 hover:border-emerald-400 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-md"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-white uppercase flex items-center gap-2">
-                            <span>🦺</span> Als aktiver User
-                          </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">
-                            Einsatzteilnehmer
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-700 dark:text-slate-300 mt-2 font-sans leading-relaxed">
-                          Nimmt aktiv am Einsatz teil. GPS-Tracking, Sektorzuweisung, Fundmeldungen & Chat passend zur Rolle (<span className="text-emerald-300 font-bold">{verifiedUser.role === 'admin' ? 'Einsatzleitung' : 'Einsatzkraft'}</span>).
-                        </p>
-                      </div>
-                      <div className="w-full py-2.5 px-3 rounded-lg bg-emerald-600 group-hover:bg-emerald-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
-                        <span>Als aktiver User starten</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </div>
-                    </button>
-
-                    {/* Option 2: Betrachter */}
-                    <button
-                      type="button"
-                      onClick={() => handleFinalizeLogin(verifiedUser, 'observer', selectedOperationId)}
-                      className="p-4 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:bg-slate-800 border-2 border-purple-500/60 hover:border-purple-400 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-md"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-purple-200 uppercase flex items-center gap-2">
-                            <span>👁️</span> Als Betrachter
-                          </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-purple-950 text-purple-300 border border-purple-700 font-bold">
-                            Nur Leseansicht
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-700 dark:text-slate-300 mt-2 font-sans leading-relaxed">
-                          Nimmt <strong>nicht</strong> aktiv am Einsatz teil und wird keinen Sektoren zugeteilt. Sieht alle Live-Aktionen auf der Karte, Lageberichte und kann den Chat mitlesen.
-                        </p>
-                      </div>
-                      <div className="w-full py-2.5 px-3 rounded-lg bg-purple-600 group-hover:bg-purple-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
-                        <span>Als Betrachter starten</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </div>
-                    </button>
-
-                    {/* Option 3: Trackingtest */}
-                    <div className="space-y-2 pt-2 mt-2 border-t border-slate-200 dark:border-slate-800">
-                      <div className="flex items-center gap-2 mb-1 px-1">
-                        <div className="h-px flex-1 bg-slate-50 dark:bg-slate-800"></div>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Alternativ</span>
-                        <div className="h-px flex-1 bg-slate-50 dark:bg-slate-800"></div>
-                      </div>
-                      
                       <button
                         type="button"
-                        onClick={() => setShowTestDuration(!showTestDuration)}
-                        className="w-full p-4 rounded-xl bg-white dark:bg-slate-900 border-2 border-blue-500/60 hover:border-blue-400 hover:bg-slate-50 dark:bg-slate-800 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-md"
+                        onClick={() => setPendingSessionMode(null)}
+                        className="w-full py-2 text-[11px] text-slate-400 hover:text-slate-200 transition underline text-center cursor-pointer"
                       >
-                        <div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold uppercase flex items-center gap-2 text-blue-200">
-                              <span>🛰️</span> Persönlicher Trackingtest
-                            </span>
-                            <span className="text-[10px] px-2 py-0.5 rounded font-mono border font-bold bg-blue-950 text-blue-300 border-blue-700">
-                              Testmodus
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-sans leading-relaxed">
-                            Überprüft die GPS-Funktion und Genauigkeit deines Geräts im Vorfeld (10-30 Min). Erstellt am Ende ein Prüfprotokoll mit Karte zur Bestätigung.
-                          </p>
-                        </div>
-                        {!showTestDuration && (
-                          <div className="w-full py-2.5 px-3 rounded-lg bg-blue-600 group-hover:bg-blue-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
-                            <span>Testdauer wählen & starten</span>
-                            <ChevronDown className="w-3.5 h-3.5" />
-                          </div>
-                        )}
+                        ← Zurück zur Funktionswahl
                       </button>
+                    </div>
+                  ) : (
+                    /* ── STEP 1: Role picker ── */
+                    <>
+                      <p className="text-xs text-slate-300 font-sans">
+                        Bitte wählen Sie Ihre Funktion für diese Einsatzsitzung:
+                      </p>
 
-                      {showTestDuration && (
-                        <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-950 border border-blue-500/40 animate-in slide-in-from-top-2 duration-200">
-                          <span className="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-3 text-center">
-                            Wähle die Testdauer:
-                          </span>
-                          <div className="grid grid-cols-3 gap-2">
-                            {[10, 20, 30].map((d) => (
-                              <button
-                                key={d}
-                                type="button"
-                                onClick={() => {
-                                  if (verifiedUser) {
-                                    setTestDuration(d as 10 | 20 | 30);
-                                    startTrackingTest(verifiedUser, d as 10 | 20 | 30);
-                                  }
-                                }}
-                                className="py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition cursor-pointer"
-                              >
-                                {d} Min.
-                              </button>
-                            ))}
+                      <div className="grid grid-cols-1 gap-3 pt-1">
+                        {/* Option 1: Aktiver User */}
+                        <button
+                          type="button"
+                          onClick={() => handleRoleSelected('active')}
+                          className="p-4 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 border-2 border-emerald-500/60 hover:border-emerald-400 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-md"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-bold text-white uppercase flex items-center gap-2">
+                                <span>🦺</span> Als aktiver User
+                              </span>
+                              <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">
+                                Einsatzteilnehmer
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-300 mt-2 font-sans leading-relaxed">
+                              Nimmt aktiv am Einsatz teil. GPS-Tracking, Sektorzuweisung, Fundmeldungen &amp; Chat passend zur Rolle (<span className="text-emerald-300 font-bold">{verifiedUser.role === 'admin' || verifiedUser.role === 'einsatzleitung' ? 'Einsatzleitung' : 'Einsatzkraft'}</span>).
+                            </p>
                           </div>
+                          <div className="w-full py-2.5 px-3 rounded-lg bg-emerald-600 group-hover:bg-emerald-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
+                            <span>Als aktiver User {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </div>
+                        </button>
+
+                        {/* Option 2: Betrachter */}
+                        <button
+                          type="button"
+                          onClick={() => handleRoleSelected('observer')}
+                          className="p-4 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 border-2 border-purple-500/60 hover:border-purple-400 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-md"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-bold text-purple-200 uppercase flex items-center gap-2">
+                                <span>👁️</span> Als Betrachter
+                              </span>
+                              <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-purple-950 text-purple-300 border border-purple-700 font-bold">
+                                Nur Leseansicht
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-300 mt-2 font-sans leading-relaxed">
+                              Nimmt <strong>nicht</strong> aktiv am Einsatz teil und wird keinen Sektoren zugeteilt. Sieht alle Live-Aktionen auf der Karte, Lageberichte und kann den Chat mitlesen.
+                            </p>
+                          </div>
+                          <div className="w-full py-2.5 px-3 rounded-lg bg-purple-600 group-hover:bg-purple-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
+                            <span>Als Betrachter {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </div>
+                        </button>
+
+                        {/* Option 3: Trackingtest */}
+                        <div className="space-y-2 pt-2 mt-2 border-t border-slate-700">
+                          <div className="flex items-center gap-2 mb-1 px-1">
+                            <div className="h-px flex-1 bg-slate-700" />
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Alternativ</span>
+                            <div className="h-px flex-1 bg-slate-700" />
+                          </div>
+
                           <button
                             type="button"
-                            onClick={() => setShowTestDuration(false)}
-                            className="w-full mt-3 py-1.5 text-[10px] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200 transition underline"
+                            onClick={() => setShowTestDuration(!showTestDuration)}
+                            className="w-full p-4 rounded-xl bg-white dark:bg-slate-900 border-2 border-blue-500/60 hover:border-blue-400 hover:bg-slate-50 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-md"
                           >
-                            Abbrechen
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold uppercase flex items-center gap-2 text-blue-200">
+                                  <span>🛰️</span> Persönlicher Trackingtest
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded font-mono border font-bold bg-blue-950 text-blue-300 border-blue-700">
+                                  Testmodus
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-400 mt-2 font-sans leading-relaxed">
+                                Überprüft die GPS-Funktion und Genauigkeit deines Geräts im Vorfeld (10-30 Min). Erstellt am Ende ein Prüfprotokoll mit Karte zur Bestätigung.
+                              </p>
+                            </div>
+                            {!showTestDuration && (
+                              <div className="w-full py-2.5 px-3 rounded-lg bg-blue-600 group-hover:bg-blue-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
+                                <span>Testdauer wählen &amp; starten</span>
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              </div>
+                            )}
                           </button>
+
+                          {showTestDuration && (
+                            <div className="p-3 rounded-xl bg-slate-950 border border-blue-500/40 animate-in slide-in-from-top-2 duration-200">
+                              <span className="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-3 text-center">
+                                Wähle die Testdauer:
+                              </span>
+                              <div className="grid grid-cols-3 gap-2">
+                                {[10, 20, 30].map((d) => (
+                                  <button
+                                    key={d}
+                                    type="button"
+                                    onClick={() => {
+                                      if (verifiedUser) {
+                                        setTestDuration(d as 10 | 20 | 30);
+                                        startTrackingTest(verifiedUser, d as 10 | 20 | 30);
+                                      }
+                                    }}
+                                    className="py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition cursor-pointer"
+                                  >
+                                    {d} Min.
+                                  </button>
+                                ))}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setShowTestDuration(false)}
+                                className="w-full mt-3 py-1.5 text-[10px] text-slate-400 hover:text-slate-200 transition underline"
+                              >
+                                Abbrechen
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (

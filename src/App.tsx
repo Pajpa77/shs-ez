@@ -121,31 +121,23 @@ const MainApp: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'admin' | 'map' | 'sectors' | 'chat' | 'responders' | 'log' | 'archive' | 'reports'>('map');
   const [selectedArchiveOpId, setSelectedArchiveOpId] = useState<string>('');
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.theme !== 'light');
+
+  // App UI is ALWAYS dark – no OS sync, no user toggle.
+  // Only the map tile style can be switched between light and dark.
+  const [isMapLight, setIsMapLight] = useState<boolean>(() => {
+    try { return localStorage.getItem('rescue_map_tile_light') === '1'; } catch { return false; }
+  });
   const [showDroneFeed, setShowDroneFeed] = useState(false);
 
-  // Apply Dark Mode
+  // Permanently enforce dark class on <html> so all dark: tailwind variants apply
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.theme = 'dark';
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.theme = 'light';
-    }
-  }, [isDarkMode]);
-
-  // Sync with OS Theme changes dynamically
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDarkMode(e.matches);
-    };
-    
-    // Modern event listener
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    document.documentElement.classList.add('dark');
   }, []);
+
+  // Persist map tile preference
+  useEffect(() => {
+    try { localStorage.setItem('rescue_map_tile_light', isMapLight ? '1' : '0'); } catch {}
+  }, [isMapLight]);
 
   // Automatically clear unread badge when opening chat
   useEffect(() => {
@@ -194,7 +186,7 @@ const MainApp: React.FC = () => {
     isSearchTeamsModalOpen;
 
   return (
-    <div className="fixed inset-0 w-full h-full flex flex-col bg-[#0F172A] font-sans text-slate-900 dark:text-slate-200 overflow-hidden select-none">
+    <div className="fixed inset-0 w-full h-full flex flex-col bg-[#0F172A] font-sans text-slate-200 overflow-hidden select-none">
       <TrackingTestOverlay />
       {/* Active Alert Notification Modal */}
       {activeAlertNotification && (
@@ -368,11 +360,11 @@ const MainApp: React.FC = () => {
         )}
         <div className="w-[1px] h-4 bg-slate-700 mx-1"></div>
         <button
-          onClick={() => setIsDarkMode(!isDarkMode)}
-          className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700"
-          title={isDarkMode ? "Light Mode aktivieren" : "Dark Mode aktivieren"}
+          onClick={() => setIsMapLight(!isMapLight)}
+          className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-amber-600 text-amber-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700"
+          title={isMapLight ? "Karte dunkel schalten" : "Karte hell schalten"}
         >
-          {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+          {isMapLight ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
         </button>
         {currentUser?.role === 'admin' && (
           <>
@@ -442,6 +434,7 @@ const MainApp: React.FC = () => {
           {activeTab === 'map' && (
             <div className="flex-1 relative flex flex-col h-full w-full">
               <TacticalMap
+                isMapLight={isMapLight}
                 onSelectArchiveOp={(opId) => {
                   setSelectedArchiveOpId(opId);
                   setActiveTab('archive');

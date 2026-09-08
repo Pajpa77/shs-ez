@@ -979,14 +979,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                         let statusBadge = { label: 'In Bereitschaft', color: 'bg-slate-800 text-slate-400 border-slate-700', icon: '⚪' };
 
                         if (isOnline) {
-                          if (status === 'on_site') {
+                          if (status === 'ready') {
                             statusBadge = { label: 'Vor Ort / Im Einsatz', color: 'bg-emerald-950 text-emerald-300 border-emerald-700', icon: '🟢' };
-                          } else if (status === 'arrived_ez') {
+                          } else if (status === 'ez_reached') {
                             statusBadge = { label: 'EZ erreicht', color: 'bg-amber-500/20 text-amber-300 border-amber-500/50', icon: '🟡' };
-                          } else if (status === 'en_route') {
-                            statusBadge = { label: 'Auf Anfahrt', color: 'bg-blue-950 text-blue-300 border-blue-700', icon: '🚙' };
                           } else {
-                            statusBadge = { label: 'Bereit', color: 'bg-emerald-950/60 text-emerald-400 border-emerald-800', icon: '🟢' };
+                            // in_transit
+                            statusBadge = { label: 'Auf Anfahrt', color: 'bg-red-950/60 text-red-300 border-red-700', icon: '🔴' };
                           }
                         }
 

@@ -61,6 +61,8 @@ interface TacticalMapProps {
   onCancelDrawing?: () => void;
   onSaveSnapshot?: (dataUrl: string) => void;
   onSelectArchiveOp?: (opId: string) => void;
+  /** Controls map tile brightness: true = light tiles, false = dark-filtered tiles */
+  isMapLight?: boolean;
 }
 
 // Calculate geodesic area in hectares for a polygon
@@ -165,6 +167,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   onCancelDrawing,
   onSaveSnapshot,
   onSelectArchiveOp,
+  isMapLight = false,
 }) => {
   const {
     currentOperation: globalOperation,
@@ -606,6 +609,23 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     const newLayer = createTileLayer(activeBaseMap).addTo(mapInstanceRef.current);
     activeTileLayerRef.current = newLayer;
   }, [activeBaseMap]);
+
+  // Apply light/dark filter to map tiles only (.leaflet-tile-pane).
+  // Markers, sectors, and overlays are in separate panes and are unaffected.
+  useEffect(() => {
+    const applyFilter = () => {
+      const tilePane = mapContainerRef.current?.querySelector('.leaflet-tile-pane') as HTMLElement | null;
+      if (tilePane) {
+        tilePane.style.filter = isMapLight
+          ? 'none'
+          : 'invert(1) hue-rotate(180deg) brightness(0.82) saturate(0.9)';
+      }
+    };
+    // Apply immediately and also after a short delay (tiles may not be in DOM yet on first render)
+    applyFilter();
+    const t = setTimeout(applyFilter, 300);
+    return () => clearTimeout(t);
+  }, [isMapLight]);
 
   // Handle Sector Drawing (Freehand Pen and Click Vertex Modes)
   useEffect(() => {

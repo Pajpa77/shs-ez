@@ -69,7 +69,7 @@ interface RescueContextType {
   // Authentication & Users
   currentUser: User | null;
   allUsers: User[];
-  login: (username: string, password?: string) => boolean;
+  login: (username: string, password?: string, targetOperationId?: string) => boolean;
   logout: () => void;
   requestLogout: () => void;
   confirmLogout: () => void;
@@ -82,7 +82,7 @@ interface RescueContextType {
   updateUser: (userId: string, updates: Partial<User>) => void;
   deleteUser: (userId: string) => void;
   removeUserFromOperation: (userId: string) => void;
-  setUserActiveStatus: (userId: string, isActive: boolean) => void;
+  setUserActiveStatus: (userId: string, isActive: boolean, targetOperationId?: string) => void;
   deactivateAllUsers: (includeSelf?: boolean) => void;
 
   // Global In-App Confirm Modal (Replaces browser window.confirm)
@@ -1976,7 +1976,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   }, [allUsers.length, currentUser?.id, !!currentOperation]);
 
   // User active/online status toggle & synchronization
-  const setUserActiveStatus = (userId: string, isActive: boolean) => {
+  const setUserActiveStatus = (userId: string, isActive: boolean, targetOperationId?: string) => {
     const targetUser = allUsers.find((u) => u.id === userId);
     const wasActive = targetUser?.isActive ?? true;
 
@@ -2032,6 +2032,17 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       activeSessionId: isActive ? deviceSessionId : '',
       ...(shouldResetArrival ? { arrivalStatus: 'in_transit' } : {}),
     });
+
+    if (isActive) {
+      // Also reset in userArrivalStatuses state and storage so stale "ready" status from prior sessions does not linger
+      setUserArrivalStatuses((prev) => {
+        const next = { ...prev, [userId]: 'in_transit' as const };
+        try {
+          localStorage.setItem('rescue_app_arrival_statuses_slk_v4', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    }
 
     // Ensure isLive status in userLocations matches the active status
     if (userLocations[userId]) {
@@ -2122,7 +2133,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       }
     }
 
-    // If user went from inactive to active (logged in), notify admins & log in current operation
+    // If user went from inactive to active (logged in), notify admins & log in target/current operation
     if (isActive && !wasActive && targetUser) {
       playAlertSound('notification');
       setActiveAlertNotification({
@@ -2131,7 +2142,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         timestamp: new Date().toLocaleTimeString(),
       });
 
-      const opId = currentOperation?.id || 'op-1';
+      // Target operation determination: targetOperationId takes precedence over state to prevent async race
+      const targetOp = (targetOperationId ? allOperations.find((op) => op.id === targetOperationId) : null) || currentOperation;
+      const opId = targetOp?.id || targetOperationId || 'op-1';
+
       const loginChatMsg: ChatMessage = {
         id: `msg-login-${Date.now()}`,
         operationId: opId,
@@ -2153,18 +2167,18 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         payload: loginChatMsg,
       });
 
-      if (currentOperation) {
+      if (targetOp) {
         const logEntry: OperationLogEntry = {
           id: `log-${Date.now()}`,
-          operationId: currentOperation.id,
+          operationId: targetOp.id,
           timestamp: new Date().toISOString(),
           authorName: targetUser.name,
           authorRole: targetUser.role,
           category: 'status',
           text: targetUser.role === 'observer' ? `EINGELOGGT: ${targetUser.name} (${targetUser.callSign}) hat sich als Gast/Betrachter angemeldet.` : `EINGELOGGT: ${targetUser.name} (${targetUser.callSign}) hat sich angemeldet.`,
         };
-        updateOperation(currentOperation.id, {
-          logs: [logEntry, ...(currentOperation.logs || [])],
+        updateOperation(targetOp.id, {
+          logs: [logEntry, ...(targetOp.logs || [])],
         });
       }
     }
@@ -2198,7 +2212,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   };
 
   // Authentication methods
-  const login = (username: string, password?: string): boolean => {
+  const login = (username: string, password?: string, targetOperationId?: string): boolean => {
     const trimmedUser = username.trim().toLowerCase();
     const user = allUsers.find(
       (u) =>
@@ -2209,6 +2223,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     );
     if (user) {
       const pass = password ? password.trim() : '';
+      // All accounts (including observers) require a password – no passwordless bypass
       if (!pass) {
         return false;
       }
@@ -2223,8 +2238,11 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
           return false;
         }
       }
+      if (targetOperationId) {
+        setCurrentOperationId(targetOperationId);
+      }
       setCurrentUserId(user.id);
-      setUserActiveStatus(user.id, true);
+      setUserActiveStatus(user.id, true, targetOperationId);
       playAlertSound('notification');
       setAuthNotification({
         type: 'login',
