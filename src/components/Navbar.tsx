@@ -146,7 +146,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const canManageOps = true;
 
   return (
-    <header className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-5 bg-[#1E293B] border-b border-slate-300 dark:border-slate-700 shadow-lg shrink-0 sticky top-0 z-[1000] text-slate-900 dark:text-slate-200">
+    <header className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-5 bg-[#1E293B] border-b border-slate-700 shadow-lg shrink-0 sticky top-0 z-[1000] text-slate-200">
       {/* Brand & Central SHS Leitstellen Menu Button */}
       <div className="flex items-center gap-1.5 sm:gap-4 min-w-0">
         {/* Interactive White SHS Button / Admin Hub */}
@@ -167,8 +167,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="SHS EZ (Klicken für Einsatz- und Admin-Steuerung)"
           >
             <span className="font-black tracking-widest text-slate-950">SHS</span>
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-slate-50 dark:bg-amber-400 border-2 border-slate-900 rounded-full animate-ping"></span>
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-slate-50 dark:bg-amber-400 border-2 border-slate-900 rounded-full"></span>
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 border-2 border-slate-900 rounded-full animate-ping"></span>
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 border-2 border-slate-900 rounded-full"></span>
           </button>
 
           {/* Central SHS EZ & Admin Dropdown Popover */}
@@ -179,9 +179,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="fixed inset-0 z-[2100]"
                 onClick={() => setShowSarAdminMenu(false)}
               />
-              <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain bg-[#1E293B] border border-slate-400 dark:border-slate-600 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md">
+              <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain bg-[#1E293B] border border-slate-600 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md">
                 {/* Menu Header */}
-                <div className="flex items-center justify-between px-2 py-1.5 border-b border-slate-300 dark:border-slate-700/80 mb-2">
+                <div className="flex items-center justify-between px-2 py-1.5 border-b border-slate-700/80 mb-2">
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-lg bg-white text-slate-950 flex items-center justify-center font-black text-xs shadow border border-slate-300">
                       SHS
@@ -190,7 +190,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <div className="font-bold text-white text-xs uppercase tracking-wider">
                         SHS EZ
                       </div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                      <div className="text-[10px] text-slate-400 font-mono">
                         EZ & Admin-Steuerung
                       </div>
                     </div>
@@ -209,7 +209,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         setShowSarAdminMenu(false);
                         onOpenCreateOperationModal();
                       }}
-                      className="w-full flex items-center gap-3 p-2 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:bg-slate-800 text-black dark:text-slate-100 hover:text-white border border-slate-300 dark:border-slate-700/80 hover:border-blue-500/50 transition cursor-pointer text-left group"
+                      className="w-full flex items-center gap-3 p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-100 hover:text-white border border-slate-700/80 hover:border-blue-500/50 transition cursor-pointer text-left group"
                     >
                       <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/40 text-blue-400 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition">
                         ➕
@@ -219,7 +219,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <span>Neuen Einsatz anlegen</span>
                           <span className="text-[9px] px-1.5 py-0.2 bg-blue-900/50 text-blue-300 rounded font-mono">Neu</span>
                         </div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                        <div className="text-[10px] text-slate-400 font-mono">
                           Wohnadresse, Sichtungsort (PLS) & Vermisstenprofil
                         </div>
                       </div>
@@ -233,14 +233,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                         setShowSarAdminMenu(false);
                         onOpenEditOperationModal();
                       }}
-                      className="w-full flex items-center gap-3 p-2 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:bg-slate-800 text-black dark:text-slate-100 hover:text-white border border-slate-300 dark:border-slate-700/80 hover:border-amber-500/50 transition cursor-pointer text-left group"
+                      className="w-full flex items-center gap-3 p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-100 hover:text-white border border-slate-700/80 hover:border-amber-500/50 transition cursor-pointer text-left group"
                     >
                       <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition">
                         ✏️
                       </div>
                       <div className="flex-1">
                         <div className="font-bold text-xs">Aktuellen Einsatz editieren (inkl. Sektoren & Suchgebiet)</div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                        <div className="text-[10px] text-slate-400 font-mono truncate">
                           #{currentOperation.id.slice(-4).toUpperCase()} • {currentOperation.title}
                         </div>
                       </div>
@@ -264,7 +264,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <span>Einsatzdetails & Dossier</span>
                           <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-900 text-blue-200 border border-blue-700">Info</span>
                         </div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                        <div className="text-[10px] text-slate-400 font-mono truncate">
                           {currentOperation.missingPerson?.name ? `Vermisst: ${currentOperation.missingPerson.name}` : currentOperation.title}
                         </div>
                       </div>
@@ -273,8 +273,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                   {/* 4. Einsatz-Steuerung: Pausieren / Fortsetzen / Beenden (Zusammengeführt) */}
                   {isAdmin && currentOperation && (
-                    <div className="bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl p-2 space-y-1.5">
-                      <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase font-mono px-1 flex items-center justify-between">
+                    <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-2 space-y-1.5">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase font-mono px-1 flex items-center justify-between">
                         <span>Einsatz-Steuerung (ELZ)</span>
                         <span className="text-[9px] text-blue-400">Pausieren / Beenden</span>
                       </div>
@@ -289,7 +289,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 pauseOperation(currentOperation.id, 'Einsatz pausiert');
                               }
                             }}
-                            className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg bg-slate-50 dark:bg-amber-950/50 hover:bg-slate-50 dark:bg-amber-900/70 text-amber-200 border border-amber-800/60 transition cursor-pointer font-bold text-xs"
+                            className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg bg-amber-950/50 hover:bg-amber-900/70 text-amber-200 border border-amber-800/60 transition cursor-pointer font-bold text-xs"
                           >
                             <span>⏸️</span>
                             <span>Pausieren</span>
@@ -332,14 +332,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                         setShowSarAdminMenu(false);
                         onOpenCreateUserModal();
                       }}
-                      className="w-full flex items-center gap-3 p-2 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:bg-slate-800 text-black dark:text-slate-100 hover:text-white border border-slate-300 dark:border-slate-700/80 hover:border-emerald-500/50 transition cursor-pointer text-left group"
+                      className="w-full flex items-center gap-3 p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-100 hover:text-white border border-slate-700/80 hover:border-emerald-500/50 transition cursor-pointer text-left group"
                     >
                       <div className="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition">
                         👥
                       </div>
                       <div className="flex-1">
                         <div className="font-bold text-xs">Accountverwaltung</div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                        <div className="text-[10px] text-slate-400 font-mono">
                           Helfer anlegen, bearbeiten, Rollen & Funkrufnamen
                         </div>
                       </div>
@@ -363,7 +363,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <span>App teilen & Kräfte einladen</span>
                           <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-900 text-blue-200 border border-blue-700">QR-Code</span>
                         </div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                        <div className="text-[10px] text-slate-400 font-mono truncate">
                           Direktlink & QR-Code für Helfer vor Ort (ohne Google-Login)
                         </div>
                       </div>
@@ -374,7 +374,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
 
                 {/* Quick links footer */}
-                <div className="mt-2.5 pt-2 border-t border-slate-300 dark:border-slate-700/80 grid grid-cols-3 gap-1.5 text-center font-mono text-[10px]">
+                <div className="mt-2.5 pt-2 border-t border-slate-700/80 grid grid-cols-3 gap-1.5 text-center font-mono text-[10px]">
                   <button
                     onClick={() => {
                       setActiveTab('reports');
@@ -389,7 +389,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setActiveTab('log');
                       setShowSarAdminMenu(false);
                     }}
-                    className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 cursor-pointer"
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 cursor-pointer"
                   >
                     📜 Tagebuch
                   </button>
@@ -398,7 +398,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setActiveTab('archive');
                       setShowSarAdminMenu(false);
                     }}
-                    className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 cursor-pointer"
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 cursor-pointer"
                   >
                     📦 Archiv
                   </button>
@@ -413,7 +413,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <h1 className="text-xs sm:text-sm md:text-base font-bold leading-tight uppercase tracking-wider text-white truncate">
               SHS EZ
             </h1>
-            {/* Quick Operation Selector Button */}
+            {/* Quick Operation Selector Button - styled like the Share button */}
             <div className="relative inline-block shrink-0">
               <button
                 onClick={() => {
@@ -422,13 +422,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setShowUserDropdown(false);
                   setShowResponderListDropdown(false);
                 }}
-                className="px-2 py-0.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-400 dark:border-slate-600 text-[10px] font-mono text-slate-900 dark:text-slate-200 flex items-center gap-1 cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer text-[10px] font-mono font-bold shadow-sm shrink-0"
                 title="Einsatz wechseln oder archivierte Einsätze ansehen"
               >
-                <span className="font-bold">
+                <span>
                   {currentOperation ? `#${currentOperation.id.slice(-4).toUpperCase()}` : 'EINSÄTZE'}
                 </span>
-                <ChevronDown className="w-3 h-3 text-slate-500 dark:text-slate-400" />
+                <ChevronDown className="w-3 h-3 text-blue-400 shrink-0" />
               </button>
 
               {/* Operation Dropdown Menu */}
@@ -702,19 +702,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setShowSarAdminMenu(false);
                   setShowUserDropdown(false);
                 }}
-                className="px-2 py-0.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-400 dark:border-slate-600 text-[10px] font-mono text-slate-900 dark:text-slate-200 flex items-center gap-1 sm:gap-1.5 cursor-pointer"
+                className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer text-[10px] font-mono font-bold shadow-sm shrink-0"
                 title="Einsatzkräfte & Bereitschaftsliste öffnen"
               >
                 <span className="hidden sm:inline">👥 Einsatzkräfte ({allUsers.filter(u => u.isActive).length})</span>
                 <span className="sm:hidden">👥 {allUsers.filter(u => u.isActive).length}</span>
-                <ChevronDown className="w-3 h-3 text-slate-500 dark:text-slate-400 shrink-0" />
+                <ChevronDown className="w-3 h-3 text-blue-400 shrink-0" />
               </button>
 
               {showResponderListDropdown && (
                 <>
                   <div className="fixed inset-0 z-[2100]" onClick={() => setShowResponderListDropdown(false)} />
-                  <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150 space-y-2">
-                    <div className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300 px-1 border-b border-slate-300 dark:border-slate-700 uppercase tracking-wider text-[10px] font-mono pb-1">
+                  <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150 space-y-2">
+                    <div className="flex items-center justify-between font-bold text-slate-300 px-1 border-b border-slate-700 uppercase tracking-wider text-[10px] font-mono pb-1">
                       <span>Einsatzkräfte & Bereitschaft</span>
                       <span className="text-blue-400">{allUsers.filter(u => u.isActive).length} aktiv</span>
                     </div>
@@ -725,7 +725,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <div className="text-[9px] text-indigo-300 font-bold uppercase">
                           {currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') ? '🚨 Aktive Einsatz-EZ' : '🏢 Vereinsbüro Aschersleben'}
                         </div>
-                        <div className="text-slate-900 dark:text-slate-200 truncate font-semibold text-[10px]">
+                        <div className="text-slate-200 truncate font-semibold text-[10px]">
                           {(currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && currentOperation.headquartersLocation?.address) ? currentOperation.headquartersLocation.address : 'Hohe Straße 15, Aschersleben'}
                         </div>
                       </div>
@@ -748,93 +748,53 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {[...allUsers].sort((a, b) => (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0)).map((user) => {
                         const isOnline = user.isActive;
                         const status = getUserArrivalStatus(user.id);
-                        const loc = userLocations[user.id]?.currentPosition;
-                        const distMeters = loc ? calculateDistanceToEzMeters(loc.lat, loc.lng) : null;
-                        const distText = distMeters !== null ? (distMeters >= 1000 ? `${(distMeters / 1000).toFixed(1)} km` : `${Math.round(distMeters)} m`) : 'Kein GPS';
+                        let statusBadge = { label: 'In Bereitschaft', color: 'bg-slate-800 text-slate-400 border-slate-700', icon: '⚪' };
 
-                        let statusBadge = { label: 'In Anfahrt', color: 'bg-red-500/20 text-red-300 border-red-500/50', icon: '🔴' };
-                        if (status === 'ready') {
-                          statusBadge = { label: 'Bereit', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500', icon: '🟢' };
-                        } else if (status === 'ez_reached') {
-                          statusBadge = { label: 'EZ erreicht', color: 'bg-slate-50 dark:bg-amber-500/20 text-amber-300 border-amber-500/50', icon: '🟡' };
+                        if (isOnline) {
+                          if (status === 'on_site') {
+                            statusBadge = { label: 'Vor Ort / Im Einsatz', color: 'bg-emerald-950 text-emerald-300 border-emerald-700', icon: '🟢' };
+                          } else if (status === 'arrived_ez') {
+                            statusBadge = { label: 'EZ erreicht', color: 'bg-amber-500/20 text-amber-300 border-amber-500/50', icon: '🟡' };
+                          } else if (status === 'en_route') {
+                            statusBadge = { label: 'Auf Anfahrt', color: 'bg-blue-950 text-blue-300 border-blue-700', icon: '🚙' };
+                          } else {
+                            statusBadge = { label: 'Bereit', color: 'bg-emerald-950/60 text-emerald-400 border-emerald-800', icon: '🟢' };
+                          }
                         }
 
                         return (
                           <div
                             key={user.id}
-                            className={`flex items-center justify-between p-2 rounded-lg border transition ${
-                              isOnline
-                                ? 'bg-slate-50 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-black dark:text-slate-100'
-                                : 'bg-slate-100 dark:bg-slate-950/60 border-slate-200 dark:border-slate-800/80 text-slate-500 opacity-40 grayscale'
-                            }`}
+                            className="p-2 rounded-xl bg-slate-900/80 border border-slate-700/80 flex items-center justify-between text-xs"
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-7 h-7 rounded-lg overflow-hidden bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 shrink-0 flex items-center justify-center font-bold text-xs text-white">
-                                {user.photoUrl ? (
-                                  <img src={user.photoUrl} alt={user.name} className="h-full w-full object-cover" />
-                                ) : (
-                                  user.name.charAt(0)
-                                )}
-                              </div>
+                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isOnline ? '#10b981' : '#64748b' }}></span>
                               <div className="min-w-0">
-                                <div className="font-bold text-xs truncate flex items-center gap-1.5">
-                                  <span className="truncate">{user.name}</span>
-                                  {user.role === 'admin' && <span className="text-[9px] text-amber-400 font-mono">🛡️ EL</span>}
+                                <div className="font-bold text-white text-xs truncate flex items-center gap-1">
+                                  <span>{user.name}</span>
+                                  {user.callSign && (
+                                    <span className="text-blue-400 font-mono text-[10px]">({user.callSign})</span>
+                                  )}
                                 </div>
-                                <div className="text-[9px] text-slate-500 dark:text-slate-400 font-mono truncate">
-                                  {user.callSign} • {isOnline ? `${distText}` : 'Abgemeldet'}
+                                <div className="text-[9px] text-slate-400 font-mono truncate">
+                                  KFZ: {user.licensePlate || 'k.A.'} • Akku: {user.batteryLevel ?? 100}%
                                 </div>
                               </div>
                             </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {isOnline ? (
-                                <>
-                                  <span className={`px-1.5 py-0.5 rounded border text-[9px] font-mono font-bold flex items-center gap-0.5 ${statusBadge.color}`}>
-                                    <span>{statusBadge.icon}</span>
-                                    <span>{statusBadge.label}</span>
-                                  </span>
-                                  {isAdmin && status !== 'ready' && (
-                                    <button
-                                      onClick={() => confirmUserReady(user.id)}
-                                      className="px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[9px] font-bold font-mono cursor-pointer"
-                                      title="Als Bereit bestätigen"
-                                    >
-                                      ✓
-                                    </button>
-                                  )}
-                                </>
-                              ) : (
-                                <span className="text-[9px] font-mono text-slate-500 bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800">
-                                  Offline
-                                </span>
-                              )}
-                            </div>
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border shrink-0 ${statusBadge.color}`}>
+                              {statusBadge.icon} {statusBadge.label}
+                            </span>
                           </div>
                         );
                       })}
                     </div>
-
-                    {isAdmin && onOpenCreateOperationModal && (
-                      <div className="pt-2 border-t border-slate-300 dark:border-slate-700">
-                        <button
-                          onClick={() => {
-                            setShowResponderListDropdown(false);
-                            onOpenCreateOperationModal();
-                          }}
-                          className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold font-mono uppercase cursor-pointer flex items-center justify-center gap-1.5 shadow"
-                        >
-                          <span>+ Einsatz starten</span>
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 min-w-0">
+          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5 min-w-0">
             {currentOperation && currentOperation.status === 'active' ? (
               <button
                 type="button"
@@ -843,16 +803,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onOpenOperationDetailModal();
                   }
                 }}
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg border bg-slate-50 dark:bg-slate-800/90 hover:bg-slate-100 dark:bg-slate-700/90 border-slate-300 dark:border-slate-700 hover:border-blue-500/60 text-slate-900 dark:text-slate-200 transition cursor-pointer group shadow-sm text-left max-w-[210px] sm:max-w-[340px]"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer group shadow-sm text-left max-w-[210px] sm:max-w-[340px] text-[10px] font-mono font-bold shrink-0"
                 title="📋 Einsatzdetails & Vermisstensteckbrief anzeigen (Klicken für Foto, Details & Bearbeitung)"
               >
                 <span className="flex items-center gap-1 shrink-0">
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
-                      isExercise ? 'bg-slate-50 dark:bg-amber-400 animate-pulse' : 'bg-emerald-500 animate-pulse'
+                      isExercise ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400 animate-pulse'
                     }`}
                   />
-                  <span className="font-bold tracking-tight font-mono text-[9px] text-slate-500 dark:text-slate-400 group-hover:text-blue-300 hidden sm:inline">
+                  <span className="font-bold tracking-tight font-mono text-[9px] text-blue-400 group-hover:text-blue-200 hidden sm:inline">
                     {isExercise ? 'ÜBUNG:' : 'AKTIV:'}
                   </span>
                 </span>
@@ -861,26 +821,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <img
                     src={currentOperation.missingPerson.photoUrl}
                     alt="Vermisst"
-                    className="w-4 h-4 rounded-full object-cover border border-slate-400 dark:border-slate-600 shrink-0"
+                    className="w-4 h-4 rounded-full object-cover border border-blue-500/60 shrink-0"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <span className="w-4 h-4 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[9px] shrink-0">
+                  <span className="w-4 h-4 rounded-full bg-blue-900/60 text-blue-300 border border-blue-700/60 flex items-center justify-center text-[9px] shrink-0">
                     👤
                   </span>
                 )}
 
-                <span className="font-semibold truncate text-[10px] sm:text-xs text-white group-hover:text-blue-200">
+                <span className="font-semibold truncate text-[10px] sm:text-xs text-white group-hover:text-blue-100">
                   {currentOperation.title}
                 </span>
 
                 {currentOperation.missingPerson?.name && (
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal truncate hidden md:inline">
+                  <span className="text-[10px] text-blue-300/80 font-normal truncate hidden md:inline">
                     ({currentOperation.missingPerson.name})
                   </span>
                 )}
 
-                <span className="text-[9px] font-mono text-blue-400 opacity-70 group-hover:opacity-100 shrink-0 ml-0.5">
+                <span className="text-[9px] font-mono text-blue-400 opacity-80 group-hover:opacity-100 shrink-0 ml-0.5">
                   ℹ️ Details
                 </span>
               </button>
@@ -893,12 +853,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setShowUserDropdown(false);
                   setShowResponderListDropdown(false);
                 }}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-slate-50 dark:bg-slate-800/90 hover:bg-slate-100 dark:bg-slate-700/90 border-slate-300 dark:border-slate-700 hover:border-blue-500/60 text-slate-900 dark:text-slate-200 transition cursor-pointer text-left shadow-sm group font-mono text-[10px] sm:text-xs"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer text-left shadow-sm group font-mono text-[10px] sm:text-xs font-bold shrink-0"
                 title="Bereitschaftsmodus - Klicken zum Wählen oder Starten eines Einsatzes"
               >
-                <span className="w-2 h-2 rounded-full bg-slate-50 dark:bg-amber-400 animate-pulse shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
                 <span className="font-bold text-amber-300">Bereitschaft</span>
-                <span className="text-slate-500 dark:text-slate-400 text-[10px] hidden sm:inline">(Kein aktiver Einsatz)</span>
+                <span className="text-blue-300/70 text-[10px] hidden sm:inline">(Kein aktiver Einsatz)</span>
               </button>
             )}
           </div>
@@ -906,16 +866,14 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Right Controls: Actions, Telemetry & User Profile */}
-      <div className="flex items-center gap-1.5 sm:gap-3">
-
-
+      <div className="flex items-center gap-1.5 sm:gap-2.5">
 
         {/* Network Status Indicator */}
         <div
-          className={`hidden md:flex items-center gap-1 px-2 py-1.5 rounded-lg border text-[10px] font-mono font-bold transition ${
+          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-mono font-bold transition shadow-sm ${
             isOnline
-              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
-              : 'bg-red-500/15 text-red-400 border-red-500/40'
+              ? 'bg-emerald-950/70 text-emerald-300 border-emerald-600/60'
+              : 'bg-red-950/70 text-red-300 border-red-600/60'
           }`}
           title={
             isOnline
@@ -925,12 +883,12 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           {isOnline ? (
             <>
-              <Wifi className="w-3 h-3 text-emerald-400" />
+              <Wifi className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               <span>ONLINE</span>
             </>
           ) : (
             <>
-              <WifiOff className="w-3 h-3 text-red-400" />
+              <WifiOff className="w-3.5 h-3.5 text-red-400 shrink-0" />
               <span>OFFLINE</span>
             </>
           )}
@@ -938,12 +896,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Cloud Sync Status Indicator */}
         <div
-          className={`hidden md:flex items-center gap-1 px-2 py-1.5 rounded-lg border text-[10px] font-mono font-bold transition ${
+          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-mono font-bold transition shadow-sm ${
             cloudSyncStatus === 'connected'
-              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
+              ? 'bg-emerald-950/70 text-emerald-300 border-emerald-600/60'
               : cloudSyncStatus === 'quota_exceeded'
-              ? 'bg-slate-50 dark:bg-amber-500/15 text-amber-400 border-amber-500/40'
-              : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700'
+              ? 'bg-amber-950/70 text-amber-300 border-amber-600/60'
+              : 'bg-blue-950/70 text-blue-300 border-blue-700/60'
           }`}
           title={
             cloudSyncStatus === 'connected'
@@ -955,17 +913,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           {cloudSyncStatus === 'connected' ? (
             <>
-              <Cloud className="w-3 h-3 text-emerald-400" />
+              <Cloud className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               <span>CLOUD: AKTIV</span>
             </>
           ) : cloudSyncStatus === 'quota_exceeded' ? (
             <>
-              <CloudOff className="w-3 h-3 text-amber-400" />
-              <span>CLOUD: LIMIT (LOKAL AKTIV)</span>
+              <CloudOff className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>CLOUD: LIMIT</span>
             </>
           ) : (
             <>
-              <CloudOff className="w-3 h-3 text-slate-500 dark:text-slate-400" />
+              <CloudOff className="w-3.5 h-3.5 text-blue-400 shrink-0" />
               <span>OFFLINE</span>
             </>
           )}
@@ -974,14 +932,14 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* GPS Mode toggle */}
         <button
           onClick={toggleRealGps}
-          className={`hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[10px] font-mono font-bold transition cursor-pointer ${
+          className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-mono font-bold transition cursor-pointer shadow-sm ${
             isRealGpsActive
-              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500'
-              : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:text-slate-900 dark:text-slate-200'
+              ? 'bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 hover:text-white border-emerald-600/60'
+              : 'bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60'
           }`}
           title="Echtes Smartphone/Browser GPS aktivieren"
         >
-          <Navigation className="w-3 h-3" />
+          <Navigation className={`w-3.5 h-3.5 shrink-0 ${isRealGpsActive ? 'text-emerald-400' : 'text-blue-400'}`} />
           <span>GPS: {isRealGpsActive ? 'ECHT' : 'SIM'}</span>
         </button>
 
@@ -1011,10 +969,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 return next;
               });
             }}
-            className="flex items-center gap-2 sm:gap-3 p-1 rounded-xl hover:bg-slate-50 dark:bg-slate-800 transition cursor-pointer text-left"
+            className="flex items-center gap-2 sm:gap-2.5 px-2.5 py-1 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer text-left shadow-sm shrink-0"
           >
             <div className="text-right hidden sm:block">
-              <p className="text-xs sm:text-sm font-bold text-black dark:text-slate-100 flex items-center gap-1 justify-end">
+              <p className="text-xs sm:text-sm font-bold text-white flex items-center gap-1 justify-end">
                 <span>{currentUser?.name || 'Benutzer'}</span>
                 {isFirstAdmin(currentUser) && <span title="First Admin & App-Owner (unantastbar)">👑</span>}
               </p>
@@ -1031,8 +989,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               </p>
             </div>
 
-            <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100 dark:bg-slate-700 border-2 flex items-center justify-center overflow-hidden shadow ${
-              isFirstAdmin(currentUser) ? 'border-amber-400 ring-2 ring-amber-400/40' : 'border-slate-500'
+            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-900/60 border-2 flex items-center justify-center overflow-hidden shadow shrink-0 ${
+              isFirstAdmin(currentUser) ? 'border-amber-400 ring-2 ring-amber-400/40' : 'border-blue-500/60'
             }`}>
               {currentUser?.photoUrl ? (
                 <img src={currentUser.photoUrl} alt={currentUser.name} className="w-full h-full object-cover" />
@@ -1040,7 +998,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="font-bold text-xs text-white uppercase">{currentUser?.name.charAt(0) || 'U'}</span>
               )}
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+            <ChevronDown className="w-3.5 h-3.5 text-blue-400 shrink-0" />
           </button>
 
           {/* User Profile Dropdown Menu */}
@@ -1050,18 +1008,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="fixed inset-0 z-[2100]"
                 onClick={() => setShowUserDropdown(false)}
               />
-              <div className="fixed sm:absolute top-14 sm:top-full right-2 sm:right-0 left-2 sm:left-auto sm:w-80 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150">
-                <div className="px-2 py-1.5 border-b border-slate-300 dark:border-slate-700 mb-2">
+              <div className="fixed sm:absolute top-14 sm:top-full right-2 sm:right-0 left-2 sm:left-auto sm:w-80 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-2 py-1.5 border-b border-slate-700 mb-2">
                   <div className="font-bold text-white text-sm flex items-center gap-1.5">
                     <span>{currentUser?.name}</span>
                     {isFirstAdmin(currentUser) && (
-                      <span className="px-1.5 py-0.2 rounded bg-slate-50 dark:bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-mono font-bold">
+                      <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-mono font-bold">
                         👑 OWNER
                       </span>
                     )}
                   </div>
                   <div className="text-blue-400 font-mono text-[11px]">{currentUser?.callSign}</div>
-                  <div className="text-slate-500 dark:text-slate-400 text-[10px] mt-0.5 font-mono">
+                  <div className="text-slate-400 text-[10px] mt-0.5 font-mono">
                     KFZ: {currentUser?.licensePlate || 'k.A.'} • {isFirstAdmin(currentUser) ? 'First Admin & App-Owner (unantastbar)' : currentUser?.role === 'admin' ? 'ELZ (Admin)' : 'Einsatzkraft'}
                   </div>
                 </div>
@@ -1072,7 +1030,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onOpenProfileModal();
                       setShowUserDropdown(false);
                     }}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-black dark:text-slate-100 hover:bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700/80 hover:border-slate-400 dark:border-slate-600 transition cursor-pointer text-left font-bold"
+                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-slate-100 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 transition cursor-pointer text-left font-bold"
                   >
                     <span>⚙️</span> Mein Profil, Ausrüstung & KFZ
                   </button>
