@@ -9,10 +9,27 @@ export async function captureTacticalMapScreenshot(
   fallbackOperation?: SearchOperation | null,
   userLocations?: Record<string, UserLocationState>
 ): Promise<string | null> {
-  // Always use the reliable 2D Tactical Lagekarten-Snapshot instead of html2canvas
-  // html2canvas is extremely brittle with Leaflet's 3D transforms and cross-origin tiles,
-  // often resulting in blank or broken images. The fallback renderer guarantees a crisp,
-  // professional tactical schema map.
+  const mapElement = document.getElementById('tactical-leaflet-map');
+  
+  if (mapElement) {
+    try {
+      // Force the map to fit all tracks/sectors perfectly before snapshot
+      window.dispatchEvent(new CustomEvent('ForceFitBounds'));
+      
+      // Give Leaflet time to animate the zoom and load new tiles
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      const canvas = await html2canvas(mapElement, {
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        scale: 2 // High resolution
+      });
+      return canvas.toDataURL('image/jpeg', 0.85);
+    } catch (e) {
+      console.warn('[mapSnapshotHelper] html2canvas failed, falling back to schema', e);
+    }
+  }
   
   if (fallbackOperation) {
     try {
@@ -22,7 +39,6 @@ export async function captureTacticalMapScreenshot(
     }
   }
 
-  // If already has existing mapSnapshotUrl, return that
   if (fallbackOperation?.mapSnapshotUrl && fallbackOperation.mapSnapshotUrl.startsWith('data:image')) {
     return fallbackOperation.mapSnapshotUrl;
   }

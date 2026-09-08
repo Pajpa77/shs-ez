@@ -242,18 +242,18 @@ const MainApp: React.FC = () => {
                 <h3 className="font-bold text-base text-amber-300 uppercase tracking-wide">
                   Abmeldung bestätigen
                 </h3>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                <span className="text-[10px] text-slate-400">
                   Sicherheitsabfrage für Einsatzkraft
                 </span>
               </div>
             </div>
-            <p className="text-sm text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700 font-sans leading-relaxed">
+            <p className="text-sm text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-700 font-sans leading-relaxed">
               Möchten Sie sich wirklich von Ihrem aktuellen Account abmelden?
               <br />
               <strong className="text-white font-mono mt-1 block">
                 {currentUser.name} ({currentUser.callSign || currentUser.role})
               </strong>
-              <span className="text-xs text-slate-500 dark:text-slate-400 block mt-1">
+              <span className="text-xs text-slate-400 block mt-1">
                 Dieser Logout wird im Einsatzprotokoll dokumentiert und ändert Ihren Status auf offline.
               </span>
             </p>
@@ -261,7 +261,7 @@ const MainApp: React.FC = () => {
               <button
                 type="button"
                 onClick={cancelLogout}
-                className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs uppercase cursor-pointer transition border border-slate-400 dark:border-slate-600"
+                className="px-4 py-2.5 bg-[#1E293B] hover:bg-slate-100 dark:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs uppercase cursor-pointer transition border border-slate-600"
               >
                 Abbrechen
               </button>
@@ -289,13 +289,13 @@ const MainApp: React.FC = () => {
                 {authNotification.type === 'login' ? 'Anmeldung erfolgreich' : 'Abgemeldet'}
               </div>
               <div className="text-xs text-black dark:text-slate-100 font-sans mt-0.5">{authNotification.message}</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{authNotification.timestamp}</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">{authNotification.timestamp}</div>
             </div>
           </div>
           <button
             type="button"
             onClick={clearAuthNotification}
-            className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-white transition cursor-pointer"
+            className="p-1.5 rounded-lg bg-[#1E293B] hover:bg-slate-100 dark:bg-slate-700 text-slate-400 hover:text-white transition cursor-pointer"
           >
             ✕
           </button>
@@ -341,10 +341,10 @@ const MainApp: React.FC = () => {
       )}
 
       {/* UI Zoom Controls - Slim Sleek Floating Control */}
-      <div className="fixed top-16 md:top-[76px] left-3 md:left-[320px] z-[900] pointer-events-auto flex items-center gap-1.5 bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-full px-2.5 py-1 shadow-lg backdrop-blur-md text-xs font-mono select-none ring-1 ring-white/10">
+      <div className="fixed top-16 md:top-[76px] left-3 md:left-[320px] z-[900] pointer-events-auto flex items-center gap-1.5 bg-white dark:bg-slate-900/90 border border-[#1E293B] rounded-full px-2.5 py-1 shadow-lg backdrop-blur-md text-xs font-mono select-none ring-1 ring-white/10">
         <button
           onClick={() => setUiScale(Math.max(0.7, Number((uiScale - 0.05).toFixed(2))))}
-          className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer"
+          className="w-6 h-6 flex items-center justify-center rounded-full bg-[#1E293B] hover:bg-slate-100 dark:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer"
           title="UI Verkleinern"
         >
           <Minus className="w-3.5 h-3.5" />
@@ -354,7 +354,7 @@ const MainApp: React.FC = () => {
         </span>
         <button
           onClick={() => setUiScale(Math.min(1.4, Number((uiScale + 0.05).toFixed(2))))}
-          className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer"
+          className="w-6 h-6 flex items-center justify-center rounded-full bg-[#1E293B] hover:bg-slate-100 dark:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer"
           title="UI Vergrößern"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -362,7 +362,7 @@ const MainApp: React.FC = () => {
         {Math.abs(uiScale - 1.0) > 0.01 && (
           <button
             onClick={() => setUiScale(1.0)}
-            className="text-[9px] font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white px-1 hover:underline cursor-pointer transition border-l border-slate-300 dark:border-slate-700/80 ml-0.5 pl-1.5"
+            className="text-[9px] font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white px-1 hover:underline cursor-pointer transition border-l border-[#1E293B] ml-0.5 pl-1.5"
             title="UI Reset"
           >
             Reset
@@ -371,7 +371,7 @@ const MainApp: React.FC = () => {
         <div className="w-[1px] h-4 bg-slate-300 dark:bg-slate-700/80 mx-1"></div>
         <button
           onClick={() => setIsDarkMode(!isDarkMode)}
-          className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer"
+          className="w-6 h-6 flex items-center justify-center rounded-full bg-[#1E293B] hover:bg-slate-100 dark:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer"
           title={isDarkMode ? "Light Mode aktivieren" : "Dark Mode aktivieren"}
         >
           {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
@@ -381,7 +381,7 @@ const MainApp: React.FC = () => {
             <div className="w-[1px] h-4 bg-slate-300 dark:bg-slate-700/80 mx-1"></div>
             <button
               onClick={() => setShowDroneFeed(!showDroneFeed)}
-              className={`w-6 h-6 flex items-center justify-center rounded-full transition active:scale-90 cursor-pointer ${showDroneFeed ? 'bg-red-500 text-white' : 'bg-slate-50 dark:bg-slate-800 text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+              className={`w-6 h-6 flex items-center justify-center rounded-full transition active:scale-90 cursor-pointer ${showDroneFeed ? 'bg-red-500 text-white' : 'bg-[#1E293B] text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
               title="Drohnen-Feed ein/ausschalten"
             >
               <RadioTower className="w-3.5 h-3.5" />
@@ -473,15 +473,15 @@ const MainApp: React.FC = () => {
               />
 
             {/* Geometric Floating Action & Tab Dock */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2 sm:py-2.5 bg-white dark:bg-slate-900/95 border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md z-[850] max-w-[95vw]">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-2 sm:py-2.5 bg-[#0F172A]/95 border border-slate-700 rounded-2xl shadow-2xl backdrop-blur-md z-[850] max-w-[95vw]">
               <button
                 onClick={() => setActiveTab('responders')}
                 className="flex flex-col items-center gap-1 w-14 sm:w-20 group cursor-pointer"
               >
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-400 dark:border-slate-600 flex items-center justify-center group-hover:bg-slate-100 dark:bg-slate-700 transition">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#1E293B] border border-slate-600 flex items-center justify-center group-hover:bg-slate-700 transition">
                   <UserIcon className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
                 </div>
-                <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-tighter text-slate-700 dark:text-slate-300">Kräfte</span>
+                <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-tighter text-slate-300">Kräfte</span>
               </button>
 
               <div className="h-8 sm:h-10 w-px bg-slate-100 dark:bg-slate-700"></div>
@@ -497,7 +497,7 @@ const MainApp: React.FC = () => {
                 className={`flex flex-col items-center gap-1 w-16 sm:w-20 group transition ${(currentUser?.role === 'observer' || !currentOperation || (currentOperation.status !== 'active' && currentOperation.status !== 'paused')) ? 'opacity-50 cursor-not-allowed grayscale' : 'cursor-pointer'}`}
               >
                 <div className={`w-11 h-11 sm:w-14 sm:h-14 -mt-2.5 sm:-mt-3 rounded-full border-4 border-slate-900 flex items-center justify-center transition active:scale-95 ${(currentUser?.role === 'observer' || !currentOperation || (currentOperation.status !== 'active' && currentOperation.status !== 'paused')) ? 'bg-slate-100 dark:bg-slate-700' : 'bg-red-600 shadow-[0_0_20px_rgba(220,38,38,0.5)] group-hover:bg-red-500 animate-pulse'}`}>
-                  <AlertTriangle className={`w-5 h-5 sm:w-6 sm:h-6 ${(currentUser?.role === 'observer' || !currentOperation || (currentOperation.status !== 'active' && currentOperation.status !== 'paused')) ? 'text-slate-500 dark:text-slate-400' : 'text-white'}`} />
+                  <AlertTriangle className={`w-5 h-5 sm:w-6 sm:h-6 ${(currentUser?.role === 'observer' || !currentOperation || (currentOperation.status !== 'active' && currentOperation.status !== 'paused')) ? 'text-slate-400' : 'text-white'}`} />
                 </div>
                 <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-widest ${(currentUser?.role === 'observer' || !currentOperation || (currentOperation.status !== 'active' && currentOperation.status !== 'paused')) ? 'text-slate-500' : 'text-red-500'}`}>FUND!</span>
               </button>
@@ -508,10 +508,10 @@ const MainApp: React.FC = () => {
                 onClick={() => setActiveTab('chat')}
                 className="flex flex-col items-center gap-1 w-14 sm:w-20 group cursor-pointer relative"
               >
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-400 dark:border-slate-600 flex items-center justify-center group-hover:bg-slate-100 dark:bg-slate-700 transition">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#1E293B] border border-slate-600 flex items-center justify-center group-hover:bg-slate-700 transition">
                   <Radio className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
                 </div>
-                <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-tighter text-slate-700 dark:text-slate-300">Funk</span>
+                <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-tighter text-slate-300">Funk</span>
                 {unreadChatCount > 0 && (
                   <span className="absolute top-0 right-2 w-4 h-4 rounded-full bg-emerald-500 text-slate-950 font-bold text-[9px] flex items-center justify-center animate-pulse">
                     {unreadChatCount}
@@ -579,11 +579,11 @@ const MainApp: React.FC = () => {
       </main>
 
       {/* Permanent Bottom Navigation Bar (Visible in all orientations including Landscape) */}
-      <nav className="h-14 bg-white dark:bg-slate-900/95 border-t border-slate-300 dark:border-slate-700/80 flex items-center justify-around px-2 sm:px-6 z-[900] shrink-0 font-mono text-[10px] select-none">
+      <nav className="h-14 bg-[#0F172A]/95 border-t border-[#1E293B] flex items-center justify-around px-2 sm:px-6 z-[900] shrink-0 font-mono text-[10px] select-none">
         <button
           onClick={() => setActiveTab('map')}
           className={`flex flex-col items-center justify-center min-w-[50px] sm:min-w-[64px] py-1 px-2 rounded-xl transition cursor-pointer ${
-            activeTab === 'map' ? 'text-blue-400 bg-slate-50 dark:bg-slate-800 font-bold border border-slate-300 dark:border-slate-700 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
+            activeTab === 'map' ? 'text-blue-400 bg-[#1E293B] font-bold border border-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <MapPin className="w-4 h-4" />
@@ -593,7 +593,7 @@ const MainApp: React.FC = () => {
         <button
           onClick={() => setActiveTab('sectors')}
           className={`flex flex-col items-center justify-center min-w-[50px] sm:min-w-[64px] py-1 px-2 rounded-xl transition cursor-pointer ${
-            activeTab === 'sectors' ? 'text-blue-400 bg-slate-50 dark:bg-slate-800 font-bold border border-slate-300 dark:border-slate-700 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
+            activeTab === 'sectors' ? 'text-blue-400 bg-[#1E293B] font-bold border border-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <Layers className="w-4 h-4" />
@@ -603,7 +603,7 @@ const MainApp: React.FC = () => {
         <button
           onClick={() => setActiveTab('chat')}
           className={`flex flex-col items-center justify-center min-w-[50px] sm:min-w-[64px] py-1 px-2 rounded-xl transition cursor-pointer relative ${
-            activeTab === 'chat' ? 'text-blue-400 bg-slate-50 dark:bg-slate-800 font-bold border border-slate-300 dark:border-slate-700 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
+            activeTab === 'chat' ? 'text-blue-400 bg-[#1E293B] font-bold border border-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <Radio className="w-4 h-4" />
@@ -618,7 +618,7 @@ const MainApp: React.FC = () => {
         <button
           onClick={() => setActiveTab('responders')}
           className={`flex flex-col items-center justify-center min-w-[50px] sm:min-w-[64px] py-1 px-2 rounded-xl transition cursor-pointer ${
-            activeTab === 'responders' ? 'text-blue-400 bg-slate-50 dark:bg-slate-800 font-bold border border-slate-300 dark:border-slate-700 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
+            activeTab === 'responders' ? 'text-blue-400 bg-[#1E293B] font-bold border border-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <Users className="w-4 h-4" />
@@ -628,7 +628,7 @@ const MainApp: React.FC = () => {
         <button
           onClick={() => setActiveTab('log')}
           className={`flex flex-col items-center justify-center min-w-[50px] sm:min-w-[64px] py-1 px-2 rounded-xl transition cursor-pointer ${
-            activeTab === 'log' ? 'text-blue-400 bg-slate-50 dark:bg-slate-800 font-bold border border-slate-300 dark:border-slate-700 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
+            activeTab === 'log' ? 'text-blue-400 bg-[#1E293B] font-bold border border-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <FileText className="w-4 h-4" />
@@ -638,7 +638,7 @@ const MainApp: React.FC = () => {
         <button
           onClick={() => setActiveTab('archive')}
           className={`flex flex-col items-center justify-center min-w-[50px] sm:min-w-[64px] py-1 px-2 rounded-xl transition cursor-pointer ${
-            activeTab === 'archive' ? 'text-blue-400 bg-slate-50 dark:bg-slate-800 font-bold border border-slate-300 dark:border-slate-700 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
+            activeTab === 'archive' ? 'text-blue-400 bg-[#1E293B] font-bold border border-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <Archive className="w-4 h-4" />

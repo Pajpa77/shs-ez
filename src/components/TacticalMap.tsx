@@ -969,7 +969,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     if (!sectorsLayerRef.current || !currentOperation) return;
     sectorsLayerRef.current.clearLayers();
 
-    if (!showSectors) return;
+    if (!showSectors || activeTrackingTest?.isActive) return;
 
     // 1. Render Master Search Area (Haupt-Suchgebiet) if defined
     if (currentOperation.searchAreaPolygon && currentOperation.searchAreaPolygon.length >= 3) {
@@ -1093,7 +1093,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     const renderedTrackUserIds = new Set<string>();
 
     // 1. Render historical / archived search tracks (from previous search phases or saved on pause/end)
-    if (currentOperation?.archivedTracks && currentOperation.archivedTracks.length > 0) {
+    if (currentOperation?.archivedTracks && currentOperation.archivedTracks.length > 0 && !activeTrackingTest?.isActive) {
       currentOperation.archivedTracks.forEach((archivedTrack) => {
         if (!archivedTrack.points || archivedTrack.points.length < 2) return;
 
@@ -1158,6 +1158,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     // 2. Render user tracks from userLocations (in active or paused mode, keeping all recorded movement profiles visible!)
     if (!isArchiveMode || (currentOperation?.archivedTracks?.length || 0) === 0) {
       (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState], idx) => {
+        // If tracking test is active, ONLY render the track of the person doing the test
+        if (activeTrackingTest?.isActive && userId !== activeTrackingTest.userId) {
+          return;
+        }
+
         const history = locState.trackHistory;
         if (!history || history.length < 2) return;
 
@@ -1256,6 +1261,13 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
     const renderList: RenderableResponder[] = [];
     (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState], idx) => {
+      // If tracking test is active, ONLY render the current user doing the test
+      if (activeTrackingTest?.isActive && userId !== activeTrackingTest.userId) {
+        return;
+      }
+
+      if (!currentOperation?.participantIds?.includes(userId)) return;
+
       const user = allUsers.find((u) => u.id === userId);
       if (!user) return;
 
@@ -1505,14 +1517,22 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       if (currentOperation.headquartersLocation) {
         allPoints.push([currentOperation.headquartersLocation.lat, currentOperation.headquartersLocation.lng]);
       }
+      if (currentOperation.archivedTracks) {
+        currentOperation.archivedTracks.forEach((t) => {
+          if (t.points) t.points.forEach((pt) => allPoints.push([pt.lat, pt.lng]));
+        });
+      }
+      if (userLocations) {
+        Object.values(userLocations).forEach((loc) => {
+          if (loc.trackHistory) loc.trackHistory.forEach((pt) => allPoints.push([pt.lat, pt.lng]));
+        });
+      }
     }
 
-    if (userLocations) {
-      (Object.values(userLocations) as UserLocationState[]).forEach((u) => {
-        if (u?.currentPosition) {
-          allPoints.push([u.currentPosition.lat, u.currentPosition.lng]);
-        }
-      });
+    // If tracking test is active, ONLY fit bounds to the test track!
+    if (activeTrackingTest?.isActive && activeTrackingTest.trackPoints.length > 0) {
+      allPoints.length = 0; // Clear other points
+      activeTrackingTest.trackPoints.forEach(pt => allPoints.push([pt.lat, pt.lng]));
     }
 
     if (allPoints.length > 0) {
@@ -1522,6 +1542,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       mapInstanceRef.current.setView([VEREINSBUERO_LOCATION.lat, VEREINSBUERO_LOCATION.lng], 13);
     }
   };
+
+  useEffect(() => {
+    const onForceFitBounds = () => handleFitBounds();
+    window.addEventListener('ForceFitBounds', onForceFitBounds);
+    return () => window.removeEventListener('ForceFitBounds', onForceFitBounds);
+  }, [currentOperation, activeTrackingTest, userLocations]);
 
   return (
     <div className="relative w-full h-full min-h-[500px] overflow-hidden bg-slate-100 dark:bg-slate-950 select-none">

@@ -1,0 +1,13 @@
+﻿const fs = require('fs');
+let content = fs.readFileSync('src/App.tsx', 'utf8');
+content = content.replaceAll('bg-white dark:bg-slate-900/95', 'bg-[#0F172A]/95');
+content = content.replaceAll('border-slate-300 dark:border-slate-700/80', 'border-[#1E293B]');
+content = content.replaceAll('bg-slate-50 dark:bg-slate-800', 'bg-[#1E293B]');
+content = content.replaceAll('border border-slate-300 dark:border-slate-700', 'border border-slate-700');
+content = content.replaceAll('border border-slate-400 dark:border-slate-600', 'border border-slate-600');
+content = content.replaceAll('text-slate-500 dark:text-slate-400', 'text-slate-400');
+content = content.replaceAll('hover:text-slate-900 dark:text-slate-200', 'hover:text-slate-200');
+content = content.replaceAll('text-slate-700 dark:text-slate-300', 'text-slate-300');
+content = content.replaceAll('group-hover:bg-slate-100 dark:bg-slate-700', 'group-hover:bg-slate-700');
+fs.writeFileSync('src/App.tsx', content);
+console.log('App.tsx updated');
