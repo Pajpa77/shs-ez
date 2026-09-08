@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { User, EquipmentType, UserRole } from '../types';
+import { getOpTheme } from './Navbar';
 import {
   Shield,
   User as UserIcon,
@@ -57,6 +58,84 @@ export const LoginScreen: React.FC = () => {
     isOperationActive,
     startTrackingTest,
   } = useRescue();
+
+  // Dynamic status theme for the "SPÜRHUNDE-SALZLANDKREIS E.V." badge:
+  // - weiß leuchten wenn alles inaktiv
+  // - gelb während einer übung
+  // - wenn 1 einsatz aktiv ist übernimm diese farbe (z.B. Blau)
+  // - bei mehreren aktiven einsätzen rot blinken
+  // - bei gleichzeitigen übung und einsatz orange
+  const loginStatusTheme = useMemo(() => {
+    const activeRealOps = (allOperations || []).filter(
+      (o) => o.status === 'active' && o.type !== 'exercise'
+    );
+    const activeExercises = (allOperations || []).filter(
+      (o) => o.status === 'active' && o.type === 'exercise'
+    );
+
+    const realCount = activeRealOps.length;
+    const exerciseCount = activeExercises.length;
+
+    // 1. Gleichzeitige Übung und Einsatz -> Orange blinken
+    if (realCount > 0 && exerciseCount > 0) {
+      return {
+        dotBg: 'bg-orange-500',
+        pingBg: 'bg-orange-400',
+        animatePing: true,
+        glow: 'shadow-[0_0_12px_rgba(249,115,22,0.8)]',
+        badgeBg: 'bg-orange-950/70 border-orange-700/60 text-orange-300',
+        title: `Lage: Gleichzeitig ${realCount} Realeinsatz und ${exerciseCount} Übung aktiv`,
+      };
+    }
+
+    // 2. Mehrere aktive Einsätze -> Rot blinken
+    if (realCount > 1) {
+      return {
+        dotBg: 'bg-red-500',
+        pingBg: 'bg-red-400',
+        animatePing: true,
+        glow: 'shadow-[0_0_12px_rgba(239,68,68,0.8)]',
+        badgeBg: 'bg-red-950/70 border-red-700/60 text-red-300',
+        title: `Lage: ${realCount} aktive Realeinsätze laufen`,
+      };
+    }
+
+    // 3. Genau 1 Realeinsatz aktiv -> Übernimm diese Farbe (aus taktischer Farbpalette)
+    if (realCount === 1) {
+      const singleOp = activeRealOps[0];
+      const opTheme = getOpTheme(singleOp, allOperations || []);
+      return {
+        dotBg: opTheme.dotBg,
+        pingBg: opTheme.pingBg,
+        animatePing: true,
+        glow: 'shadow-[0_0_12px_rgba(59,130,246,0.8)]',
+        badgeBg: `${opTheme.badge}`,
+        title: `Lage: 1 Realeinsatz aktiv (${opTheme.colorName}) - ${singleOp.title}`,
+      };
+    }
+
+    // 4. Nur Übung(en) aktiv -> Gelb blinken
+    if (exerciseCount > 0) {
+      return {
+        dotBg: 'bg-amber-400',
+        pingBg: 'bg-amber-300',
+        animatePing: true,
+        glow: 'shadow-[0_0_12px_rgba(251,191,36,0.8)]',
+        badgeBg: 'bg-amber-950/70 border-amber-700/60 text-amber-300',
+        title: `Lage: ${exerciseCount === 1 ? '1 Übung' : `${exerciseCount} Übungen`} aktiv`,
+      };
+    }
+
+    // 5. Alles inaktiv -> Weiß leuchten lassen (Bereitschaft)
+    return {
+      dotBg: 'bg-white',
+      pingBg: 'bg-white',
+      animatePing: false,
+      glow: 'shadow-[0_0_10px_rgba(255,255,255,0.85)]',
+      badgeBg: 'bg-blue-950/60 border-blue-700/50 text-blue-300',
+      title: 'Lage: Bereitschaft (Kein aktiver Einsatz)',
+    };
+  }, [allOperations]);
 
   const activeOperations = useMemo(() => {
     return allOperations.filter((op) => op.status === 'active' || op.status === 'paused');
@@ -368,8 +447,20 @@ export const LoginScreen: React.FC = () => {
                 />
               </div>
               <div className="flex flex-col items-center gap-1.5 text-center">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-950/60 border border-blue-700/50 text-blue-300 text-[10px] font-bold font-mono whitespace-nowrap">
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-ping" />
+                <div
+                  className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg border text-[10px] font-bold font-mono whitespace-nowrap transition-all shadow-sm ${loginStatusTheme.badgeBg}`}
+                  title={loginStatusTheme.title}
+                >
+                  <span className="relative flex h-2 w-2 items-center justify-center shrink-0">
+                    {loginStatusTheme.animatePing && (
+                      <span
+                        className={`absolute inline-flex h-full w-full rounded-full ${loginStatusTheme.pingBg} animate-ping opacity-75`}
+                      />
+                    )}
+                    <span
+                      className={`relative inline-flex h-2 w-2 rounded-full ${loginStatusTheme.dotBg} ${loginStatusTheme.glow} border border-slate-900/40`}
+                    />
+                  </span>
                   <span>SPÜRHUNDE-SALZLANDKREIS E.V.</span>
                 </div>
                 <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight uppercase">
