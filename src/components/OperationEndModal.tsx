@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { generateOperationPDF } from '../lib/pdfExport';
+import { captureTacticalMapScreenshot, generateTacticalCanvasFallback } from '../lib/mapSnapshotHelper';
 import {
   CheckCircle2,
   AlertTriangle,
@@ -89,13 +90,20 @@ export const OperationEndModal: React.FC<OperationEndModalProps> = ({
     }
 
     setIsProcessing(true);
-    let snapshotDataUrl: string | undefined = undefined;
 
+    // Capture tactical map screenshot (Leaflet container with auto-fit, falling back to tactical vector canvas)
+    let snapshotDataUrl: string | undefined = undefined;
     if (includeMapSnapshot) {
-      // The actual screenshot generation is now handled cleanly by the
-      // captureTacticalMapScreenshot utility inside endOperation to avoid Leaflet DOM issues.
-      // We just pass undefined to let the context handle it.
-      snapshotDataUrl = undefined;
+      try {
+        snapshotDataUrl = (await captureTacticalMapScreenshot(currentOperation, userLocations)) || undefined;
+      } catch (err) {
+        console.warn('[OperationEndModal] Primary screenshot capture failed, attempting canvas fallback:', err);
+        try {
+          snapshotDataUrl = generateTacticalCanvasFallback(currentOperation, userLocations) || undefined;
+        } catch (fallbackErr) {
+          console.warn('[OperationEndModal] Tactical canvas fallback failed:', fallbackErr);
+        }
+      }
     }
 
     endOperation(currentOperation.id, closingNotes.trim() || undefined, outcome, snapshotDataUrl);

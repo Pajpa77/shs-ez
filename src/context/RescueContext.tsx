@@ -168,6 +168,7 @@ interface RescueContextType {
   sendChatMessage: (data: {
     text: string;
     channel: string;
+    operationId?: string;
     isDirect?: boolean;
     recipientId?: string;
     isAlert?: boolean;
@@ -762,11 +763,13 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     null;
 
   const unreadChatCount = useMemo(() => {
-    if (!currentOperation) return 0;
     return chatMessages.filter((m) => {
       const msgTime = new Date(m.timestamp).getTime();
+      const isRelevantOp =
+        m.operationId === 'general' ||
+        (currentOperation && m.operationId === currentOperation.id);
       return (
-        m.operationId === currentOperation.id &&
+        isRelevantOp &&
         msgTime > lastReadChatTimestamp &&
         m.senderId !== currentUser?.id
       );
@@ -1692,6 +1695,11 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         if (currentTest && currentTest.isActive && !currentTest.isCompleted) {
           setActiveTrackingTest(prev => {
             if (!prev) return null;
+            const lastPt = prev.trackPoints[prev.trackPoints.length - 1];
+            if (lastPt) {
+              const d = calculateDistanceMeters(lastPt.lat, lastPt.lng, point.lat, point.lng);
+              if (d < 1) return prev; // Deduplicate stationary points
+            }
             return {
               ...prev,
               trackPoints: [...prev.trackPoints, point]
@@ -1726,11 +1734,15 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
             const isUserReady =
               currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
-            const updatedHistory = isUserReady
-              ? [...cleanHistory, point].slice(-500)
-              : cleanHistory.length > 0
-              ? cleanHistory
-              : [point];
+            let nextHistory = cleanHistory;
+            if (isUserReady) {
+              const lastHistorical = cleanHistory[cleanHistory.length - 1];
+              const shouldAdd = !lastHistorical || calculateDistanceMeters(lastHistorical.lat, lastHistorical.lng, point.lat, point.lng) >= 1;
+              nextHistory = shouldAdd ? [...cleanHistory, point].slice(-500) : cleanHistory;
+            } else if (cleanHistory.length === 0) {
+              nextHistory = [point];
+            }
+            const updatedHistory = nextHistory;
             const updatedLocState: UserLocationState = {
               ...userLoc,
               currentPosition: point,
@@ -1796,12 +1808,35 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               altitude: pos.coords.altitude ? Math.round(pos.coords.altitude) : undefined,
             };
             setMyLocation(bgPoint);
+
+            // Also record for tracking test if active in background
+            const currentBgTest = activeTrackingTestRef.current;
+            if (currentBgTest && currentBgTest.isActive && !currentBgTest.isCompleted) {
+              setActiveTrackingTest((prev) => {
+                if (!prev) return null;
+                const lastPt = prev.trackPoints[prev.trackPoints.length - 1];
+                if (lastPt) {
+                  const d = calculateDistanceMeters(lastPt.lat, lastPt.lng, bgPoint.lat, bgPoint.lng);
+                  if (d < 1) return prev; // Deduplicate stationary points
+                }
+                return {
+                  ...prev,
+                  trackPoints: [...prev.trackPoints, bgPoint],
+                };
+              });
+            }
+
             setUserLocations((prev) => {
               const uLoc = prev[currentUser.id];
               if (!uLoc) return prev;
               const isReady =
                 currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
-              const nextHistory = isReady ? [...uLoc.trackHistory, bgPoint].slice(-500) : uLoc.trackHistory;
+              let nextHistory = uLoc.trackHistory || [];
+              if (isReady) {
+                const lastPt = nextHistory[nextHistory.length - 1];
+                const shouldAdd = !lastPt || calculateDistanceMeters(lastPt.lat, lastPt.lng, bgPoint.lat, bgPoint.lng) >= 1;
+                nextHistory = shouldAdd ? [...nextHistory, bgPoint].slice(-500) : nextHistory;
+              }
               const updatedState: UserLocationState = {
                 ...uLoc,
                 currentPosition: bgPoint,
@@ -1984,8 +2019,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         const locState = userLocations[userId];
         const existingArchived = currentOperation.archivedTracks || [];
         const updatedArchived = [...existingArchived];
-        const alreadySaved = updatedArchived.some(
-          (t) => t.userId === userId && t.points.length === locState.trackHistory.length
+        // Deduplicate by userId: only add if no existing entry covers the same or more points
+        const existingForUser = updatedArchived.filter(t => t.userId === userId);
+        const alreadySaved = existingForUser.some(
+          t => t.points.length >= locState.trackHistory.length
         );
         if (!alreadySaved) {
           const userIndex = allUsers.findIndex((u) => u.id === targetUser.id);
@@ -2784,9 +2821,9 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState]) => {
       if (locState?.trackHistory && locState.trackHistory.length > 1) {
         const user = allUsers.find((u) => u.id === userId);
-        const alreadySaved = updatedArchived.some(
-          (t) => t.userId === userId && t.points.length === locState.trackHistory.length
-        );
+        // Only skip archiving if an existing entry already covers the same or MORE points for this user
+        const existingForUser = updatedArchived.filter(t => t.userId === userId);
+        const alreadySaved = existingForUser.some(t => t.points.length >= locState.trackHistory.length);
         if (!alreadySaved) {
           const userIdx = allUsers.findIndex((u) => u.id === userId);
           const COLORS = ['#06b6d4', '#f97316', '#10b981', '#a855f7', '#eab308', '#ec4899', '#3b82f6', '#14b8a6'];
@@ -3060,9 +3097,8 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState]) => {
           if (locState?.trackHistory && locState.trackHistory.length > 1) {
             const user = allUsers.find((u) => u.id === userId);
-            const alreadySaved = updatedArchived.some(
-              (t) => t.userId === userId && t.points.length === locState.trackHistory.length
-            );
+            const existingForUser = updatedArchived.filter(t => t.userId === userId);
+            const alreadySaved = existingForUser.some(t => t.points.length >= locState.trackHistory.length);
             if (!alreadySaved) {
               updatedArchived.push({
                 id: `track-${userId}-${Date.now()}`,
@@ -3201,9 +3237,8 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState]) => {
       if (locState?.trackHistory && locState.trackHistory.length > 1) {
         const user = allUsers.find((u) => u.id === userId);
-        const alreadySaved = updatedArchived.some(
-          (t) => t.userId === userId && t.points.length === locState.trackHistory.length
-        );
+        const existingForUser = updatedArchived.filter(t => t.userId === userId);
+        const alreadySaved = existingForUser.some(t => t.points.length >= locState.trackHistory.length);
         if (!alreadySaved) {
           const COLORS = ['#06b6d4', '#f97316', '#10b981', '#a855f7', '#eab308', '#ec4899', '#3b82f6', '#14b8a6'];
           const userIdx = allUsers.findIndex(u => u.id === userId);
@@ -3928,6 +3963,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   const sendChatMessage = (data: {
     text: string;
     channel: string;
+    operationId?: string;
     isDirect?: boolean;
     recipientId?: string;
     isAlert?: boolean;
@@ -3937,7 +3973,9 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     audioDuration?: number;
     isVoiceMessage?: boolean;
   }) => {
-    if (!currentOperation || !currentUser) return;
+    if (!currentUser) return;
+
+    const opId = data.operationId || currentOperation?.id || 'general';
 
     let loc: GpsPoint | undefined;
     if (data.includeLocation) {
@@ -3946,7 +3984,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
-      operationId: currentOperation.id,
+      operationId: opId,
       senderId: currentUser.id,
       senderName: currentUser.name,
       senderCallSign: currentUser.callSign,
@@ -4061,6 +4099,41 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     setUserArrivalStatuses(prev => ({ ...prev, [user.id]: 'ready' }));
     setIsRealGpsActive(true);
     setCurrentUserId(user.id);
+
+    // Immediately fetch a GPS position so the marker appears on the map right away,
+    // before watchPosition delivers its first update (which can take several seconds).
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const initPoint: GpsPoint = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            timestamp: new Date().toISOString(),
+            accuracy: Math.round(pos.coords.accuracy),
+            speed: pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0,
+            altitude: pos.coords.altitude ? Math.round(pos.coords.altitude) : undefined,
+          };
+          setMyLocation(initPoint);
+          // Seed userLocations so the responder marker renders immediately
+          setUserLocations(prev => ({
+            ...prev,
+            [user.id]: {
+              userId: user.id,
+              isLive: true,
+              lastUpdated: new Date().toISOString(),
+              currentPosition: initPoint,
+              trackHistory: [initPoint],
+            },
+          }));
+          // Also add as first trackPoint to the session
+          setActiveTrackingTest(prev =>
+            prev ? { ...prev, trackPoints: [initPoint] } : null
+          );
+        },
+        (err) => console.warn('[TrackingTest] Initial GPS fetch failed:', err),
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }
+      );
+    }
   }, [updateUser]);
 
   const stopTrackingTest = useCallback(() => {

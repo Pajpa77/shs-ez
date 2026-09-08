@@ -194,13 +194,13 @@ export interface Finding {
 
 export interface ChatMessage {
   id: string;
-  operationId: string;
+  operationId: string; // Operation-ID oder 'general' für allgemeinen Vereinsfunk
   senderId: string;
   senderName: string;
   senderCallSign: string;
   senderRole: UserRole;
   senderPhotoUrl?: string;
-  channel: 'all' | 'admins' | string; // 'all', 'admins', or sectorId / direct target
+  channel: 'all' | 'admins' | 'general' | string; // 'all', 'admins', 'general', or sectorId / direct target
   isDirect: boolean;
   recipientId?: string;
   text: string;

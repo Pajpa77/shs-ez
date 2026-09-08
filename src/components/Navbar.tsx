@@ -38,8 +38,8 @@ import {
 } from 'lucide-react';
 
 interface NavbarProps {
-  activeTab: 'map' | 'sectors' | 'chat' | 'responders' | 'log' | 'archive' | 'admin';
-  setActiveTab: (tab: 'map' | 'sectors' | 'chat' | 'responders' | 'log' | 'archive' | 'admin') => void;
+  activeTab: 'map' | 'sectors' | 'chat' | 'responders' | 'log' | 'archive' | 'admin' | 'reports';
+  setActiveTab: (tab: 'map' | 'sectors' | 'chat' | 'responders' | 'log' | 'archive' | 'admin' | 'reports') => void;
   onOpenFindingModal: () => void;
   onOpenProfileModal: () => void;
   onOpenLoginModal: () => void;
@@ -374,7 +374,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
 
                 {/* Quick links footer */}
-                <div className="mt-2.5 pt-2 border-t border-slate-300 dark:border-slate-700/80 grid grid-cols-2 gap-2 text-center font-mono text-[10px]">
+                <div className="mt-2.5 pt-2 border-t border-slate-300 dark:border-slate-700/80 grid grid-cols-3 gap-1.5 text-center font-mono text-[10px]">
+                  <button
+                    onClick={() => {
+                      setActiveTab('reports');
+                      setShowSarAdminMenu(false);
+                    }}
+                    className="p-1.5 rounded-lg bg-blue-950/40 hover:bg-blue-900/60 text-blue-300 border border-blue-800/60 cursor-pointer font-bold"
+                  >
+                    📊 Berichte
+                  </button>
                   <button
                     onClick={() => {
                       setActiveTab('log');
@@ -382,7 +391,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     }}
                     className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 cursor-pointer"
                   >
-                    📜 Einsatztagebuch
+                    📜 Tagebuch
                   </button>
                   <button
                     onClick={() => {
@@ -391,7 +400,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     }}
                     className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 cursor-pointer"
                   >
-                    📦 Einsatzarchiv
+                    📦 Archiv
                   </button>
                 </div>
               </div>
@@ -532,15 +541,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <div className="pt-2 border-t border-slate-300 dark:border-slate-700/80">
                           <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase font-mono px-2 py-1 flex items-center justify-between">
                             <span>📦 Archivierte Einsätze ({allOperations.filter((o) => o.status === 'completed').length})</span>
-                            <button
-                              onClick={() => {
-                                setActiveTab('archive');
-                                setShowOpDropdown(false);
-                              }}
-                              className="text-blue-400 hover:underline text-[9px]"
-                            >
-                              Alle öffnen
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  setActiveTab('reports');
+                                  setShowOpDropdown(false);
+                                }}
+                                className="text-emerald-400 hover:underline text-[9px] font-bold"
+                              >
+                                📊 Berichte
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setActiveTab('archive');
+                                  setShowOpDropdown(false);
+                                }}
+                                className="text-blue-400 hover:underline text-[9px]"
+                              >
+                                Alle öffnen
+                              </button>
+                            </div>
                           </div>
                           <div className="space-y-1">
                             {allOperations

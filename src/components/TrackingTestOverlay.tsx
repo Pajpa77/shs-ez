@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Timer, Camera, Save, Trash2, LogOut, CheckCircle2, Download } from 'lucide-react';
+import { Timer, Trash2, LogOut, CheckCircle2, Download } from 'lucide-react';
 import { useRescue } from '../context/RescueContext';
-import { captureTacticalMapScreenshot } from '../lib/mapSnapshotHelper';
+import { generateTrackingTestSnapshot } from '../lib/mapSnapshotHelper';
 import { calculateTotalDistance } from '../lib/distanceCalc';
 import { jsPDF } from 'jspdf';
 
@@ -10,8 +10,7 @@ export const TrackingTestOverlay: React.FC = () => {
   const { activeTrackingTest, saveTrackingTestResult, stopTrackingTest } = useRescue();
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [snapshotUrl, setSnapshotUrl] = useState<string | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+
 
   const generateTrackingPDF = (dataUrl: string, distanceMeters: number) => {
     if (!activeTrackingTest) return;
@@ -51,61 +50,26 @@ export const TrackingTestOverlay: React.FC = () => {
     return () => clearInterval(interval);
   }, [activeTrackingTest]);
 
-  // Handle completion and screenshot
+  // Handle completion and auto-generate snapshot
   useEffect(() => {
-    if (activeTrackingTest?.isCompleted && !snapshotUrl && !isCapturing) {
+    if (activeTrackingTest?.isCompleted && !snapshotUrl) {
       handleAutoCapture();
     }
-  }, [activeTrackingTest?.isCompleted, snapshotUrl, isCapturing]);
+  }, [activeTrackingTest?.isCompleted, snapshotUrl]);
 
-  const handleAutoCapture = async () => {
-    setIsCapturing(true);
-    // Give the map a moment to render final points
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+  const handleAutoCapture = () => {
+    if (!activeTrackingTest) return;
     try {
-      // Create a dummy operation for the fallback renderer if DOM capture fails
-      const dummyOp = {
-        id: 'tracking-test',
-        title: 'Tracking Test',
-        status: 'active',
-        type: 'operation',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        commander: 'System',
-        participants: [],
-        participantIds: [],
-        sectors: [],
-        findings: [],
-        logs: [],
-        missingPerson: {
-          name: 'N/A',
-          age: 0,
-          description: '',
-          lastSeen: ''
-        },
-        archivedTracks: [{
-          id: 'test-track',
-          userId: activeTrackingTest.userId,
-          userName: 'Tester',
-          callSign: 'Test',
-          color: '#38bdf8',
-          phaseLabel: 'Test',
-          recordedAt: new Date().toISOString(),
-          points: activeTrackingTest.trackPoints
-        }]
-      } as any;
-      
-      const dataUrl = await captureTacticalMapScreenshot(dummyOp as import('../types').SearchOperation);
+      // Directly render the GPS track as a canvas image — no html2canvas / CORS issues
+      const dataUrl = generateTrackingTestSnapshot(activeTrackingTest);
       if (dataUrl) {
         setSnapshotUrl(dataUrl);
       }
     } catch (err) {
-      console.error('Failed to capture tracking test screenshot:', err);
-    } finally {
-      setIsCapturing(false);
+      console.error('Failed to generate tracking test snapshot:', err);
     }
   };
+
 
   if (!activeTrackingTest) return null;
 
@@ -173,8 +137,7 @@ export const TrackingTestOverlay: React.FC = () => {
                     <img src={snapshotUrl} alt="Map Snapshot" className="w-full h-full object-contain" />
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-500">
-                      <Camera className="w-12 h-12 animate-pulse" />
-                      <span className="text-sm font-mono uppercase animate-pulse">Erstelle Snapshot...</span>
+                      <span className="text-sm font-mono uppercase">Keine GPS-Daten vorhanden</span>
                     </div>
                   )}
                 </div>

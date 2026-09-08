@@ -29,6 +29,7 @@ import {
   PanelLeftOpen,
   MessageSquare,
   Menu,
+  ChevronDown,
 } from 'lucide-react';
 
 interface ChatPanelProps {
@@ -153,6 +154,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     currentUser,
     allUsers,
     currentOperation,
+    allOperations,
+    setCurrentOperationId,
     chatMessages,
     sendChatMessage,
     markChatAsRead,
@@ -162,7 +165,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     playAlertSound,
   } = useRescue();
 
-  const [activeChannel, setActiveChannel] = useState<string>('all'); // 'all', 'admins', sectorId, or userId
+  const [activeScope, setActiveScope] = useState<'operation' | 'general'>(() => {
+    return currentOperation ? 'operation' : 'general';
+  });
+  const [selectedOpId, setSelectedOpId] = useState<string>(() => {
+    return currentOperation?.id || allOperations.find(o => o.status === 'active')?.id || allOperations[0]?.id || '';
+  });
+
+  const [activeChannel, setActiveChannel] = useState<string>('all'); // 'all', 'admins', 'general', sectorId, or userId
   const [inputText, setInputText] = useState('');
   const [isEmergencyAlert, setIsEmergencyAlert] = useState(false);
   const [includeLocation, setIncludeLocation] = useState(false);
@@ -185,6 +195,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef<number>(chatMessages.length);
+
+  // Sync selectedOpId when currentOperation changes
+  useEffect(() => {
+    if (currentOperation) {
+      setSelectedOpId(currentOperation.id);
+    }
+  }, [currentOperation?.id]);
 
   useEffect(() => {
     if (initialDirectUser) {
@@ -220,10 +237,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     prevMessagesLengthRef.current = chatMessages.length;
   }, [chatMessages, activeChannel, autoPlayAudio, currentUser?.id, playAlertSound, markChatAsRead]);
 
-  if (!currentUser || !currentOperation) {
+  if (!currentUser) {
     return (
       <div className="p-8 text-center text-slate-500 dark:text-slate-400 font-mono">
-        Bitte wählen Sie einen aktiven Einsatz aus.
+        Bitte melden Sie sich an, um den Funkchat zu nutzen.
       </div>
     );
   }
@@ -331,14 +348,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     setRecordingTime(0);
   };
 
+  // Resolved effective operation for operation chat
+  const effectiveOperation = allOperations.find((o) => o.id === selectedOpId) || currentOperation || null;
+
   // --- Filter messages based on active channel and search query ---
   const filteredMessages = chatMessages.filter((msg) => {
-    if (msg.operationId !== currentOperation.id) return false;
+    if (activeScope === 'general') {
+      if (msg.operationId !== 'general') return false;
+    } else {
+      if (!effectiveOperation || msg.operationId !== effectiveOperation.id) return false;
+    }
 
     // Filter by channel type
     let matchesChannel = false;
-    if (activeChannel === 'all') {
-      matchesChannel = msg.channel === 'all';
+    if (activeChannel === 'all' || activeChannel === 'general') {
+      matchesChannel = msg.channel === 'all' || msg.channel === 'general';
     } else if (activeChannel === 'admins') {
       matchesChannel = msg.channel === 'admins';
     } else if (activeChannel === 'system') {
@@ -379,11 +403,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     const isDirect =
       activeChannel !== 'all' &&
       activeChannel !== 'admins' &&
+      activeChannel !== 'general' &&
       !activeChannel.startsWith('sec-');
+
+    const targetOpId = activeScope === 'general' ? 'general' : (effectiveOperation?.id || 'general');
 
     sendChatMessage({
       text: inputText.trim() || (includeLocation ? '📍 GPS-Standort übermittelt' : ''),
       channel: activeChannel,
+      operationId: targetOpId,
       isDirect,
       recipientId: isDirect ? activeChannel : undefined,
       isAlert: isEmergencyAlert,
@@ -395,21 +423,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     setIncludeLocation(false);
   };
 
-  // Filter allUsers to only contain participants of the active operation
-  const currentOperationUsers = useMemo(() => {
-    if (currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused')) {
-      const participantIds = currentOperation.participantIds || [];
+  // Filter users based on scope
+  const scopedUsers = useMemo(() => {
+    if (activeScope === 'operation' && effectiveOperation && (effectiveOperation.status === 'active' || effectiveOperation.status === 'paused')) {
+      const participantIds = effectiveOperation.participantIds || [];
       return allUsers.filter((u) => participantIds.includes(u.id));
     }
     return allUsers;
-  }, [allUsers, currentOperation]);
+  }, [allUsers, activeScope, effectiveOperation]);
 
   // Target data objects
-  const activeTargetUser = currentOperationUsers.find((u) => u.id === activeChannel);
-  const activeSector = currentOperation.sectors.find((s) => s.id === activeChannel);
-  const admins = currentOperationUsers.filter((u) => u.role === 'admin' && u.isActive);
-  const responders = currentOperationUsers.filter((u) => u.id !== currentUser.id && u.role !== 'admin' && u.isActive);
-  const activeUsersCount = currentOperationUsers.filter((u) => u.isActive).length;
+  const activeTargetUser = allUsers.find((u) => u.id === activeChannel);
+  const activeSector = effectiveOperation?.sectors?.find((s) => s.id === activeChannel);
+  const admins = scopedUsers.filter((u) => u.role === 'admin' && u.isActive);
+  const responders = scopedUsers.filter((u) => u.id !== currentUser.id && u.role !== 'admin' && u.isActive);
+  const activeUsersCount = scopedUsers.filter((u) => u.isActive).length;
 
   // Filter and sort responders in sidebar by search query and online status
   const filteredResponders = responders
@@ -431,15 +459,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
   // Calculate unread counts per channel
   const getUnreadForChannel = (channelId: string) => {
-    if (!currentOperation) return 0;
+    const targetOpId = activeScope === 'general' ? 'general' : effectiveOperation?.id;
+    if (!targetOpId) return 0;
     return chatMessages.filter((m) => {
-      if (m.operationId !== currentOperation.id) return false;
+      if (m.operationId !== targetOpId) return false;
       if (m.senderId === currentUser.id) return false;
       
       const msgTime = new Date(m.timestamp).getTime();
       if (msgTime <= lastReadChatTimestamp) return false;
 
-      if (channelId === 'all') return m.channel === 'all';
+      if (channelId === 'all' || channelId === 'general') return m.channel === 'all' || m.channel === 'general';
       if (channelId === 'admins') return m.channel === 'admins';
       if (channelId === 'system') return m.channel === 'system' || m.channel === 'logs';
       if (channelId.startsWith('sec-')) return m.channel === channelId;
@@ -522,10 +551,77 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
               </button>
             </div>
 
+            {/* Scope Switcher: Einsatzfunk vs Vereinsfunk (Allgemein) */}
+            <div className="grid grid-cols-2 gap-1.5 p-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700/80 rounded-xl font-mono text-[10px]">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveScope('operation');
+                  setActiveChannel('all');
+                }}
+                className={`py-1.5 px-2 rounded-lg font-bold transition cursor-pointer flex items-center justify-center gap-1 ${
+                  activeScope === 'operation'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>🚨 Einsatzfunk</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveScope('general');
+                  setActiveChannel('all');
+                }}
+                className={`py-1.5 px-2 rounded-lg font-bold transition cursor-pointer flex items-center justify-center gap-1 ${
+                  activeScope === 'general'
+                    ? 'bg-emerald-600 text-white shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>🌐 Vereinsfunk</span>
+              </button>
+            </div>
+
+            {/* Operation Selector (when in Einsatzfunk and operations exist) */}
+            {activeScope === 'operation' && (
+              <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-2 space-y-1 font-mono text-xs">
+                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <span className="uppercase font-bold">Einsatz wählen:</span>
+                  {effectiveOperation && (
+                    <span className="text-emerald-400 font-bold">
+                      {effectiveOperation.status === 'active' ? '● Aktiv' : '⏸ Pausiert'}
+                    </span>
+                  )}
+                </div>
+                <select
+                  value={selectedOpId}
+                  onChange={(e) => {
+                    const newOpId = e.target.value;
+                    setSelectedOpId(newOpId);
+                    setCurrentOperationId(newOpId);
+                    setActiveChannel('all');
+                  }}
+                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-2 py-1 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                >
+                  {allOperations
+                    .filter((o) => o.status === 'active' || o.status === 'paused')
+                    .map((op) => (
+                      <option key={op.id} value={op.id}>
+                        #{op.id.slice(-4).toUpperCase()} {op.title}
+                      </option>
+                    ))}
+                  {allOperations.filter((o) => o.status === 'active' || o.status === 'paused').length === 0 && (
+                    <option value="">Kein laufender Einsatz</option>
+                  )}
+                </select>
+              </div>
+            )}
+
             {/* Global Group Channels */}
             <div className="space-y-1">
               <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-1 block font-mono">
-                FUNK-HAUPTKANÄLE:
+                {activeScope === 'general' ? 'VEREINSFUNK-KANÄLE:' : 'EINSATZFUNK-KANÄLE:'}
               </span>
 
               {currentUser?.role !== 'observer' && (
@@ -608,14 +704,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
               )}
             </div>
 
-            {/* Sector Channels (if sectors exist) */}
-            {currentUser?.role !== 'observer' && currentOperation.sectors && currentOperation.sectors.length > 0 && (
+            {/* Sector Channels (if in operation scope and sectors exist) */}
+            {activeScope === 'operation' && currentUser?.role !== 'observer' && effectiveOperation?.sectors && effectiveOperation.sectors.length > 0 && (
               <div className="space-y-1 pt-2 border-t border-slate-300 dark:border-slate-700">
                 <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-1 block font-mono">
                   SEKTOR-FUNKKANÄLE:
                 </span>
 
-                {currentOperation.sectors.map((sec) => (
+                {effectiveOperation.sectors.map((sec) => (
                   <button
                     type="button"
                     key={sec.id}
@@ -777,7 +873,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 <h3 className="font-extrabold text-xs sm:text-sm text-white flex items-center gap-1.5 uppercase tracking-wide truncate">
                   <span className="truncate">
                     {activeChannel === 'all'
-                      ? 'Gesamter Einsatzfunk'
+                      ? activeScope === 'general'
+                        ? 'Allgemeiner Vereinsfunk'
+                        : 'Gesamter Einsatzfunk'
                       : activeChannel === 'admins'
                       ? 'Führungskanal EL'
                       : activeSector
@@ -792,7 +890,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 </h3>
                 <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
                   {activeChannel === 'all'
-                    ? `Offener Funkkanal • ${activeUsersCount} Einsatzkräfte online`
+                    ? activeScope === 'general'
+                      ? `Offener Kanal für alle Vereinsmitglieder • ${activeUsersCount} online`
+                      : `Offener Funkkanal • ${activeUsersCount} Einsatzkräfte online`
                     : activeChannel === 'admins'
                     ? 'Sicherer Führungskanal'
                     : activeSector
@@ -1056,7 +1156,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
               onChange={(e) => setInputText(e.target.value)}
               placeholder={`Funkspruch an ${
                 activeChannel === 'all'
-                  ? 'alle Einheiten'
+                  ? activeScope === 'general'
+                    ? 'alle Vereinsmitglieder'
+                    : 'alle Einheiten'
                   : activeChannel === 'admins'
                   ? 'Einsatzleitung'
                   : activeSector

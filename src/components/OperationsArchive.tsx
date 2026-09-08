@@ -57,12 +57,14 @@ interface OperationsArchiveProps {
   onNavigateToMap?: () => void;
   initialSelectedOpId?: string;
   onSelectOpId?: (opId: string) => void;
+  initialSubTab?: 'report' | 'protocol' | 'map' | 'findings' | 'roster' | 'chat';
 }
 
 export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
   onNavigateToMap,
   initialSelectedOpId,
   onSelectOpId,
+  initialSubTab,
 }) => {
   const {
     allOperations,
@@ -96,7 +98,13 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
     }
   }, [selectedOpId, onSelectOpId]);
 
-  const [activeSubTab, setActiveSubTab] = useState<'report' | 'protocol' | 'map' | 'findings' | 'roster' | 'chat'>('report');
+  const [activeSubTab, setActiveSubTab] = useState<'report' | 'protocol' | 'map' | 'findings' | 'roster' | 'chat'>(initialSubTab || 'report');
+
+  React.useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
   const [operationToDelete, setOperationToDelete] = useState<SearchOperation | null>(null);
   const [operationToReactivate, setOperationToReactivate] = useState<SearchOperation | null>(null);
 

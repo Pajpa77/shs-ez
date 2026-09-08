@@ -1158,8 +1158,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     // 2. Render user tracks from userLocations (in active or paused mode, keeping all recorded movement profiles visible!)
     if (!isArchiveMode || (currentOperation?.archivedTracks?.length || 0) === 0) {
       (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState], idx) => {
-        // If tracking test is active, ONLY render the track of the person doing the test
-        if (activeTrackingTest?.isActive && userId !== activeTrackingTest.userId) {
+        // If tracking test is active, skip (section 3 below renders activeTrackingTest specifically)
+        if (activeTrackingTest?.isActive) {
           return;
         }
 
@@ -1261,12 +1261,13 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
     const renderList: RenderableResponder[] = [];
     (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState], idx) => {
-      // If tracking test is active, ONLY render the current user doing the test
-      if (activeTrackingTest?.isActive && userId !== activeTrackingTest.userId) {
-        return;
+      // If tracking test is active, ONLY render the current user doing the test (no operation needed)
+      if (activeTrackingTest?.isActive) {
+        if (userId !== activeTrackingTest.userId) return;
+        // Skip participantIds check – tracking test runs without an active operation
+      } else {
+        if (!currentOperation?.participantIds?.includes(userId)) return;
       }
-
-      if (!currentOperation?.participantIds?.includes(userId)) return;
 
       const user = allUsers.find((u) => u.id === userId);
       if (!user) return;
@@ -1361,7 +1362,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         const assignedSector = currentOperation?.sectors.find(
           (s) => s.id === item.user.assignedSectorId || s.assignedUserIds?.includes(item.user.id)
         );
-        const sectorTag = assignedSector ? `<span class="text-amber-300 font-bold ml-1">🎯 ${assignedSector.name}</span>` : '';
+        const sectorTag = activeTrackingTest?.isActive
+          ? `<span class="text-sky-300 font-bold ml-1 font-mono">📡 TEST</span>`
+          : assignedSector
+          ? `<span class="text-amber-300 font-bold ml-1">🎯 ${assignedSector.name}</span>`
+          : '';
         const clusterBadge = isCluster ? `<span class="bg-blue-600 text-white rounded-full px-1 text-[9px] font-mono shadow ml-1">${itemIdx + 1}/${N}</span>` : '';
 
         // Custom animated responder pin with photo/equipment
@@ -1410,7 +1415,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         respondersLayerRef.current?.addLayer(marker);
       });
     });
-  }, [userLocations, allUsers, currentUser, currentOperation, showResponders, showInactiveResponders]);
+  }, [userLocations, allUsers, currentUser, currentOperation, showResponders, showInactiveResponders, activeTrackingTest]);
 
   // Render Findings (Fundmeldungen) - Filters false alarms during active operation to prevent confusion
   useEffect(() => {

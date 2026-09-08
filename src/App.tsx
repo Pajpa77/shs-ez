@@ -121,7 +121,7 @@ const MainApp: React.FC = () => {
     document.documentElement.style.setProperty('--ui-scale', uiScale.toString());
   }, [uiScale]);
 
-  const [activeTab, setActiveTab] = useState<'admin' | 'map' | 'sectors' | 'chat' | 'responders' | 'log' | 'archive'>('map');
+  const [activeTab, setActiveTab] = useState<'admin' | 'map' | 'sectors' | 'chat' | 'responders' | 'log' | 'archive' | 'reports'>('map');
   const [selectedArchiveOpId, setSelectedArchiveOpId] = useState<string>('');
   const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
   const [showDroneFeed, setShowDroneFeed] = useState(false);
@@ -572,6 +572,17 @@ const MainApp: React.FC = () => {
               onNavigateToMap={() => setActiveTab('map')}
               initialSelectedOpId={selectedArchiveOpId}
               onSelectOpId={setSelectedArchiveOpId}
+            />
+          </div>
+        )}
+
+        {activeTab === 'reports' && (
+          <div className="flex-1 overflow-y-auto pb-16 bg-[#0F172A]">
+            <OperationsArchive
+              onNavigateToMap={() => setActiveTab('map')}
+              initialSelectedOpId={selectedArchiveOpId}
+              onSelectOpId={setSelectedArchiveOpId}
+              initialSubTab="report"
             />
           </div>
         )}
