@@ -227,7 +227,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
               if (status === 'ready') {
                 statusBadge = { label: 'Bereit (Tracking aktiv)', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500', icon: '🟢' };
               } else if (status === 'ez_reached') {
-                statusBadge = { label: 'EZ erreicht (Bestätigung ausstehend)', color: 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border-amber-500/50', icon: '🟡' };
+                statusBadge = { label: 'EZ erreicht (Bestätigung ausstehend)', color: 'bg-slate-50 dark:bg-amber-500/20 text-amber-300 border-amber-500/50', icon: '🟡' };
               }
 
               return (
@@ -494,7 +494,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
 
                   <div className="flex flex-col items-end gap-1">
                     {isFirstAdmin(user) ? (
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase border bg-slate-50 dark:bg-[#0F172A]mber-500/25 text-amber-300 border-amber-400/80 flex items-center gap-1 shadow-sm">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase border bg-slate-50 dark:bg-amber-500/25 text-amber-300 border-amber-400/80 flex items-center gap-1 shadow-sm">
                         <span>👑</span>
                         <span>First Admin (Owner)</span>
                       </span>
@@ -522,7 +522,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                       </span>
                     )}
                     {!isFirstAdmin(user) && user.role === 'einsatzleitung' && user.isAdmin && (
-                      <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border border-amber-500/40 font-bold">
+                      <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-slate-50 dark:bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">
                         👑 +Admin
                       </span>
                     )}
@@ -637,7 +637,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                   <div className="flex gap-1">
                     {isFirstAdmin(user) ? (
                       <div
-                        className="px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-[#0F172A]mber-950/60 text-amber-300 border border-amber-500/60 font-mono text-[10px] flex items-center gap-1 font-bold select-none cursor-default"
+                        className="px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-amber-950/60 text-amber-300 border border-amber-500/60 font-mono text-[10px] flex items-center gap-1 font-bold select-none cursor-default"
                         title="First Admin & App-Owner (unantastbar)"
                       >
                         <span>👑</span>
@@ -652,8 +652,8 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                               user.role === 'admin'
                                 ? 'bg-red-950/60 hover:bg-red-900/80 text-red-300 border-red-800/80'
                                 : user.isAdmin
-                                ? 'bg-slate-50 dark:bg-[#0F172A]mber-950/60 hover:bg-slate-50 dark:bg-[#0F172A]mber-900/80 text-amber-300 border-amber-800/80'
-                                : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-50 dark:bg-[#0F172A]mber-950/60 text-slate-700 dark:text-slate-300 hover:text-amber-300 border-slate-300 dark:border-slate-700'
+                                ? 'bg-slate-50 dark:bg-amber-950/60 hover:bg-slate-50 dark:bg-amber-900/80 text-amber-300 border-amber-800/80'
+                                : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-50 dark:bg-amber-950/60 text-slate-700 dark:text-slate-300 hover:text-amber-300 border-slate-300 dark:border-slate-700'
                             }`}
                             title={
                               user.role === 'admin'
@@ -673,7 +673,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                                 removeUserFromOperation(user.id);
                               }
                             }}
-                            className="p-2 rounded-lg bg-slate-50 dark:bg-[#0F172A]mber-950/60 hover:bg-slate-50 dark:bg-[#0F172A]mber-900/80 text-amber-300 border border-amber-800/80 transition cursor-pointer"
+                            className="p-2 rounded-lg bg-slate-50 dark:bg-amber-950/60 hover:bg-slate-50 dark:bg-amber-900/80 text-amber-300 border border-amber-800/80 transition cursor-pointer"
                             title="Aus dem aktuellen Einsatz abmelden"
                           >
                             <LogOut className="w-4 h-4" />

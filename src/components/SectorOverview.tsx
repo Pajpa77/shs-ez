@@ -202,7 +202,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
                       isSearched
                         ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500'
                         : isInProgress
-                        ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border-amber-500'
+                        ? 'bg-slate-50 dark:bg-amber-500/20 text-amber-300 border-amber-500'
                         : 'bg-blue-500/20 text-blue-300 border-blue-500'
                     }`}
                   >
@@ -280,7 +280,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
                   }}
                   className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow ${
                     isSearched
-                      ? 'bg-slate-50 dark:bg-[#0F172A]mber-600 hover:bg-slate-50 dark:bg-[#0F172A]mber-500 text-slate-950'
+                      ? 'bg-slate-50 dark:bg-amber-600 hover:bg-slate-50 dark:bg-amber-500 text-slate-950'
                       : 'bg-emerald-600 hover:bg-emerald-500 text-white'
                   }`}
                 >

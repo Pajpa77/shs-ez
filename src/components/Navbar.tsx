@@ -167,8 +167,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="SHS EZ (Klicken für Einsatz- und Admin-Steuerung)"
           >
             <span className="font-black tracking-widest text-slate-950">SHS</span>
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-slate-50 dark:bg-[#0F172A]mber-400 border-2 border-slate-900 rounded-full animate-ping"></span>
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-slate-50 dark:bg-[#0F172A]mber-400 border-2 border-slate-900 rounded-full"></span>
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-slate-50 dark:bg-amber-400 border-2 border-slate-900 rounded-full animate-ping"></span>
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-slate-50 dark:bg-amber-400 border-2 border-slate-900 rounded-full"></span>
           </button>
 
           {/* Central SHS EZ & Admin Dropdown Popover */}
@@ -235,7 +235,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       }}
                       className="w-full flex items-center gap-3 p-2 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:bg-slate-800 text-black dark:text-slate-100 hover:text-white border border-slate-300 dark:border-slate-700/80 hover:border-amber-500/50 transition cursor-pointer text-left group"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-[#0F172A]mber-600/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition">
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition">
                         ✏️
                       </div>
                       <div className="flex-1">
@@ -289,7 +289,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 pauseOperation(currentOperation.id, 'Einsatz pausiert');
                               }
                             }}
-                            className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg bg-slate-50 dark:bg-[#0F172A]mber-950/50 hover:bg-slate-50 dark:bg-[#0F172A]mber-900/70 text-amber-200 border border-amber-800/60 transition cursor-pointer font-bold text-xs"
+                            className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg bg-slate-50 dark:bg-amber-950/50 hover:bg-slate-50 dark:bg-amber-900/70 text-amber-200 border border-amber-800/60 transition cursor-pointer font-bold text-xs"
                           >
                             <span>⏸️</span>
                             <span>Pausieren</span>
@@ -655,7 +655,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                   pauseOperation(currentOperation.id, 'Einsatz pausiert');
                                 }
                               }}
-                              className="py-1.5 px-2 rounded-lg bg-slate-50 dark:bg-[#0F172A]mber-600/30 hover:bg-slate-50 dark:bg-[#0F172A]mber-600 text-amber-300 hover:text-white border border-amber-500/40 text-[10px] font-bold transition flex items-center justify-center gap-1 font-mono cursor-pointer"
+                              className="py-1.5 px-2 rounded-lg bg-slate-50 dark:bg-amber-600/30 hover:bg-slate-50 dark:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/40 text-[10px] font-bold transition flex items-center justify-center gap-1 font-mono cursor-pointer"
                               title="Laufenden Einsatz pausieren"
                             >
                               ⏸️ Pausieren
@@ -756,7 +756,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         if (status === 'ready') {
                           statusBadge = { label: 'Bereit', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500', icon: '🟢' };
                         } else if (status === 'ez_reached') {
-                          statusBadge = { label: 'EZ erreicht', color: 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border-amber-500/50', icon: '🟡' };
+                          statusBadge = { label: 'EZ erreicht', color: 'bg-slate-50 dark:bg-amber-500/20 text-amber-300 border-amber-500/50', icon: '🟡' };
                         }
 
                         return (
@@ -849,7 +849,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="flex items-center gap-1 shrink-0">
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
-                      isExercise ? 'bg-slate-50 dark:bg-[#0F172A]mber-400 animate-pulse' : 'bg-emerald-500 animate-pulse'
+                      isExercise ? 'bg-slate-50 dark:bg-amber-400 animate-pulse' : 'bg-emerald-500 animate-pulse'
                     }`}
                   />
                   <span className="font-bold tracking-tight font-mono text-[9px] text-slate-500 dark:text-slate-400 group-hover:text-blue-300 hidden sm:inline">
@@ -896,7 +896,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border bg-slate-50 dark:bg-slate-800/90 hover:bg-slate-100 dark:bg-slate-700/90 border-slate-300 dark:border-slate-700 hover:border-blue-500/60 text-slate-900 dark:text-slate-200 transition cursor-pointer text-left shadow-sm group font-mono text-[10px] sm:text-xs"
                 title="Bereitschaftsmodus - Klicken zum Wählen oder Starten eines Einsatzes"
               >
-                <span className="w-2 h-2 rounded-full bg-slate-50 dark:bg-[#0F172A]mber-400 animate-pulse shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-slate-50 dark:bg-amber-400 animate-pulse shrink-0" />
                 <span className="font-bold text-amber-300">Bereitschaft</span>
                 <span className="text-slate-500 dark:text-slate-400 text-[10px] hidden sm:inline">(Kein aktiver Einsatz)</span>
               </button>
@@ -942,7 +942,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             cloudSyncStatus === 'connected'
               ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40'
               : cloudSyncStatus === 'quota_exceeded'
-              ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/15 text-amber-400 border-amber-500/40'
+              ? 'bg-slate-50 dark:bg-amber-500/15 text-amber-400 border-amber-500/40'
               : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700'
           }`}
           title={
@@ -1055,7 +1055,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="font-bold text-white text-sm flex items-center gap-1.5">
                     <span>{currentUser?.name}</span>
                     {isFirstAdmin(currentUser) && (
-                      <span className="px-1.5 py-0.2 rounded bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-mono font-bold">
+                      <span className="px-1.5 py-0.2 rounded bg-slate-50 dark:bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-mono font-bold">
                         👑 OWNER
                       </span>
                     )}

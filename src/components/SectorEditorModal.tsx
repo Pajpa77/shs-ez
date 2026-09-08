@@ -301,7 +301,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono">
               {[
                 { id: 'open', label: 'Offen', icon: '⭕', color: 'border-blue-500/50 bg-blue-500/20 text-blue-300' },
-                { id: 'in_progress', label: 'In Suche', icon: '⏳', color: 'border-amber-500/50 bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300' },
+                { id: 'in_progress', label: 'In Suche', icon: '⏳', color: 'border-amber-500/50 bg-slate-50 dark:bg-amber-500/20 text-amber-300' },
                 { id: 'searched', label: '✅ ABGESUCHT', icon: '✅', color: 'border-emerald-500 bg-emerald-500/20 text-emerald-300 font-bold' },
                 { id: 'suspicious', label: '⚠️ Verdacht', icon: '🚨', color: 'border-red-500/50 bg-red-500/20 text-red-300' },
               ].map((s) => (
@@ -338,7 +338,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
                       ? p === 'urgent'
                         ? 'bg-red-600 text-white border-red-500'
                         : p === 'high'
-                        ? 'bg-slate-50 dark:bg-[#0F172A]mber-600 text-white border-amber-500'
+                        ? 'bg-slate-50 dark:bg-amber-600 text-white border-amber-500'
                         : 'bg-blue-600 text-white border-blue-500'
                       : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                   }`}
@@ -466,7 +466,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
                     onClick={() => toggleEquipment(eq.id)}
                     className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center gap-2 ${
                       isSelected
-                        ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 border-amber-500 text-amber-200'
+                        ? 'bg-slate-50 dark:bg-amber-500/20 border-amber-500 text-amber-200'
                         : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                     }`}
                   >

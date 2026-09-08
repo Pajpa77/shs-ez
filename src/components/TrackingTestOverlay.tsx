@@ -117,22 +117,22 @@ export const TrackingTestOverlay: React.FC = () => {
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col"
+              className="bg-[#1E293B] border border-slate-700 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col"
             >
-              <div className="p-6 border-b border-slate-300 dark:border-slate-700 flex items-center justify-between bg-blue-900/20">
+              <div className="p-6 border-b border-slate-700 flex items-center justify-between bg-blue-900/20">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/40">
                     <CheckCircle2 className="w-6 h-6" />
                   </div>
                   <div>
                     <h2 className="text-xl font-black text-white uppercase tracking-tight">Test abgeschlossen</h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">GPS-Aufzeichnung beendet ({activeTrackingTest.durationMinutes} Min.)</p>
+                    <p className="text-xs text-slate-400 font-mono">GPS-Aufzeichnung beendet ({activeTrackingTest.durationMinutes} Min.)</p>
                   </div>
                 </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                <div className="aspect-video bg-slate-100 dark:bg-slate-950 rounded-2xl border border-slate-300 dark:border-slate-700 overflow-hidden relative group flex items-center justify-center">
+                <div className="aspect-video bg-slate-950 rounded-2xl border border-slate-700 overflow-hidden relative group flex items-center justify-center">
                   {snapshotUrl ? (
                     <img src={snapshotUrl} alt="Map Snapshot" className="w-full h-full object-contain" />
                   ) : (
@@ -143,17 +143,17 @@ export const TrackingTestOverlay: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-3 gap-4 text-xs font-mono">
-                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700">
-                    <span className="block text-slate-500 uppercase text-[10px] mb-1">Startzeit</span>
-                    <span className="text-slate-900 dark:text-slate-200">{new Date(activeTrackingTest.startTime).toLocaleTimeString()}</span>
+                  <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-700">
+                    <span className="block text-slate-400 uppercase text-[10px] mb-1">Startzeit</span>
+                    <span className="text-slate-200 font-bold">{new Date(activeTrackingTest.startTime).toLocaleTimeString()}</span>
                   </div>
-                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700">
-                    <span className="block text-slate-500 uppercase text-[10px] mb-1">Wegpunkte</span>
-                    <span className="text-slate-900 dark:text-slate-200">{activeTrackingTest.trackPoints.length}</span>
+                  <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-700">
+                    <span className="block text-slate-400 uppercase text-[10px] mb-1">Wegpunkte</span>
+                    <span className="text-slate-200 font-bold">{activeTrackingTest.trackPoints.length}</span>
                   </div>
-                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700">
-                    <span className="block text-slate-500 uppercase text-[10px] mb-1">Distanz</span>
-                    <span className="text-slate-900 dark:text-slate-200">
+                  <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-700">
+                    <span className="block text-slate-400 uppercase text-[10px] mb-1">Distanz</span>
+                    <span className="text-slate-200 font-bold">
                       {calculateTotalDistance(activeTrackingTest.trackPoints) > 1000 
                         ? (calculateTotalDistance(activeTrackingTest.trackPoints) / 1000).toFixed(2) + ' km' 
                         : Math.round(calculateTotalDistance(activeTrackingTest.trackPoints)) + ' m'}
@@ -161,12 +161,12 @@ export const TrackingTestOverlay: React.FC = () => {
                   </div>
                 </div>
 
-                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed text-center italic">
+                <p className="text-sm text-slate-300 leading-relaxed text-center italic">
                   Prüfprotokoll herunterladen und Test beenden? (Du wirst anschließend automatisch abgemeldet)
                 </p>
               </div>
 
-              <div className="p-6 bg-white dark:bg-slate-900/50 border-t border-slate-300 dark:border-slate-700 flex flex-col gap-3">
+              <div className="p-6 bg-slate-900/80 border-t border-slate-700 flex flex-col gap-3">
                 <button
                   onClick={async () => {
                     if (snapshotUrl) {
@@ -183,7 +183,7 @@ export const TrackingTestOverlay: React.FC = () => {
                 </button>
                 <button
                   onClick={() => saveTrackingTestResult(false)}
-                  className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold uppercase text-xs transition cursor-pointer"
+                  className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase text-xs transition cursor-pointer border border-slate-700"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Verwerfen (Ohne Speichern)</span>

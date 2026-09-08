@@ -93,7 +93,7 @@ export const MissionLog: React.FC = () => {
                 currentOperation.status === 'active'
                   ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700'
                   : currentOperation.status === 'paused'
-                  ? 'bg-slate-50 dark:bg-[#0F172A]mber-950/80 text-amber-300 border border-amber-700'
+                  ? 'bg-slate-50 dark:bg-amber-950/80 text-amber-300 border border-amber-700'
                   : 'bg-blue-950/80 text-blue-300 border border-blue-700'
               }`}
             >
@@ -295,7 +295,7 @@ export const MissionLog: React.FC = () => {
                   isFinding
                     ? 'bg-red-950 text-red-300 border border-red-600'
                     : isPause
-                    ? 'bg-slate-50 dark:bg-[#0F172A]mber-950 text-amber-300 border border-amber-600'
+                    ? 'bg-slate-50 dark:bg-amber-950 text-amber-300 border border-amber-600'
                     : isEnd
                     ? 'bg-red-950 text-red-300 border border-red-700'
                     : isSector

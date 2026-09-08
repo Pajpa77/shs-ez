@@ -344,16 +344,16 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   className={`px-2.5 py-1.5 rounded-xl border text-left transition shrink-0 cursor-pointer font-mono text-[11px] flex items-center gap-2 ${
                     isSelected
                       ? isOwnerUser
-                        ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/25 border-amber-400 text-white shadow ring-1 ring-amber-400/50'
+                        ? 'bg-slate-50 dark:bg-amber-500/25 border-amber-400 text-white shadow ring-1 ring-amber-400/50'
                         : 'bg-blue-500/25 border-blue-400 text-white shadow'
                       : isOwnerUser
-                      ? 'bg-slate-50 dark:bg-[#0F172A]mber-950/40 border-amber-500/50 text-amber-200 hover:bg-slate-50 dark:bg-[#0F172A]mber-900/40'
+                      ? 'bg-slate-50 dark:bg-amber-950/40 border-amber-500/50 text-amber-200 hover:bg-slate-50 dark:bg-amber-900/40'
                       : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-800'
                   }`}
                 >
                   <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[9px] uppercase border ${
                     isOwnerUser
-                      ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/30 text-amber-200 border-amber-400/60'
+                      ? 'bg-slate-50 dark:bg-amber-500/30 text-amber-200 border-amber-400/60'
                       : 'bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-200 border border-slate-400 dark:border-slate-600'
                   }`}>
                     {isOwnerUser ? '👑' : u.name.charAt(0)}
@@ -362,7 +362,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     <div className="font-bold flex items-center gap-1">
                       <span>{u.name}</span>
                       {isOwnerUser ? (
-                        <span className="text-[8px] px-1 py-0.2 rounded border font-mono font-bold bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border-amber-400/60">
+                        <span className="text-[8px] px-1 py-0.2 rounded border font-mono font-bold bg-slate-50 dark:bg-amber-500/20 text-amber-300 border-amber-400/60">
                           OWNER
                         </span>
                       ) : (u.role === 'admin' || u.role === 'einsatzleitung' || u.isAdmin) ? (
@@ -370,7 +370,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                           u.role === 'admin'
                             ? 'bg-red-950 text-red-300 border-red-800'
                             : u.isAdmin
-                            ? 'bg-slate-50 dark:bg-[#0F172A]mber-950 text-amber-300 border-amber-800'
+                            ? 'bg-slate-50 dark:bg-amber-950 text-amber-300 border-amber-800'
                             : 'bg-emerald-950 text-emerald-300 border-emerald-800'
                         }`}>
                           {u.role === 'admin' ? 'ADM' : u.isAdmin ? 'EL+ADM' : 'EL'}
@@ -390,14 +390,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto text-xs">
           {/* Owner Protection Notification Banner */}
           {isTargetOwnerProtected && (
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0F172A]mber-950/80 border-2 border-amber-500/80 text-amber-200 text-xs font-mono flex items-start gap-3 shadow-lg">
-              <div className="p-2 rounded-lg bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border border-amber-500/40 shrink-0 text-base">
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-amber-950/80 border-2 border-amber-500/80 text-amber-200 text-xs font-mono flex items-start gap-3 shadow-lg">
+              <div className="p-2 rounded-lg bg-slate-50 dark:bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0 text-base">
                 👑
               </div>
               <div>
                 <div className="font-bold text-amber-300 uppercase tracking-wide flex items-center gap-2">
                   <span>FIRST ADMIN & APP-OWNER (UNANTASTBAR)</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-50 dark:bg-[#0F172A]mber-500/30 text-amber-200 border border-amber-400/60 font-bold">
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-50 dark:bg-amber-500/30 text-amber-200 border border-amber-400/60 font-bold">
                     Schreibgeschützt
                   </span>
                 </div>
@@ -409,14 +409,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           )}
 
           {isTargetOwnerAndMe && (
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#0F172A]mber-950/60 border border-amber-500/60 text-amber-200 text-xs font-mono flex items-start gap-3 shadow-md">
-              <div className="p-2 rounded-lg bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border border-amber-500/40 shrink-0 text-base">
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-amber-950/60 border border-amber-500/60 text-amber-200 text-xs font-mono flex items-start gap-3 shadow-md">
+              <div className="p-2 rounded-lg bg-slate-50 dark:bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0 text-base">
                 👑
               </div>
               <div>
                 <div className="font-bold text-amber-300 uppercase tracking-wide flex items-center gap-2">
                   <span>DEIN FIRST-ADMIN ACCOUNT (APP-OWNER)</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-50 dark:bg-[#0F172A]mber-500/30 text-amber-200 border border-amber-400/60 font-bold">
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-50 dark:bg-amber-500/30 text-amber-200 border border-amber-400/60 font-bold">
                     Unantastbar
                   </span>
                 </div>
@@ -579,14 +579,14 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               {/* Role Combination Feature (EL + Admin) */}
               <div className="mt-3 p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 flex items-start justify-between gap-3">
                 <div className="flex items-start gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-[#0F172A]mber-500/10 text-amber-400 border border-amber-500/30 shrink-0 mt-0.5">
+                  <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-amber-500/10 text-amber-400 border border-amber-500/30 shrink-0 mt-0.5">
                     <Shield className="w-4 h-4" />
                   </div>
                   <div>
                     <div className="text-xs font-bold text-slate-900 dark:text-slate-200 flex items-center gap-2 flex-wrap">
                       <span>Administrator-Rechte mit Einsatzleitung kombinieren</span>
                       {role === 'einsatzleitung' && isAlsoAdmin && (
-                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border border-amber-500/40 rounded-full">
+                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-slate-50 dark:bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full">
                           Kombiniert: EL + Admin
                         </span>
                       )}
@@ -615,7 +615,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     onChange={(e) => setIsAlsoAdmin(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-slate-50 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-50 dark:bg-[#0F172A]mber-600 peer-disabled:opacity-60"></div>
+                  <div className="w-11 h-6 bg-slate-50 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-50 dark:bg-amber-600 peer-disabled:opacity-60"></div>
                 </label>
               </div>
             </div>
@@ -888,7 +888,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                           onClose();
                         }
                       }}
-                      className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#0F172A]mber-950/60 hover:bg-slate-50 dark:bg-[#0F172A]mber-900/80 text-amber-300 hover:text-white font-bold transition cursor-pointer border border-amber-800/80 flex items-center gap-1.5 uppercase tracking-wider font-mono text-xs shadow"
+                      className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-amber-950/60 hover:bg-slate-50 dark:bg-amber-900/80 text-amber-300 hover:text-white font-bold transition cursor-pointer border border-amber-800/80 flex items-center gap-1.5 uppercase tracking-wider font-mono text-xs shadow"
                       title="Benutzer aus dem aktuellen Einsatz abmelden (Account bleibt in Datenbank)"
                     >
                       <LogOut className="w-3.5 h-3.5 text-amber-400" />

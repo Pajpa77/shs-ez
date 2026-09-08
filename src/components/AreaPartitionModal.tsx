@@ -460,7 +460,7 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
                         ? p === 'high'
                           ? 'bg-red-500/20 text-red-400 border-red-500'
                           : p === 'medium'
-                          ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-400 border-amber-500'
+                          ? 'bg-slate-50 dark:bg-amber-500/20 text-amber-400 border-amber-500'
                           : 'bg-blue-500/20 text-blue-400 border-blue-500'
                         : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:bg-slate-800'
                     }`}

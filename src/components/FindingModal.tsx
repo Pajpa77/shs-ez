@@ -248,7 +248,7 @@ export const FindingModal: React.FC<FindingModalProps> = ({
             <div className="grid grid-cols-3 gap-2 font-mono">
               {[
                 { id: 'standard', label: 'Normal / Hinweis', color: 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300' },
-                { id: 'high', label: '⚠️ Hoch / Verdächtig', color: 'border-amber-500 bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300' },
+                { id: 'high', label: '⚠️ Hoch / Verdächtig', color: 'border-amber-500 bg-slate-50 dark:bg-amber-500/20 text-amber-300' },
                 { id: 'critical', label: '🚨 KRITISCH / ALARM', color: 'border-red-500 bg-red-500/20 text-red-200 font-bold' },
               ].map((lvl) => (
                 <button

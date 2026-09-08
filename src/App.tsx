@@ -121,7 +121,7 @@ const MainApp: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'admin' | 'map' | 'sectors' | 'chat' | 'responders' | 'log' | 'archive' | 'reports'>('map');
   const [selectedArchiveOpId, setSelectedArchiveOpId] = useState<string>('');
-  const [isDarkMode, setIsDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.theme !== 'light');
   const [showDroneFeed, setShowDroneFeed] = useState(false);
 
   // Apply Dark Mode
@@ -233,7 +233,7 @@ const MainApp: React.FC = () => {
         <div className="fixed inset-0 z-[3500] flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[#1E293B] border-2 border-amber-500 rounded-2xl max-w-md w-full p-6 shadow-2xl text-white space-y-4 animate-in zoom-in-95 duration-200 font-mono">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-slate-50 dark:bg-[#0F172A]mber-500 text-slate-950 flex items-center justify-center font-bold text-xl shrink-0 shadow">
+              <div className="w-12 h-12 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-xl shrink-0 shadow">
                 ⚠️
               </div>
               <div>
@@ -339,10 +339,10 @@ const MainApp: React.FC = () => {
       )}
 
       {/* UI Zoom Controls - Slim Sleek Floating Control */}
-      <div className="fixed top-16 md:top-[76px] left-3 md:left-[320px] z-[900] pointer-events-auto flex items-center gap-1.5 bg-white dark:bg-slate-900/90 border border-[#1E293B] rounded-full px-2.5 py-1 shadow-lg backdrop-blur-md text-xs font-mono select-none ring-1 ring-white/10">
+      <div className="fixed top-16 md:top-[76px] left-3 md:left-[320px] z-[900] pointer-events-auto flex items-center gap-1.5 bg-[#1E293B]/95 border border-slate-700 rounded-full px-2.5 py-1 shadow-xl backdrop-blur-md text-xs font-mono select-none ring-1 ring-white/10 text-slate-200">
         <button
           onClick={() => setUiScale(Math.max(0.7, Number((uiScale - 0.05).toFixed(2))))}
-          className="w-6 h-6 flex items-center justify-center rounded-full bg-[#1E293B] hover:bg-slate-100 dark:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer"
+          className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700"
           title="UI Verkleinern"
         >
           <Minus className="w-3.5 h-3.5" />
@@ -352,7 +352,7 @@ const MainApp: React.FC = () => {
         </span>
         <button
           onClick={() => setUiScale(Math.min(1.4, Number((uiScale + 0.05).toFixed(2))))}
-          className="w-6 h-6 flex items-center justify-center rounded-full bg-[#1E293B] hover:bg-slate-100 dark:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer"
+          className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700"
           title="UI Vergrößern"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -360,26 +360,26 @@ const MainApp: React.FC = () => {
         {Math.abs(uiScale - 1.0) > 0.01 && (
           <button
             onClick={() => setUiScale(1.0)}
-            className="text-[9px] font-bold text-slate-400 hover:text-slate-900 dark:hover:text-white px-1 hover:underline cursor-pointer transition border-l border-[#1E293B] ml-0.5 pl-1.5"
+            className="text-[9px] font-bold text-slate-400 hover:text-white px-1 hover:underline cursor-pointer transition border-l border-slate-700 ml-0.5 pl-1.5"
             title="UI Reset"
           >
             Reset
           </button>
         )}
-        <div className="w-[1px] h-4 bg-slate-300 dark:bg-slate-700/80 mx-1"></div>
+        <div className="w-[1px] h-4 bg-slate-700 mx-1"></div>
         <button
           onClick={() => setIsDarkMode(!isDarkMode)}
-          className="w-6 h-6 flex items-center justify-center rounded-full bg-[#1E293B] hover:bg-slate-100 dark:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer"
+          className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700"
           title={isDarkMode ? "Light Mode aktivieren" : "Dark Mode aktivieren"}
         >
           {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
         </button>
         {currentUser?.role === 'admin' && (
           <>
-            <div className="w-[1px] h-4 bg-slate-300 dark:bg-slate-700/80 mx-1"></div>
+            <div className="w-[1px] h-4 bg-slate-700 mx-1"></div>
             <button
               onClick={() => setShowDroneFeed(!showDroneFeed)}
-              className={`w-6 h-6 flex items-center justify-center rounded-full transition active:scale-90 cursor-pointer ${showDroneFeed ? 'bg-red-500 text-white' : 'bg-[#1E293B] text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+              className={`w-6 h-6 flex items-center justify-center rounded-full transition active:scale-90 cursor-pointer border ${showDroneFeed ? 'bg-red-600 text-white border-red-500' : 'bg-slate-800 text-red-400 hover:bg-slate-700 border-slate-700'}`}
               title="Drohnen-Feed ein/ausschalten"
             >
               <RadioTower className="w-3.5 h-3.5" />

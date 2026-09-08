@@ -428,7 +428,7 @@ export const LoginScreen: React.FC = () => {
             {authNotification && (
               <div className={`mb-4 p-3.5 rounded-xl border text-xs flex items-center justify-between font-mono animate-in fade-in duration-200 ${
                 authNotification.type === 'logout'
-                  ? 'bg-slate-50 dark:bg-[#0F172A]mber-950/80 border-amber-600 text-amber-200 shadow-lg'
+                  ? 'bg-slate-50 dark:bg-amber-950/80 border-amber-600 text-amber-200 shadow-lg'
                   : 'bg-emerald-950/80 border-emerald-600 text-emerald-200 shadow-lg'
               }`}>
                 <div className="flex items-center gap-2.5">
@@ -489,7 +489,7 @@ export const LoginScreen: React.FC = () => {
             )}
 
             {lockoutSeconds > 0 && (
-              <div className="mb-4 p-3 rounded-xl bg-slate-50 dark:bg-[#0F172A]mber-950/80 border border-amber-600 text-amber-300 text-xs flex items-center gap-2 font-mono">
+              <div className="mb-4 p-3 rounded-xl bg-slate-50 dark:bg-amber-950/80 border border-amber-600 text-amber-300 text-xs flex items-center gap-2 font-mono">
                 <Clock className="w-4 h-4 shrink-0 animate-spin text-amber-400" />
                 <span>Sicherheitssperre aktiv: Bitte warten Sie {lockoutSeconds}s.</span>
               </div>

@@ -106,7 +106,7 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
               <div
                 className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 border ${
                   isExercise
-                    ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-400 border-amber-500/40'
+                    ? 'bg-slate-50 dark:bg-amber-500/20 text-amber-400 border-amber-500/40'
                     : 'bg-red-500/20 text-red-400 border-red-500/40 animate-pulse'
                 }`}
               >
@@ -127,7 +127,7 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
                     #{op.id.slice(-4).toUpperCase()}
                   </span>
                   {isExercise && (
-                    <span className="text-[9px] uppercase font-mono px-2 py-0.5 rounded bg-slate-50 dark:bg-[#0F172A]mber-950 text-amber-300 border border-amber-800 font-bold">
+                    <span className="text-[9px] uppercase font-mono px-2 py-0.5 rounded bg-slate-50 dark:bg-amber-950 text-amber-300 border border-amber-800 font-bold">
                       Übung
                     </span>
                   )}
@@ -377,7 +377,7 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
               <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900/90 border border-amber-500/30 space-y-2 relative shadow-md">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-amber-400">
-                    <span className="p-1 rounded-lg bg-slate-50 dark:bg-[#0F172A]mber-950 border border-amber-800 text-amber-300">
+                    <span className="p-1 rounded-lg bg-slate-50 dark:bg-amber-950 border border-amber-800 text-amber-300">
                       🏠 Heim
                     </span>
                     <span>Wohnanschrift der Person</span>
@@ -389,7 +389,7 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
                     {mp?.homeAddress?.address || 'Keine Wohnadresse hinterlegt'}
                   </div>
                   {mp?.homeAddress?.notes && (
-                    <div className="text-slate-500 dark:text-slate-400 text-[11px] bg-slate-50 dark:bg-[#0F172A]mber-950/20 p-2 rounded-lg border border-amber-800/40 text-amber-200/90">
+                    <div className="text-slate-500 dark:text-slate-400 text-[11px] bg-slate-50 dark:bg-amber-950/20 p-2 rounded-lg border border-amber-800/40 text-amber-200/90">
                       <strong>Hinweis:</strong> {mp.homeAddress.notes}
                     </div>
                   )}

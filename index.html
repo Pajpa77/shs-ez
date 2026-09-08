@@ -18,11 +18,11 @@
         console.error('[BOOT-ERROR]', e);
       });
 
-      // Apply dark mode early to prevent FOUC
-      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-      } else {
+      // Apply dark mode early to prevent FOUC (default to dark for tactical EZ interface)
+      if (localStorage.theme === 'light') {
         document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
       }
     </script>
 

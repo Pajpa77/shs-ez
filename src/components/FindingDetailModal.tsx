@@ -68,7 +68,7 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
                     finding.urgency === 'critical'
                       ? 'bg-red-500/20 text-red-300 border border-red-500/40'
                       : finding.urgency === 'high'
-                      ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border border-amber-500/40'
+                      ? 'bg-slate-50 dark:bg-amber-500/20 text-amber-300 border border-amber-500/40'
                       : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
                   }`}
                 >
@@ -152,7 +152,7 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
                 ? 'bg-red-950/50 border-red-800 text-red-300'
                 : finding.status === 'verified' || finding.verified
                 ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                : 'bg-slate-50 dark:bg-[#0F172A]mber-500/15 border-amber-500/40 text-amber-300'
+                : 'bg-slate-50 dark:bg-amber-500/15 border-amber-500/40 text-amber-300'
             }`}
           >
             <div className="flex items-center gap-2.5">

@@ -98,7 +98,7 @@ body {
   width: 100%;
   margin: 0;
   padding: 0;
-  @apply bg-slate-100 text-slate-900 dark:bg-[#0F172A] dark:text-[#f8fafc];
+  @apply bg-[#0F172A] text-[#f8fafc];
   -webkit-overflow-scrolling: touch;
 }
 
@@ -107,4 +107,78 @@ body {
   width: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* Dark tactical styling for Leaflet Map Controls (matching top bar #1E293B) */
+.leaflet-bar {
+  border: 1px solid #334155 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
+  background-color: #1E293B !important;
+}
+
+.leaflet-bar a {
+  background-color: #1E293B !important;
+  color: #94A3B8 !important;
+  border-bottom: 1px solid #334155 !important;
+  transition: all 0.15s ease-in-out !important;
+  width: 34px !important;
+  height: 34px !important;
+  line-height: 34px !important;
+  font-size: 16px !important;
+  font-weight: bold !important;
+}
+
+.leaflet-bar a:last-child {
+  border-bottom: none !important;
+}
+
+.leaflet-bar a:hover {
+  background-color: #334155 !important;
+  color: #FFFFFF !important;
+}
+
+.leaflet-bar a.leaflet-disabled {
+  background-color: #0F172A !important;
+  color: #475569 !important;
+}
+
+/* Leaflet Attribution */
+.leaflet-control-attribution {
+  background-color: rgba(15, 23, 42, 0.85) !important;
+  color: #64748B !important;
+  backdrop-filter: blur(4px);
+  border-radius: 6px !important;
+  margin: 4px !important;
+  padding: 2px 8px !important;
+  font-size: 9px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  border: 1px solid #334155 !important;
+}
+
+.leaflet-control-attribution a {
+  color: #60A5FA !important;
+}
+
+/* Leaflet Popup Styling matching dark tactical theme */
+.leaflet-popup-content-wrapper {
+  background: #1E293B !important;
+  color: #F8FAFC !important;
+  border: 1px solid #475569 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
+}
+
+.leaflet-popup-tip {
+  background: #1E293B !important;
+  border: 1px solid #475569 !important;
+}
+
+.leaflet-popup-close-button {
+  color: #94A3B8 !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #FFFFFF !important;
 }

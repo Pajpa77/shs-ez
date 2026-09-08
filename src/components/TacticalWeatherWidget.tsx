@@ -125,11 +125,11 @@ export const TacticalWeatherWidget: React.FC<TacticalWeatherWidgetProps> = ({
   const isDroneWarning = weather.windGusts >= 35; // Drohnen-Einsatzgrenze (UAS limit)
 
   return (
-    <div className="bg-white dark:bg-slate-900/95 backdrop-blur-md border border-slate-300 dark:border-slate-700/80 rounded-xl shadow-xl text-slate-900 dark:text-slate-200 overflow-hidden font-sans">
+    <div className="bg-[#1E293B]/95 backdrop-blur-md border border-slate-700 rounded-xl shadow-xl text-slate-200 overflow-hidden font-sans">
       {/* Header Bar */}
       <div
         onClick={() => setIsExpanded(!isExpanded)}
-        className="px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:bg-slate-800/60 transition select-none"
+        className="px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-slate-800/60 transition select-none"
       >
         <div className="flex items-center gap-2">
           <CloudSun className="w-4 h-4 text-amber-400" />
@@ -137,7 +137,7 @@ export const TacticalWeatherWidget: React.FC<TacticalWeatherWidgetProps> = ({
             <span className="font-bold text-xs font-mono text-white tracking-wider">
               {weather.temperature}°C
             </span>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[120px]">
+            <span className="text-[11px] text-slate-400 truncate max-w-[120px]">
               {getWeatherDescription(weather.weatherCode)}
             </span>
           </div>
@@ -152,30 +152,30 @@ export const TacticalWeatherWidget: React.FC<TacticalWeatherWidgetProps> = ({
             />
             <span>{windInfo.label} {weather.windSpeed} km/h</span>
           </div>
-          <span className="text-[10px] text-slate-500 font-mono">{isExpanded ? '▲' : '▼'}</span>
+          <span className="text-[10px] text-slate-400 font-mono">{isExpanded ? '▲' : '▼'}</span>
         </div>
       </div>
 
       {/* Expanded Tactical Details (for K9 Scent Drift & Drone limits) */}
       {isExpanded && (
-        <div className="p-3 pt-1 border-t border-slate-200 dark:border-slate-800 text-xs space-y-2.5 bg-slate-100 dark:bg-slate-950/40">
+        <div className="p-3 pt-1 border-t border-slate-800 text-xs space-y-2.5 bg-slate-950/40">
           <div className="grid grid-cols-2 gap-2 text-[11px]">
             {/* Wind & Gusts */}
-            <div className="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mb-1">
+            <div className="p-2 rounded-lg bg-slate-900 border border-slate-800">
+              <div className="flex items-center gap-1.5 text-slate-400 mb-1">
                 <Wind className="w-3.5 h-3.5 text-blue-400" />
                 <span className="font-bold uppercase text-[10px]">Wind & Böen</span>
               </div>
-              <div className="font-mono text-slate-900 dark:text-slate-200 font-bold">
+              <div className="font-mono text-slate-200 font-bold">
                 {weather.windSpeed} km/h (Böen: {weather.windGusts} km/h)
               </div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              <div className="text-[10px] text-slate-400 mt-0.5">
                 Richtung: {windInfo.label} ({weather.windDirection}°)
               </div>
             </div>
 
             {/* Scent Drift for Mantrailer */}
-            <div className="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            <div className="p-2 rounded-lg bg-slate-900 border border-slate-800">
               <div className="flex items-center gap-1.5 text-orange-400 mb-1">
                 <Compass className="w-3.5 h-3.5 text-orange-400" />
                 <span className="font-bold uppercase text-[10px]">🐕 Geruchsabdrift</span>

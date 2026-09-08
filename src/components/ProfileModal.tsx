@@ -229,7 +229,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-white uppercase tracking-wide">Mein Einsatzprofil & Daten</h2>
                 {isFirstAdmin(currentUser) && (
-                  <span className="px-2 py-0.5 rounded-full bg-slate-50 dark:bg-[#0F172A]mber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold flex items-center gap-1">
+                  <span className="px-2 py-0.5 rounded-full bg-slate-50 dark:bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold flex items-center gap-1">
                     <span>👑</span>
                     <span>First Admin / App-Owner</span>
                   </span>
@@ -521,7 +521,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 batteryLevel > 40
                   ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                   : batteryLevel > 15
-                  ? 'bg-slate-50 dark:bg-[#0F172A]mber-950 text-amber-300 border border-amber-800'
+                  ? 'bg-slate-50 dark:bg-amber-950 text-amber-300 border border-amber-800'
                   : 'bg-red-950 text-red-300 border border-red-800'
               }`}>
                 {batteryLevel}% {batteryCharging ? '⚡ (Wird geladen)' : '🔋'}

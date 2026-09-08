@@ -513,7 +513,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 onClick={() => setType('exercise')}
                 className={`p-3.5 rounded-xl border text-left transition cursor-pointer flex items-center gap-3 ${
                   type === 'exercise'
-                    ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 border-amber-500 text-amber-200 ring-1 ring-amber-500/40 shadow-lg'
+                    ? 'bg-slate-50 dark:bg-amber-500/20 border-amber-500 text-amber-200 ring-1 ring-amber-500/40 shadow-lg'
                     : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:bg-slate-800'
                 }`}
               >
@@ -718,7 +718,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                     type="button"
                     onClick={() => geocodeAddress(homeAddress, 'home')}
                     disabled={isGeocodingHome || !homeAddress.trim()}
-                    className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-[#0F172A]mber-600 hover:bg-slate-50 dark:bg-[#0F172A]mber-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition shrink-0"
+                    className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-amber-600 hover:bg-slate-50 dark:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer transition shrink-0"
                     title="Koordinaten automatisch über OpenStreetMap ermitteln"
                   >
                     <Search className="w-3.5 h-3.5" />

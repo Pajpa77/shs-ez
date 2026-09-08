@@ -240,7 +240,7 @@ export const OperationEndModal: React.FC<OperationEndModalProps> = ({
                   onClick={() => setOutcome('aborted')}
                   className={`p-3 rounded-xl border text-left transition cursor-pointer flex items-center gap-2.5 ${
                     outcome === 'aborted'
-                      ? 'bg-slate-50 dark:bg-[#0F172A]mber-500/20 border-amber-500 text-amber-100 ring-2 ring-amber-500/40'
+                      ? 'bg-slate-50 dark:bg-amber-500/20 border-amber-500 text-amber-100 ring-2 ring-amber-500/40'
                       : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
                   }`}
                 >

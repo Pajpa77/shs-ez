@@ -590,7 +590,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                   <span
                     className={`text-[10px] font-bold px-2.5 py-0.5 rounded uppercase border font-mono ${
                       isExercise
-                        ? 'bg-slate-50 dark:bg-[#0F172A]mber-950 text-amber-300 border-amber-600'
+                        ? 'bg-slate-50 dark:bg-amber-950 text-amber-300 border-amber-600'
                         : 'bg-red-950 text-red-300 border-red-600'
                     }`}
                   >
@@ -800,7 +800,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                 {/* Externe Helfer Notiz (ohne App) */}
                 {(externalVolunteersCount > 0 || (selectedOp.externalVolunteersNotes && selectedOp.externalVolunteersNotes.trim() !== '')) && (
                   <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-amber-500/30 font-mono flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-[#0F172A]mber-950/80 border border-amber-800 text-amber-300 shrink-0">
+                    <div className="p-2 rounded-lg bg-slate-50 dark:bg-amber-950/80 border border-amber-800 text-amber-300 shrink-0">
                       <Users className="w-4 h-4" />
                     </div>
                     <div className="space-y-0.5">
@@ -974,7 +974,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                                   s.status === 'searched'
                                     ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
                                     : s.status === 'in_progress'
-                                    ? 'bg-slate-50 dark:bg-[#0F172A]mber-950 text-amber-300'
+                                    ? 'bg-slate-50 dark:bg-amber-950 text-amber-300'
                                     : 'bg-blue-950 text-blue-300'
                                 }`}
                               >
@@ -1246,7 +1246,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                     filteredLogs.map((log) => {
                       const categoryColors: Record<string, string> = {
                         status: 'border-blue-500 bg-blue-950/40 text-blue-300',
-                        finding: 'border-amber-500 bg-slate-50 dark:bg-[#0F172A]mber-950/40 text-amber-300',
+                        finding: 'border-amber-500 bg-slate-50 dark:bg-amber-950/40 text-amber-300',
                         sector: 'border-emerald-500 bg-emerald-950/40 text-emerald-300',
                         member: 'border-purple-500 bg-purple-950/40 text-purple-300',
                         radio: 'border-cyan-500 bg-cyan-950/40 text-cyan-300',
@@ -1400,7 +1400,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                             <h4 className="font-bold text-white text-xs font-sans">{f.title}</h4>
                             <span
                               className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                                f.verified ? 'bg-emerald-950 text-emerald-300' : 'bg-slate-50 dark:bg-[#0F172A]mber-950 text-amber-300'
+                                f.verified ? 'bg-emerald-950 text-emerald-300' : 'bg-slate-50 dark:bg-amber-950 text-amber-300'
                               }`}
                             >
                               {f.verified ? '✓ Verifiziert' : 'In Prüfung'}
@@ -1504,7 +1504,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                           Freiwillige Helfer & Externe Organisationen (ohne App-Zugang)
                         </span>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-slate-50 dark:bg-[#0F172A]mber-950 border border-amber-800 text-amber-300 text-xs font-bold">
+                      <span className="px-2 py-0.5 rounded bg-slate-50 dark:bg-amber-950 border border-amber-800 text-amber-300 text-xs font-bold">
                         {externalVolunteersCount} Helfer
                       </span>
                     </div>
@@ -1542,7 +1542,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                         key={msg.id}
                         className={`p-3 rounded-xl border transition ${
                           msg.isAlert
-                            ? 'bg-slate-50 dark:bg-[#0F172A]mber-950/30 border-amber-500/50'
+                            ? 'bg-slate-50 dark:bg-amber-950/30 border-amber-500/50'
                             : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700/80'
                         }`}
                       >
