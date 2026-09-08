@@ -2370,11 +2370,14 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   }, [updateUser]);
 
   const getUserArrivalStatus = useCallback((userId: string): 'in_transit' | 'ez_reached' | 'ready' => {
+    // 1. If an admin has confirmed the user as ready, they are ready (green)
     if (userArrivalStatuses[userId] === 'ready') return 'ready';
     const user = allUsers.find((u) => u.id === userId);
     if (user?.arrivalStatus === 'ready') return 'ready';
-    if (userArrivalStatuses[userId]) return userArrivalStatuses[userId];
-    if (user?.arrivalStatus) return user.arrivalStatus;
+
+    // 2. Otherwise determine automatically by distance to EZ:
+    // Distance > 500m = 'in_transit' (rot / in Anfahrt)
+    // Distance <= 500m = 'ez_reached' (gelb / in EZ Bereich eingetroffen)
     const loc = userLocations[userId]?.currentPosition;
     if (!loc) return 'in_transit';
     const dist = calculateDistanceToEzMeters(loc.lat, loc.lng);
@@ -4017,6 +4020,47 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       playAlertSound('chat_admins');
     } else {
       playAlertSound(data.channel);
+    }
+
+    // Protocol logging: Automatically log communication involving Einsatzleitung into Operation Logs
+    if (opId && opId !== 'general') {
+      const recipientUser = data.recipientId ? allUsers.find((u) => u.id === data.recipientId) : undefined;
+      const isSenderEL = currentUser.role === 'admin' || currentUser.role === 'einsatzleitung';
+      const isRecipientEL = recipientUser?.role === 'admin' || recipientUser?.role === 'einsatzleitung';
+      const isELChannel = data.channel === 'admins';
+
+      if (isSenderEL || isRecipientEL || isELChannel) {
+        const logText = data.isDirect
+          ? `[FUNK/DIREKT] ${currentUser.name} (${currentUser.callSign}) ➔ ${recipientUser ? `${recipientUser.name} (${recipientUser.callSign})` : 'EL'}: "${data.text || (data.isVoiceMessage ? '🎙️ CB-Sprachnachricht' : 'Anhang')}"`
+          : isELChannel
+          ? `[FÜHRUNGSFUNK EL] ${currentUser.name} (${currentUser.callSign}): "${data.text || (data.isVoiceMessage ? '🎙️ CB-Sprachnachricht' : 'Anhang')}"`
+          : `[EINSATZFUNK] ${currentUser.name} (${currentUser.callSign}): "${data.text || (data.isVoiceMessage ? '🎙️ CB-Sprachnachricht' : 'Anhang')}"`;
+
+        const logEntry: OperationLogEntry = {
+          id: `log-chat-${Date.now()}`,
+          operationId: opId,
+          timestamp: new Date().toISOString(),
+          authorName: currentUser.name,
+          authorRole: currentUser.role,
+          category: 'radio',
+          text: logText,
+        };
+
+        setAllOperations((prevOps) => {
+          return prevOps.map((op) => {
+            if (op.id === opId) {
+              const updatedOp: SearchOperation = {
+                ...op,
+                logs: [logEntry, ...(op.logs || [])],
+                updatedAt: new Date().toISOString(),
+              };
+              syncOperationToCloud(updatedOp);
+              return updatedOp;
+            }
+            return op;
+          });
+        });
+      }
     }
 
     broadcastChannelRef.current?.postMessage({
