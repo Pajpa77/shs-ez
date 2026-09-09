@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { User, EquipmentType, UserRole } from '../types';
 import { getOpTheme } from './Navbar';
+import { SniffingDogAnimation } from './SniffingDogAnimation';
 import {
   Shield,
   User as UserIcon,
@@ -1088,6 +1089,7 @@ export const LoginScreen: React.FC = () => {
           </div>
         </div>
       </div>
+      <SniffingDogAnimation />
     </div>
   );
 };
