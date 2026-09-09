@@ -2,7 +2,7 @@ import React from 'react';
 
 export const SniffingDogAnimation: React.FC = () => {
   return (
-    <div className="fixed bottom-0 left-0 right-0 h-36 pointer-events-none z-20 overflow-hidden select-none">
+    <div className="fixed bottom-0 left-0 right-0 h-36 pointer-events-none z-[9999] overflow-hidden select-none">
       {/* Continuous Crisp White Ground Line */}
       <div className="absolute bottom-[18px] left-0 right-0 h-[3px] bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
 

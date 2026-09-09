@@ -2,6 +2,7 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { RescueProvider, useRescue } from './context/RescueContext';
 import { useAlerts } from './hooks/useAlerts';
 import { LoginScreen } from './components/LoginScreen';
+import { SniffingDogAnimation } from './components/SniffingDogAnimation';
 import { Navbar } from './components/Navbar';
 import { TacticalMap } from './components/TacticalMap';
 
@@ -167,7 +168,12 @@ const MainApp: React.FC = () => {
 
   // If not authenticated, show login
   if (!currentUser) {
-    return <LoginScreen />;
+    return (
+      <div className="relative w-full h-full min-h-screen">
+        <LoginScreen />
+        <SniffingDogAnimation />
+      </div>
+    );
   }
 
   const isAdmin = currentUser.role === 'admin';
