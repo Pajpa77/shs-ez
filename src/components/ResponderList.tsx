@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { User, EquipmentType, SearchTeam, isFirstAdmin, isOwner, getUserTrackColor } from '../types';
+import { User, EquipmentType, SearchTeam, isFirstAdmin, isOwner, getUserTrackColor, getUserConnectionStatus, getSignalFreshnessText } from '../types';
 import {
   Users,
   Shield,
@@ -433,6 +433,8 @@ export const ResponderList: React.FC<ResponderListProps> = ({
           );
           const badges = getEquipmentBadges(user.equipment);
           const isMe = user.id === currentUser?.id;
+          const connStatus = getUserConnectionStatus(user);
+          const freshnessText = getSignalFreshnessText(user);
 
           return (
             <div
@@ -461,9 +463,23 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                       </div>
                       <span
                         className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-slate-900 ${
-                          user.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500'
+                          !user.isActive
+                            ? 'bg-slate-500'
+                            : connStatus === 'active'
+                            ? 'bg-emerald-500 animate-pulse'
+                            : connStatus === 'stale'
+                            ? 'bg-amber-400 animate-pulse'
+                            : 'bg-rose-500'
                         }`}
-                        title={user.isActive ? 'Eingeloggt & Aktiv' : 'Abgemeldet / Offline'}
+                        title={
+                          !user.isActive
+                            ? 'Abgemeldet'
+                            : connStatus === 'active'
+                            ? '🟢 Online & Ortend'
+                            : connStatus === 'stale'
+                            ? '🟡 Signal verzögert (Funkloch / Handy pausiert)'
+                            : '🔴 Signal verloren (Gerät aus / Offline)'
+                        }
                       />
                     </div>
 
@@ -478,13 +494,23 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                         <button
                           onClick={() => setUserActiveStatus(user.id, !user.isActive)}
                           className={`text-[9px] px-2 py-0.5 rounded font-mono font-bold transition cursor-pointer ${
-                            user.isActive
+                            !user.isActive
+                              ? 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700 hover:bg-emerald-900/40 hover:text-emerald-300'
+                              : connStatus === 'active'
                               ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-rose-900/40 hover:text-rose-300'
-                              : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700 hover:bg-emerald-900/40 hover:text-emerald-300'
+                              : connStatus === 'stale'
+                              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-rose-900/40 hover:text-rose-300'
+                              : 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-900/40'
                           }`}
                           title={user.isActive ? 'Klicken um abzumelden' : 'Klicken um anzumelden'}
                         >
-                          {user.isActive ? '● Online' : '○ Abgemeldet'}
+                          {!user.isActive
+                            ? '○ Abgemeldet'
+                            : connStatus === 'active'
+                            ? '● Online'
+                            : connStatus === 'stale'
+                            ? `🟡 Funkloch (${freshnessText})`
+                            : `🔴 Signal weg (${freshnessText})`}
                         </button>
                       </div>
                       <div className="text-xs text-blue-400 font-mono font-semibold">{user.callSign}</div>

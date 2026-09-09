@@ -87,6 +87,50 @@ export const isUserAdminOrEL = (user: User | null | undefined): boolean => {
   return isUserAdmin(user) || isUserEL(user);
 };
 
+export type ConnectionStatus = 'active' | 'stale' | 'offline';
+
+export const getUserConnectionStatus = (user: User | null | undefined): ConnectionStatus => {
+  if (!user || !user.isActive) return 'offline';
+  let timestamp = user.lastHeartbeat;
+  if (!timestamp && user.lastSeen) {
+    const parsed = new Date(user.lastSeen).getTime();
+    if (!isNaN(parsed)) timestamp = parsed;
+  }
+  if (!timestamp && user.updatedAt) {
+    const parsed = new Date(user.updatedAt).getTime();
+    if (!isNaN(parsed)) timestamp = parsed;
+  }
+  if (!timestamp) return 'offline';
+
+  const diffMs = Date.now() - timestamp;
+  if (diffMs < 45000) return 'active'; // < 45s: aktiv (🟢)
+  if (diffMs < 180000) return 'stale';  // 45s - 3 Min: Signal verzögert / Funkloch (🟡)
+  return 'offline'; // > 3 Min: Signal verloren / offline (🔴)
+};
+
+export const getSignalFreshnessText = (user: User | null | undefined): string => {
+  if (!user || !user.isActive) return 'Abgemeldet';
+  let timestamp = user.lastHeartbeat;
+  if (!timestamp && user.lastSeen) {
+    const parsed = new Date(user.lastSeen).getTime();
+    if (!isNaN(parsed)) timestamp = parsed;
+  }
+  if (!timestamp && user.updatedAt) {
+    const parsed = new Date(user.updatedAt).getTime();
+    if (!isNaN(parsed)) timestamp = parsed;
+  }
+  if (!timestamp) return 'Kein Signal';
+
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 0) return 'Gerade eben';
+  if (seconds < 10) return 'Gerade eben';
+  if (seconds < 60) return `vor ${seconds} Sek.`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `vor ${minutes} Min.`;
+  const hours = Math.floor(minutes / 60);
+  return `vor ${hours} Std.`;
+};
+
 export interface GpsPoint {
   lat: number;
   lng: number;

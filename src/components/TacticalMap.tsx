@@ -12,6 +12,8 @@ import {
   SearchOperation,
   getUserTrackColor,
   TACTICAL_TRACK_COLORS,
+  getUserConnectionStatus,
+  getSignalFreshnessText,
 } from '../types';
 import { VEREINSBUERO_LOCATION } from '../mockData';
 import { TacticalWeatherOverlay } from './TacticalWeatherOverlay';
@@ -1473,6 +1475,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         const assignedSector = currentOperation?.sectors.find(
           (s) => s.id === item.user.assignedSectorId || s.assignedUserIds?.includes(item.user.id)
         );
+        const connStatus = getUserConnectionStatus(item.user);
+        const freshnessText = getSignalFreshnessText(item.user);
+
         const sectorTag = activeTrackingTest?.isActive
           ? `<span class="text-sky-300 font-bold ml-1 font-mono">📡 TEST</span>`
           : assignedSector
@@ -1480,11 +1485,37 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           : '';
         const clusterBadge = isCluster ? `<span class="bg-blue-600 text-white rounded-full px-1 text-[9px] font-mono shadow ml-1">${itemIdx + 1}/${N}</span>` : '';
 
-        // Custom animated responder pin with photo/equipment
+        const statusBadgeHtml = !item.isOnline
+          ? '<span class="text-slate-400 font-normal">(Abgemeldet)</span>'
+          : connStatus === 'active'
+          ? '<span class="text-emerald-400 font-bold">🟢</span>'
+          : connStatus === 'stale'
+          ? `<span class="text-amber-300 font-bold">🟡 Funkloch (${freshnessText})</span>`
+          : `<span class="text-rose-400 font-bold">🔴 Signal weg (${freshnessText})</span>`;
+
+        const outerGlowClass = item.isMe
+          ? 'bg-cyan-500/40 animate-ping'
+          : !item.isOnline
+          ? 'bg-slate-500/20'
+          : connStatus === 'active'
+          ? 'bg-emerald-500/20'
+          : connStatus === 'stale'
+          ? 'bg-amber-500/40 animate-pulse'
+          : 'bg-rose-500/30';
+
+        const avatarBorderClass = !item.isOnline
+          ? 'border-slate-400 opacity-60'
+          : connStatus === 'active'
+          ? 'border-white'
+          : connStatus === 'stale'
+          ? 'border-amber-400 ring-2 ring-amber-400/50'
+          : 'border-rose-500 ring-2 ring-rose-500/50';
+
+        // Custom animated responder pin with photo/equipment & connection status
         const iconHtml = `
           <div class="relative group cursor-pointer">
-            <div class="absolute -inset-1.5 rounded-full ${item.isMe ? 'bg-cyan-500/40 animate-ping' : item.isOnline ? 'bg-amber-500/20' : 'bg-slate-500/20'}"></div>
-            <div class="relative flex items-center justify-center h-10 w-10 rounded-full border-2 ${item.isOnline ? 'border-white' : 'border-slate-400 opacity-60'} shadow-2xl overflow-hidden" style="background-color: ${item.trackColor};">
+            <div class="absolute -inset-1.5 rounded-full ${outerGlowClass}"></div>
+            <div class="relative flex items-center justify-center h-10 w-10 rounded-full border-2 ${avatarBorderClass} shadow-2xl overflow-hidden" style="background-color: ${item.trackColor};">
               ${
                 item.user.photoUrl
                   ? `<img src="${item.user.photoUrl}" alt="${item.user.name}" class="h-full w-full object-cover" />`
@@ -1495,13 +1526,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             <div class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#1E293B] text-xs border border-white/50 shadow">
               ${badge.icon}
             </div>
-            <!-- Call sign banner with Sector & Cluster Position -->
+            <!-- Call sign banner with Sector, Cluster Position & Connection Status -->
             <div class="absolute top-11 left-1/2 transform -translate-x-1/2 px-2 py-0.5 rounded ${item.isOnline ? 'bg-[#1E293B]/95 text-white' : 'bg-slate-800/90 text-slate-300'} text-[10px] font-semibold border border-slate-700 whitespace-nowrap shadow-md flex items-center gap-1">
               <span>${item.user.callSign}</span>
               ${clusterBadge}
               ${sectorTag}
-              ${item.user.licensePlate ? `<span class="text-slate-400">• ${item.user.licensePlate}</span>` : ''}
-              ${!item.isOnline ? '<span class="text-slate-400">(Abgemeldet)</span>' : ''}
+              ${statusBadgeHtml}
             </div>
           </div>
         `;

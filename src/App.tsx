@@ -82,32 +82,21 @@ const MainApp: React.FC = () => {
 
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   
-  // Prevent accidental page leave
+  // Prevent accidental page leave during active session/operation
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (currentUser) {
-        // Most modern browsers require setting returnValue to a non-empty string to trigger the dialog
-        // The actual string is usually ignored and replaced by a browser-default message
+        // Warn the user before accidentally navigating away or closing tab
         event.preventDefault();
-        event.returnValue = ''; 
-        return '';
-      }
-    };
-
-    const handleUnload = () => {
-      if (currentUser) {
-        // Best-effort cleanup: Ensure local session is cleared on actual close
-        // This ensures the user is "logged out" from the local perspective
-        localStorage.removeItem('rescue_app_current_user_id_slk_v4');
+        event.returnValue = 'Achtung: Du befindest dich in einer aktiven Rettungssitzung. Beim Schließen der Seite wird das GPS-Tracking unterbrochen.'; 
+        return event.returnValue;
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('unload', handleUnload);
     
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('unload', handleUnload);
     };
   }, [currentUser]);
 

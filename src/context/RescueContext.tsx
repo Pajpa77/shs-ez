@@ -1894,6 +1894,47 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     };
   }, [isRealGpsActive, currentUser, syncLocationToCloud, userArrivalStatuses]);
 
+  // Periodic Status Tick to trigger UI updates for stale / offline signal calculations
+  const [, setStatusTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStatusTick((t) => t + 1);
+    }, 15000); // Re-evaluate signal freshness every 15s
+    return () => clearInterval(interval);
+  }, []);
+
+  // Periodic Heartbeat for active logged-in user (every 20 seconds)
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const sendHeartbeat = () => {
+      const now = Date.now();
+      const isoStr = new Date(now).toISOString();
+
+      setAllUsers((prev) =>
+        prev.map((u) => {
+          if (u.id === currentUserId) {
+            const updated: User = {
+              ...u,
+              lastHeartbeat: now,
+              lastSeen: isoStr,
+              updatedAt: isoStr,
+            };
+            syncUserToCloud(updated);
+            return updated;
+          }
+          return u;
+        })
+      );
+    };
+
+    // Immediate initial heartbeat
+    sendHeartbeat();
+
+    const interval = setInterval(sendHeartbeat, 20000);
+    return () => clearInterval(interval);
+  }, [currentUserId, syncUserToCloud]);
+
   // Tactical Movement Simulator for field responders (only when explicitly enabled and operation is active)
   useEffect(() => {
     if (!isSimulatorRunning || !isOperationActive) return;
