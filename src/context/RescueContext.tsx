@@ -1766,8 +1766,8 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 (isAccurate && (distMoved >= 2.0 || (timeSinceLast >= 20000 && distMoved >= 1.0)));
 
               nextHistory = shouldAdd ? [...cleanHistory, point].slice(-MAX_TRACK_POINTS) : cleanHistory;
-            } else if (cleanHistory.length === 0) {
-              nextHistory = [point];
+            } else {
+              nextHistory = [];
             }
             const updatedHistory = nextHistory;
             const updatedLocState: UserLocationState = {
@@ -2085,16 +2085,26 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       });
     }
 
-    // Ensure isLive status in userLocations matches the active status
-    if (userLocations[userId]) {
-      const updatedLoc = {
-        ...userLocations[userId],
-        isLive: isActive,
-        lastUpdated: new Date().toISOString(),
-      };
-      setUserLocations((prev) => ({ ...prev, [userId]: updatedLoc }));
+    // Ensure isLive status in userLocations matches the active status and initialize location entry if missing
+    setUserLocations((prev) => {
+      const existingLoc = prev[userId];
+      const defaultPos = myLocation || { lat: VEREINSBUERO_LOCATION.lat, lng: VEREINSBUERO_LOCATION.lng, timestamp: new Date().toISOString() };
+      const updatedLoc: UserLocationState = existingLoc
+        ? {
+            ...existingLoc,
+            isLive: isActive,
+            lastUpdated: new Date().toISOString(),
+          }
+        : {
+            userId,
+            currentPosition: defaultPos,
+            isLive: isActive,
+            lastUpdated: new Date().toISOString(),
+            trackHistory: [],
+          };
       syncLocationToCloud(userId, updatedLoc);
-    }
+      return { ...prev, [userId]: updatedLoc };
+    });
 
     const isTrackingTestUser = Boolean(
       (activeTrackingTestRef.current && activeTrackingTestRef.current.userId === userId) ||

@@ -1373,13 +1373,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     }
 
     const renderList: RenderableResponder[] = [];
-    (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState], idx) => {
-      // If tracking test is active, ONLY render the current user doing the test (no operation needed)
+    const targetUserIds = new Set<string>();
+    Object.keys(userLocations).forEach((id) => targetUserIds.add(id));
+    allUsers.filter((u) => u.isActive).forEach((u) => targetUserIds.add(u.id));
+
+    targetUserIds.forEach((userId) => {
+      // If tracking test is active, ONLY render the current user doing the test
       if (activeTrackingTest?.isActive) {
         if (userId !== activeTrackingTest.userId) return;
-        // Skip participantIds check – tracking test runs without an active operation
-      } else {
-        if (!currentOperation?.participantIds?.includes(userId)) return;
       }
 
       const user = allUsers.find((u) => u.id === userId);
@@ -1389,11 +1390,24 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       const isOnline = user.isActive;
       if (!isOnline && !showInactiveResponders) return;
 
+      let locState = userLocations[userId];
+      if (!locState && user.id === currentUser?.id && myLocation) {
+        locState = {
+          userId: user.id,
+          currentPosition: myLocation,
+          isLive: true,
+          lastUpdated: new Date().toISOString(),
+          trackHistory: [],
+        };
+      }
+
+      if (!locState || !locState.currentPosition) return;
+
       renderList.push({
         userId,
         user,
         locState,
-        idx,
+        idx: renderList.length,
         isOnline,
         isMe: user.id === currentUser?.id,
         trackColor: getUserTrackColor(user || userId, allUsers),

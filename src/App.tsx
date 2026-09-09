@@ -115,7 +115,12 @@ const MainApp: React.FC = () => {
   // App UI is ALWAYS dark – no OS sync, no user toggle.
   // Only the map tile style can be switched between light and dark.
   const [isMapLight, setIsMapLight] = useState<boolean>(() => {
-    try { return localStorage.getItem('rescue_map_tile_light') === '1'; } catch { return false; }
+    try {
+      const saved = localStorage.getItem('rescue_map_tile_light');
+      return saved !== '0';
+    } catch {
+      return true;
+    }
   });
   const [showDroneFeed, setShowDroneFeed] = useState(false);
 
@@ -325,55 +330,57 @@ const MainApp: React.FC = () => {
         </div>
       )}
 
-      {/* UI Zoom Controls - Slim Sleek Floating Control */}
-      <div className="fixed top-16 md:top-[76px] left-3 md:left-[320px] z-[900] pointer-events-auto flex items-center gap-1.5 bg-[#1E293B]/95 border border-slate-700 rounded-full px-2.5 py-1 shadow-xl backdrop-blur-md text-xs font-mono select-none ring-1 ring-white/10 text-slate-200">
-        <button
-          onClick={() => setUiScale(Math.max(0.7, Number((uiScale - 0.05).toFixed(2))))}
-          className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700"
-          title="UI Verkleinern"
-        >
-          <Minus className="w-3.5 h-3.5" />
-        </button>
-        <span className="text-[10px] font-bold text-blue-400 px-0.5 min-w-[34px] text-center">
-          {Math.round(uiScale * 100)}%
-        </span>
-        <button
-          onClick={() => setUiScale(Math.min(1.4, Number((uiScale + 0.05).toFixed(2))))}
-          className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700"
-          title="UI Vergrößern"
-        >
-          <Plus className="w-3.5 h-3.5" />
-        </button>
-        {Math.abs(uiScale - 1.0) > 0.01 && (
+      {/* UI Zoom Controls - Slim Sleek Floating Control (Visible on Map view) */}
+      {activeTab === 'map' && (
+        <div className="fixed top-[68px] sm:top-[76px] left-2.5 sm:left-[320px] z-[1200] pointer-events-auto flex items-center gap-1.5 bg-[#1E293B]/95 border border-slate-700 rounded-full px-2.5 py-1 shadow-xl backdrop-blur-md text-xs font-mono select-none ring-1 ring-white/10 text-slate-200 max-w-[calc(100vw-20px)] overflow-x-auto">
           <button
-            onClick={() => setUiScale(1.0)}
-            className="text-[9px] font-bold text-slate-400 hover:text-white px-1 hover:underline cursor-pointer transition border-l border-slate-700 ml-0.5 pl-1.5"
-            title="UI Reset"
+            onClick={() => setUiScale(Math.max(0.7, Number((uiScale - 0.05).toFixed(2))))}
+            className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700 shrink-0"
+            title="UI Verkleinern"
           >
-            Reset
+            <Minus className="w-3.5 h-3.5" />
           </button>
-        )}
-        <div className="w-[1px] h-4 bg-slate-700 mx-1"></div>
-        <button
-          onClick={() => setIsMapLight(!isMapLight)}
-          className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-amber-600 text-amber-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700"
-          title={isMapLight ? "Karte dunkel schalten" : "Karte hell schalten"}
-        >
-          {isMapLight ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
-        </button>
-        {currentUser?.role === 'admin' && (
-          <>
-            <div className="w-[1px] h-4 bg-slate-700 mx-1"></div>
+          <span className="text-[10px] font-bold text-blue-400 px-0.5 min-w-[34px] text-center shrink-0">
+            {Math.round(uiScale * 100)}%
+          </span>
+          <button
+            onClick={() => setUiScale(Math.min(1.4, Number((uiScale + 0.05).toFixed(2))))}
+            className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700 shrink-0"
+            title="UI Vergrößern"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+          {Math.abs(uiScale - 1.0) > 0.01 && (
             <button
-              onClick={() => setShowDroneFeed(!showDroneFeed)}
-              className={`w-6 h-6 flex items-center justify-center rounded-full transition active:scale-90 cursor-pointer border ${showDroneFeed ? 'bg-red-600 text-white border-red-500' : 'bg-slate-800 text-red-400 hover:bg-slate-700 border-slate-700'}`}
-              title="Drohnen-Feed ein/ausschalten"
+              onClick={() => setUiScale(1.0)}
+              className="text-[9px] font-bold text-slate-400 hover:text-white px-1 hover:underline cursor-pointer transition border-l border-slate-700 ml-0.5 pl-1.5 shrink-0"
+              title="UI Reset"
             >
-              <RadioTower className="w-3.5 h-3.5" />
+              Reset
             </button>
-          </>
-        )}
-      </div>
+          )}
+          <div className="w-[1px] h-4 bg-slate-700 mx-1 shrink-0"></div>
+          <button
+            onClick={() => setIsMapLight(!isMapLight)}
+            className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-amber-600 text-amber-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700 shrink-0"
+            title={isMapLight ? "Karte dunkel schalten" : "Karte hell schalten"}
+          >
+            {isMapLight ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+          </button>
+          {currentUser?.role === 'admin' && (
+            <>
+              <div className="w-[1px] h-4 bg-slate-700 mx-1 shrink-0"></div>
+              <button
+                onClick={() => setShowDroneFeed(!showDroneFeed)}
+                className={`w-6 h-6 flex items-center justify-center rounded-full transition active:scale-90 cursor-pointer border shrink-0 ${showDroneFeed ? 'bg-red-600 text-white border-red-500' : 'bg-slate-800 text-red-400 hover:bg-slate-700 border-slate-700'}`}
+                title="Drohnen-Feed ein/ausschalten"
+              >
+                <RadioTower className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Top Tactical Navigation */}
       <Navbar

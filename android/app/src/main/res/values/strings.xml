@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SHS EZ</string>
+    <string name="title_activity_main">SHS EZ</string>
+    <string name="package_name">com.shsez.app</string>
+    <string name="custom_url_scheme">com.shsez.app</string>
+</resources>
