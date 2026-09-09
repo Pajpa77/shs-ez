@@ -171,7 +171,6 @@ export function serializeUserForFirestore(user: User): Record<string, any> {
     role: user.role || 'responder',
     callSign: user.callSign || '',
     licensePlate: user.licensePlate || '',
-    photoUrl: user.photoUrl || '',
     phone: user.phone || '',
     equipment: Array.isArray(user.equipment) ? user.equipment : ['foot_search'],
     customEquipmentTags: Array.isArray(user.customEquipmentTags) ? user.customEquipmentTags : [],
@@ -193,6 +192,12 @@ export function serializeUserForFirestore(user: User): Record<string, any> {
     lastTrackingTest: user.lastTrackingTest || null,
     updatedAt: new Date().toISOString(),
   };
+
+  // Only include photoUrl if it's set or non-empty so initial seeds never wipe existing user photos in Firestore
+  if (user.photoUrl !== undefined && user.photoUrl !== '') {
+    data.photoUrl = user.photoUrl;
+  }
+
   return cleanUndefinedFields(data);
 }
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 import {
   Share2,
   Copy,
@@ -23,6 +24,7 @@ interface ShareAppModalProps {
 export const ShareAppModal: React.FC<ShareAppModalProps> = ({ isOpen, onClose }) => {
   const [copied, setCopied] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const { isInstallable, isInstalled, install } = usePWAInstall();
   
   // Always construct the public shareable preview URL (ais-pre-...)
   // Dev container origin (ais-dev-...) requires Google Cloud account login, so we automatically convert to public URL
@@ -214,11 +216,28 @@ export const ShareAppModal: React.FC<ShareAppModalProps> = ({ isOpen, onClose })
           </div>
 
           {/* PWA Home Screen Installation Guide */}
-          <div className="bg-blue-950/30 border border-blue-800/50 rounded-xl p-4 space-y-2 text-[11px] text-slate-700 dark:text-slate-300">
-            <div className="flex items-center gap-2 text-blue-300 font-bold font-mono">
-              <Download className="w-4 h-4" />
-              <span>Tipp: Als App auf dem Homescreen speichern (Vollbild)</span>
+          <div className="bg-blue-950/30 border border-blue-800/50 rounded-xl p-4 space-y-3 text-[11px] text-slate-700 dark:text-slate-300">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-blue-300 font-bold font-mono">
+                <Download className="w-4 h-4" />
+                <span>Als App auf dem Startbildschirm speichern</span>
+              </div>
+              {isInstalled && (
+                <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 font-mono text-[10px] font-bold">
+                  ✓ Bereits installiert
+                </span>
+              )}
             </div>
+            {isInstallable && !isInstalled && (
+              <button
+                type="button"
+                onClick={install}
+                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg transition active:scale-95 cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Jetzt App auf Homescreen installieren</span>
+              </button>
+            )}
             <p className="leading-relaxed">
               • <strong>iPhone / iPad (Safari):</strong> Unten auf das Teilen-Symbol (Viereck mit Pfeil nach oben) tippen und <em>&quot;Zum Home-Bildschirm&quot;</em> wählen.<br />
               • <strong>Android (Chrome):</strong> Oben rechts auf das 3-Punkte-Menü tippen und <em>&quot;App installieren&quot;</em> oder <em>&quot;Zum Startbildschirm hinzufügen&quot;</em> wählen.

@@ -47,7 +47,10 @@ import {
   X,
   CloudSun,
   FileText,
+  GripVertical,
+  Move,
 } from 'lucide-react';
+import { useDraggable } from '../hooks/useDraggable';
 
 interface TacticalMapProps {
   operation?: SearchOperation | null;
@@ -169,7 +172,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   onCancelDrawing,
   onSaveSnapshot,
   onSelectArchiveOp,
-  isMapLight = false,
+  isMapLight = true,
 }) => {
   const {
     currentOperation: globalOperation,
@@ -217,6 +220,32 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const [isLayersOpenMobile, setIsLayersOpenMobile] = useState(false);
   const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false);
   const [desktopSidebarTab, setDesktopSidebarTab] = useState<'layers' | 'tracks' | 'actions'>('layers');
+
+  // Draggable Hooks for Floating Map Panels & Cards
+  const {
+    dragRef: sidebarDragRef,
+    position: sidebarPos,
+    isDragging: isSidebarDragging,
+    dragProps: sidebarDragProps,
+  } = useDraggable({ storageKey: 'tactical_map_sidebar' });
+
+  const {
+    dragRef: sectorCardDragRef,
+    position: sectorCardPos,
+    dragProps: sectorCardDragProps,
+  } = useDraggable({ storageKey: 'sector_detail_card' });
+
+  const {
+    dragRef: userCardDragRef,
+    position: userCardPos,
+    dragProps: userCardDragProps,
+  } = useDraggable({ storageKey: 'user_detail_card' });
+
+  const {
+    dragRef: weatherDragRef,
+    position: weatherPos,
+    dragProps: weatherDragProps,
+  } = useDraggable({ storageKey: 'weather_widget' });
   const [drawnPoints, setDrawnPoints] = useState<[number, number][]>([]);
   const [drawMode, setDrawMode] = useState<'pen' | 'click'>('pen');
   const [strokeHistory, setStrokeHistory] = useState<[number, number][][]>([]);
@@ -2189,10 +2218,21 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       {/* DESKTOP / TABLET FLOATING TACTICAL SIDEBAR */}
       {!isDesktopSidebarCollapsed && (
-        <div className="hidden md:flex absolute top-4 left-4 z-[900] flex-col gap-2 max-w-[290px] w-[290px] max-h-[calc(100vh-140px)] overflow-y-auto pr-1 select-none scrollbar-thin">
+        <div
+          ref={sidebarDragRef}
+          style={sidebarPos ? { position: 'fixed', left: `${sidebarPos.x}px`, top: `${sidebarPos.y}px`, zIndex: 950 } : undefined}
+          className={`${sidebarPos ? '' : 'hidden md:flex absolute top-4 left-4 z-[900]'} flex-col gap-2 max-w-[290px] w-[290px] max-h-[calc(100vh-140px)] overflow-y-auto pr-1 select-none scrollbar-thin transition-all ${isSidebarDragging ? 'shadow-2xl shadow-blue-500/20 scale-[1.01]' : ''}`}
+        >
           {/* Header Tab Bar */}
           <div className="bg-[#1E293B]/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-xl flex items-center justify-between text-xs font-mono">
-            <div className="flex gap-1">
+            <div
+              {...sidebarDragProps}
+              className="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-white touch-none shrink-0"
+              title="Sidebar verschieben (Ziehen)"
+            >
+              <GripVertical className="w-3.5 h-3.5" />
+            </div>
+            <div className="flex gap-1 flex-1 min-w-0">
               <button
                 onClick={() => setDesktopSidebarTab('layers')}
                 className={`px-2 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1 ${
@@ -2566,11 +2606,22 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       {/* Floating Sector Details Card (When a sector is clicked) */}
       {selectedSector && (
-        <div className="fixed sm:absolute bottom-24 sm:bottom-28 md:bottom-24 right-2 sm:right-6 left-2 sm:left-auto sm:w-[420px] max-w-[calc(100vw-1rem)] z-[1100] bg-[#1E293B]/95 backdrop-blur-md border border-slate-700 rounded-2xl shadow-2xl text-slate-100 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+        <div
+          ref={sectorCardDragRef}
+          style={sectorCardPos ? { position: 'fixed', left: `${sectorCardPos.x}px`, top: `${sectorCardPos.y}px`, zIndex: 1100 } : undefined}
+          className={`${sectorCardPos ? '' : 'fixed sm:absolute bottom-20 sm:bottom-24 right-2 sm:right-6 left-2 sm:left-auto z-[1100]'} sm:w-[420px] max-w-[calc(100vw-1rem)] max-h-[min(480px,calc(100vh-120px))] bg-[#1E293B]/95 backdrop-blur-md border border-slate-700 rounded-2xl shadow-2xl text-slate-100 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200`}
+        >
           <>
             {/* Card Header */}
-            <div className="flex items-start justify-between gap-2 p-3.5 pb-2.5 border-b border-slate-700 bg-slate-900/80">
-              <div className="min-w-0">
+            <div className="flex items-center justify-between gap-2 p-3 pb-2.5 border-b border-slate-700 bg-slate-900/80">
+              <div
+                {...sectorCardDragProps}
+                className="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-white touch-none shrink-0"
+                title="Karte verschieben (Ziehen)"
+              >
+                <GripVertical className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">
                     {selectedSector.status === 'searched' ? '✅' : selectedSector.status === 'in_progress' ? '⏳' : '🎯'}
@@ -2704,11 +2755,22 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       {/* Floating Tactical User / Responder Card (When a responder pin is clicked) */}
       {selectedUser && (
-        <div className="fixed sm:absolute bottom-24 sm:bottom-28 md:bottom-24 right-2 sm:right-6 left-2 sm:left-auto sm:w-[420px] max-w-[calc(100vw-1rem)] z-[1100] bg-[#1E293B]/95 backdrop-blur-md border border-slate-700 rounded-2xl shadow-2xl text-slate-100 flex flex-col overflow-hidden animate-in fade-in slide-in-from-right-4 duration-200">
+        <div
+          ref={userCardDragRef}
+          style={userCardPos ? { position: 'fixed', left: `${userCardPos.x}px`, top: `${userCardPos.y}px`, zIndex: 1100 } : undefined}
+          className={`${userCardPos ? '' : 'fixed sm:absolute bottom-20 sm:bottom-24 right-2 sm:right-6 left-2 sm:left-auto z-[1100]'} sm:w-[420px] max-w-[calc(100vw-1rem)] max-h-[min(480px,calc(100vh-120px))] bg-[#1E293B]/95 backdrop-blur-md border border-slate-700 rounded-2xl shadow-2xl text-slate-100 flex flex-col overflow-hidden animate-in fade-in slide-in-from-right-4 duration-200`}
+        >
           <>
             {/* Card Header */}
-            <div className="flex items-start justify-between gap-3 p-3.5 pb-2.5 border-b border-slate-700 bg-slate-900/80">
-              <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center justify-between gap-3 p-3 pb-2.5 border-b border-slate-700 bg-slate-900/80">
+              <div
+                {...userCardDragProps}
+                className="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-white touch-none shrink-0"
+                title="Karte verschieben (Ziehen)"
+              >
+                <GripVertical className="w-4 h-4" />
+              </div>
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-blue-500 shadow-md bg-slate-800 flex items-center justify-center shrink-0">
                   {selectedUser.photoUrl ? (
                     <img src={selectedUser.photoUrl} alt={selectedUser.name} className="h-full w-full object-cover" />
@@ -3041,15 +3103,28 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         </div>
       )}
 
-      {/* DESKTOP / TABLET FLOATING WEATHER OVERLAY (Top-Right of Map) */}
+      {/* DESKTOP / TABLET FLOATING WEATHER OVERLAY (Top-Right of Map, Draggable) */}
       {showWeatherOverlay && (
-        <div className="hidden md:block absolute top-4 right-4 z-[900] w-[340px] max-w-[calc(100vw-360px)] animate-in fade-in slide-in-from-top-2 duration-200">
-          <TacticalWeatherOverlay
-            lat={weatherTarget.lat}
-            lng={weatherTarget.lng}
-            locationTitle={weatherTarget.title}
-            onClose={() => setShowWeatherOverlay(false)}
-          />
+        <div
+          ref={weatherDragRef}
+          style={weatherPos ? { position: 'fixed', left: `${weatherPos.x}px`, top: `${weatherPos.y}px`, zIndex: 900 } : undefined}
+          className={`${weatherPos ? '' : 'hidden md:block absolute top-14 right-4 z-[900]'} w-[340px] max-w-[calc(100vw-360px)] animate-in fade-in slide-in-from-top-2 duration-200`}
+        >
+          <div className="relative group">
+            <div
+              {...weatherDragProps}
+              className="absolute top-2 left-2 z-[950] p-1 rounded-md bg-slate-900/80 text-slate-400 hover:text-white cursor-grab active:cursor-grabbing border border-slate-700 touch-none"
+              title="Wetter-Widget verschieben (Ziehen)"
+            >
+              <GripVertical className="w-3.5 h-3.5" />
+            </div>
+            <TacticalWeatherOverlay
+              lat={weatherTarget.lat}
+              lng={weatherTarget.lng}
+              locationTitle={weatherTarget.title}
+              onClose={() => setShowWeatherOverlay(false)}
+            />
+          </div>
         </div>
       )}
 

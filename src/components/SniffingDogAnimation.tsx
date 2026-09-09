@@ -3,19 +3,19 @@ import React from 'react';
 export const SniffingDogAnimation: React.FC = () => {
   return (
     <div className="fixed bottom-0 left-0 right-0 h-36 pointer-events-none z-[9999] overflow-hidden select-none">
-      {/* Continuous Crisp RAL 6010 Grasgrün Ground Line */}
-      <div className="absolute bottom-[18px] left-0 right-0 h-[3px] bg-[#35682D] shadow-[0_0_10px_rgba(53,104,45,0.8)]" />
+      {/* Continuous Crisp Neon Gelb/Grün Ground Line */}
+      <div className="absolute bottom-[18px] left-0 right-0 h-[3px] bg-[#ccff00] shadow-[0_0_12px_rgba(204,255,0,0.9)]" />
 
       {/* Walking Dog Outer Container: Travels 100% Screen Width from Far-Right to Far-Left */}
       <div className="absolute bottom-[6px] left-0 animate-dog-walk-across flex items-end">
-        {/* German Shepherd in RAL 6010 Grasgrün (#35682D) */}
+        {/* German Shepherd in Neon Gelb/Grün (#ccff00) */}
         <svg
           width="240"
           height="140"
           viewBox="0 0 240 140"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="text-[#35682D] drop-shadow-[0_0_12px_rgba(53,104,45,0.9)] overflow-visible"
+          className="text-[#ccff00] drop-shadow-[0_0_14px_rgba(204,255,0,0.95)] overflow-visible"
         >
           <defs>
             <style>{`
@@ -138,11 +138,11 @@ export const SniffingDogAnimation: React.FC = () => {
           </defs>
 
           {/* SCENT PARTICLES AT NOSE */}
-          <circle cx="24" cy="116" r="2.2" fill="#35682D" className="sniff-dot-1" />
-          <circle cx="18" cy="111" r="2.8" fill="#35682D" className="sniff-dot-2" />
+          <circle cx="24" cy="116" r="2.2" fill="#ccff00" className="sniff-dot-1" />
+          <circle cx="18" cy="111" r="2.8" fill="#ccff00" className="sniff-dot-2" />
 
-          {/* REALISTIC MULTI-PATH VECTOR STROKES IN RAL 6010 GRASGRÜN */}
-          <g stroke="#35682D" strokeWidth="4.2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+          {/* REALISTIC MULTI-PATH VECTOR STROKES IN NEON GELB/GRÜN */}
+          <g stroke="#ccff00" strokeWidth="4.2" strokeLinecap="round" strokeLinejoin="round" fill="none">
             
             {/* BACKGROUND LEGS */}
             <g className="anim-leg-br" opacity="0.5">
@@ -191,16 +191,16 @@ export const SniffingDogAnimation: React.FC = () => {
 
               {/* Expressive Eye */}
               <g stroke="none">
-                <ellipse cx="46" cy="58" rx="3.5" ry="5.5" fill="#35682D" />
+                <ellipse cx="46" cy="58" rx="3.5" ry="5.5" fill="#ccff00" />
                 <ellipse cx="44.5" cy="58.5" rx="2" ry="3" fill="#0F172A" />
-                <ellipse cx="47" cy="56" rx="1" ry="1.5" fill="#35682D" />
+                <ellipse cx="47" cy="56" rx="1" ry="1.5" fill="#ccff00" />
               </g>
 
               {/* Prominent Animated Schnüffelnase */}
               <g className="anim-sniff-nose" stroke="none">
-                <ellipse cx="25" cy="91" rx="4.5" ry="3.2" fill="#35682D" />
+                <ellipse cx="25" cy="91" rx="4.5" ry="3.2" fill="#ccff00" />
                 <ellipse cx="24" cy="91.5" rx="1.8" ry="1.2" fill="#0F172A" />
-                <circle cx="26.2" cy="89.8" r="0.8" fill="#35682D" />
+                <circle cx="26.2" cy="89.8" r="0.8" fill="#ccff00" />
               </g>
             </g>
           </g>

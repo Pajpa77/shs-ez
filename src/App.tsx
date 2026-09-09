@@ -28,6 +28,7 @@ const SearchTeamsModal = lazy(() => import('./components/SearchTeamsModal').then
 import { TrackingTestOverlay } from './components/TrackingTestOverlay';
 import { QuotaNotificationBanner } from './components/QuotaNotificationBanner';
 import { DroneFeedWidget } from './components/DroneFeedWidget';
+import { FloatingMapControlsBar } from './components/FloatingMapControlsBar';
 
 import { useWakeLock } from './hooks/useWakeLock';
 import { usePWAInstall } from './hooks/usePWAInstall';
@@ -81,6 +82,7 @@ const MainApp: React.FC = () => {
 
 
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
+  const [pwaBannerDismissed, setPwaBannerDismissed] = useState(false);
   
   // Prevent accidental page leave during active session/operation
   useEffect(() => {
@@ -117,7 +119,8 @@ const MainApp: React.FC = () => {
   const [isMapLight, setIsMapLight] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('rescue_map_tile_light');
-      return saved !== '0';
+      if (saved === '0') return false;
+      return true;
     } catch {
       return true;
     }
@@ -296,7 +299,7 @@ const MainApp: React.FC = () => {
       <QuotaNotificationBanner />
 
       {/* PWA Install Banner */}
-      {(!isInstalled && (isInstallable || isIOS)) && (
+      {(!isInstalled && !pwaBannerDismissed && (isInstallable || isIOS)) && (
         <div className="fixed bottom-20 left-4 right-4 z-[2500] bg-blue-900/90 border-2 border-blue-400 rounded-2xl p-4 shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-5">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl bg-blue-500 text-white flex items-center justify-center shrink-0 shadow-lg">
@@ -314,15 +317,16 @@ const MainApp: React.FC = () => {
               {isInstallable && (
                 <button
                   onClick={install}
-                  className="mt-3 px-4 py-2 bg-white text-blue-900 rounded-lg font-bold text-xs uppercase tracking-wide transition active:scale-95 shadow-lg"
+                  className="mt-3 px-4 py-2 bg-white text-blue-900 rounded-lg font-bold text-xs uppercase tracking-wide transition active:scale-95 shadow-lg cursor-pointer"
                 >
                   Jetzt Installieren
                 </button>
               )}
             </div>
             <button 
-              onClick={() => { /* Could add a "dismiss" state if needed */ }}
-              className="text-blue-300 hover:text-white"
+              onClick={() => setPwaBannerDismissed(true)}
+              className="text-blue-300 hover:text-white p-1 rounded-lg cursor-pointer"
+              title="Schließen"
             >
               ✕
             </button>
@@ -330,56 +334,17 @@ const MainApp: React.FC = () => {
         </div>
       )}
 
-      {/* UI Zoom Controls - Slim Sleek Floating Control (Visible on Map view) */}
+      {/* UI Zoom Controls & Map Controls - Draggable Floating Bar */}
       {activeTab === 'map' && (
-        <div className="fixed top-[68px] sm:top-[76px] left-2.5 sm:left-[320px] z-[1200] pointer-events-auto flex items-center gap-1.5 bg-[#1E293B]/95 border border-slate-700 rounded-full px-2.5 py-1 shadow-xl backdrop-blur-md text-xs font-mono select-none ring-1 ring-white/10 text-slate-200 max-w-[calc(100vw-20px)] overflow-x-auto">
-          <button
-            onClick={() => setUiScale(Math.max(0.7, Number((uiScale - 0.05).toFixed(2))))}
-            className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700 shrink-0"
-            title="UI Verkleinern"
-          >
-            <Minus className="w-3.5 h-3.5" />
-          </button>
-          <span className="text-[10px] font-bold text-blue-400 px-0.5 min-w-[34px] text-center shrink-0">
-            {Math.round(uiScale * 100)}%
-          </span>
-          <button
-            onClick={() => setUiScale(Math.min(1.4, Number((uiScale + 0.05).toFixed(2))))}
-            className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-blue-600 text-blue-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700 shrink-0"
-            title="UI Vergrößern"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-          {Math.abs(uiScale - 1.0) > 0.01 && (
-            <button
-              onClick={() => setUiScale(1.0)}
-              className="text-[9px] font-bold text-slate-400 hover:text-white px-1 hover:underline cursor-pointer transition border-l border-slate-700 ml-0.5 pl-1.5 shrink-0"
-              title="UI Reset"
-            >
-              Reset
-            </button>
-          )}
-          <div className="w-[1px] h-4 bg-slate-700 mx-1 shrink-0"></div>
-          <button
-            onClick={() => setIsMapLight(!isMapLight)}
-            className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-amber-600 text-amber-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700 shrink-0"
-            title={isMapLight ? "Karte dunkel schalten" : "Karte hell schalten"}
-          >
-            {isMapLight ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
-          </button>
-          {currentUser?.role === 'admin' && (
-            <>
-              <div className="w-[1px] h-4 bg-slate-700 mx-1 shrink-0"></div>
-              <button
-                onClick={() => setShowDroneFeed(!showDroneFeed)}
-                className={`w-6 h-6 flex items-center justify-center rounded-full transition active:scale-90 cursor-pointer border shrink-0 ${showDroneFeed ? 'bg-red-600 text-white border-red-500' : 'bg-slate-800 text-red-400 hover:bg-slate-700 border-slate-700'}`}
-                title="Drohnen-Feed ein/ausschalten"
-              >
-                <RadioTower className="w-3.5 h-3.5" />
-              </button>
-            </>
-          )}
-        </div>
+        <FloatingMapControlsBar
+          uiScale={uiScale}
+          setUiScale={setUiScale}
+          isMapLight={isMapLight}
+          setIsMapLight={setIsMapLight}
+          showDroneFeed={showDroneFeed}
+          setShowDroneFeed={setShowDroneFeed}
+          isAdmin={currentUser?.role === 'admin'}
+        />
       )}
 
       {/* Top Tactical Navigation */}

@@ -276,13 +276,23 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       list = list.map((u) => {
         if (!u || !u.id) return u;
         try {
+          let merged = { ...u };
           const profileBackup = localStorage.getItem(`rescuetrack_user_profile_${u.id}`);
           if (profileBackup) {
             const parsedProfile = JSON.parse(profileBackup);
             if (parsedProfile && typeof parsedProfile === 'object') {
-              return { ...u, ...parsedProfile };
+              merged = { ...merged, ...parsedProfile };
             }
           }
+          const dedicatedPhoto = localStorage.getItem(`rescuetrack_user_photo_${u.id}`);
+          if (dedicatedPhoto && !merged.photoUrl) {
+            merged.photoUrl = dedicatedPhoto;
+          } else if (merged.photoUrl) {
+            try {
+              localStorage.setItem(`rescuetrack_user_photo_${u.id}`, merged.photoUrl);
+            } catch {}
+          }
+          return merged;
         } catch {
           // ignore
         }
@@ -1544,21 +1554,40 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
                 const merged = cloudUsers.map((cloudU) => {
                   const localU = localMap.get(cloudU.id);
-                  if (!localU) return cloudU;
+                  let finalU = cloudU;
                   
-                  const cloudTime = cloudU.updatedAt ? new Date(cloudU.updatedAt).getTime() : 0;
-                  const localTime = localU.updatedAt ? new Date(localU.updatedAt).getTime() : 0;
-                  
-                  // For other users: Cloud is absolute source of truth
-                  if (cloudU.id !== currentUserIdRef.current) {
-                    return cloudU;
+                  if (localU) {
+                    const cloudTime = cloudU.updatedAt ? new Date(cloudU.updatedAt).getTime() : 0;
+                    const localTime = localU.updatedAt ? new Date(localU.updatedAt).getTime() : 0;
+                    
+                    if (cloudU.id === currentUserIdRef.current && localTime > cloudTime) {
+                      finalU = localU;
+                    }
+                  }
+
+                  // Photo Preservation & Auto-Heal across all users:
+                  // If cloud user has no photoUrl (or empty string), check local state or dedicated backup
+                  if (!finalU.photoUrl) {
+                    const dedicatedPhoto = localStorage.getItem(`rescuetrack_user_photo_${finalU.id}`);
+                    const profileBackupRaw = localStorage.getItem(`rescuetrack_user_profile_${finalU.id}`);
+                    let backupPhoto = '';
+                    if (profileBackupRaw) {
+                      try {
+                        const parsed = JSON.parse(profileBackupRaw);
+                        if (parsed && parsed.photoUrl) backupPhoto = parsed.photoUrl;
+                      } catch {}
+                    }
+                    const restoredPhoto = dedicatedPhoto || backupPhoto || (localU && localU.photoUrl) || '';
+                    if (restoredPhoto) {
+                      finalU = { ...finalU, photoUrl: restoredPhoto };
+                      // Auto-heal cloud user if Firestore had no photoUrl
+                      if (!cloudU.photoUrl) {
+                        syncUserToCloud(finalU);
+                      }
+                    }
                   }
                   
-                  // For current user: Cloud wins if newer or same, otherwise keep local un-synced changes
-                  if (cloudTime >= localTime) {
-                    return cloudU;
-                  }
-                  return localU;
+                  return finalU;
                 }).map((u) => {
                   if (
                     u.id === 'user-maria' ||
@@ -2439,6 +2468,11 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
           };
           try {
             localStorage.setItem(`rescuetrack_user_profile_${userId}`, JSON.stringify(updated));
+            if (updated.photoUrl) {
+              localStorage.setItem(`rescuetrack_user_photo_${userId}`, updated.photoUrl);
+            } else {
+              localStorage.removeItem(`rescuetrack_user_photo_${userId}`);
+            }
           } catch {
             // ignore
           }
