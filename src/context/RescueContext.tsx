@@ -1870,15 +1870,15 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               const accuracy = point.accuracy || 15;
               const isAccurate = accuracy <= 40;
 
-              // Stationary jitter filter: if stationary or high accuracy uncertainty, require slightly larger movement threshold
-              const minDistRequired = accuracy > 20 && (point.speed || 0) < 1 ? 3.0 : 1.8;
+              // Stationary jitter filter: high precision micro-movement threshold (down to 1.0m)
+              const minDistRequired = accuracy > 20 && (point.speed || 0) < 1 ? 2.2 : 1.0;
 
               // Signal loss gap detection: if >= 45 seconds elapsed since last recorded point, annotate as gap start
               const isGap = lastHistorical && timeSinceLastMs >= 45000;
 
               const shouldAdd =
                 !lastHistorical ||
-                (isAccurate && (distMoved >= minDistRequired || (timeSinceLastMs >= 20000 && distMoved >= 1.0)));
+                (isAccurate && (distMoved >= minDistRequired || (timeSinceLastMs >= 15000 && distMoved >= 0.8)));
 
               if (shouldAdd) {
                 const pointToStore: GpsPoint = isGap

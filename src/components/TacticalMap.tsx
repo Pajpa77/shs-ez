@@ -492,15 +492,18 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   // Function to create tile layer or hybrid layer group
   const createTileLayer = (key: 'osm' | 'hybrid' | 'satellite' | 'topo'): L.Layer => {
     const config = TILE_LAYERS[key] || TILE_LAYERS.osm;
+    const maxNative = config.maxZoom || 19;
     if (key === 'hybrid' && 'overlayUrl' in config && config.overlayUrl) {
       const baseSat = L.tileLayer(config.url, {
         attribution: config.attribution,
-        maxZoom: config.maxZoom || 19,
+        maxZoom: 22,
+        maxNativeZoom: maxNative,
         crossOrigin: true,
       });
       const labelsOverlay = L.tileLayer(config.overlayUrl, {
         subdomains: config.subdomains || ['a', 'b', 'c', 'd'],
-        maxZoom: config.maxZoom || 19,
+        maxZoom: 22,
+        maxNativeZoom: maxNative,
         pane: 'overlayPane',
         opacity: 1,
         crossOrigin: true,
@@ -510,7 +513,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     return L.tileLayer(config.url, {
       attribution: config.attribution,
       subdomains: config.subdomains || ['a', 'b', 'c'],
-      maxZoom: config.maxZoom || 19,
+      maxZoom: 22,
+      maxNativeZoom: maxNative,
       crossOrigin: true,
     });
   };
@@ -533,7 +537,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     const map = L.map(mapContainerRef.current, {
       center: [defaultLat, defaultLng],
       zoom: 13,
+      maxZoom: 22,
       zoomControl: false,
+      preferCanvas: true, // HTML5 Canvas vector renderer: tracks scale smoothly and instantly during zoom!
     });
 
     // Custom zoom control in bottom right
