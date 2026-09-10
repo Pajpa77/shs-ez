@@ -1422,6 +1422,21 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             );
             tracksLayerRef.current?.addLayer(gapPolyline);
           } else {
+            // Render high-contrast dark outline segment for maximum visibility on satellite/topo maps
+            const glowPolyline = L.polyline(
+              [
+                [prevPt.lat, prevPt.lng],
+                [currPt.lat, currPt.lng],
+              ],
+              {
+                color: '#0f172a',
+                weight: isDrone ? 5 : 6,
+                opacity: 0.6,
+                smoothFactor: 0,
+              }
+            );
+            tracksLayerRef.current?.addLayer(glowPolyline);
+
             // Render normal continuous movement segment
             const segPolyline = L.polyline(
               [
@@ -1431,7 +1446,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               {
                 color: trackColor,
                 weight: isDrone ? 3 : 3.5,
-                opacity: 0.88,
+                opacity: 0.95,
                 smoothFactor: 0,
                 dashArray: isDrone ? '4, 4' : undefined,
               }

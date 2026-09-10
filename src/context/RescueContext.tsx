@@ -1607,31 +1607,39 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     }
                   }
 
-                  // Photo & Member ID Preservation & Auto-Heal across all users
+                  // Full Profile Preservation & Auto-Heal across all users
                   const profileBackupRaw = localStorage.getItem(`rescuetrack_user_profile_${finalU.id}`);
-                  let backupMemberId = '';
-                  let backupPhoto = '';
                   if (profileBackupRaw) {
                     try {
                       const parsed = JSON.parse(profileBackupRaw);
-                      if (parsed) {
-                        if (parsed.memberId) backupMemberId = parsed.memberId;
-                        if (parsed.photoUrl) backupPhoto = parsed.photoUrl;
+                      if (parsed && typeof parsed === 'object') {
+                        finalU = {
+                          ...parsed,
+                          ...finalU,
+                          memberId: finalU.memberId || parsed.memberId || '',
+                          phone: finalU.phone || parsed.phone || '',
+                          licensePlate: finalU.licensePlate || parsed.licensePlate || '',
+                          organization: finalU.organization || parsed.organization || '',
+                          customEquipmentNotes: finalU.customEquipmentNotes || parsed.customEquipmentNotes || '',
+                          callSign: finalU.callSign || parsed.callSign || '',
+                          equipment: (finalU.equipment && finalU.equipment.length > 0) ? finalU.equipment : (parsed.equipment || []),
+                          dogInfo: finalU.dogInfo || parsed.dogInfo,
+                          groupId: finalU.groupId || parsed.groupId,
+                          photoUrl: finalU.photoUrl || parsed.photoUrl || '',
+                        };
                       }
                     } catch {}
                   }
 
-                  if (!finalU.memberId && backupMemberId) {
-                    finalU = { ...finalU, memberId: backupMemberId };
+                  const dedicatedPhoto = localStorage.getItem(`rescuetrack_user_photo_${finalU.id}`);
+                  if (dedicatedPhoto && !finalU.photoUrl) {
+                    finalU = { ...finalU, photoUrl: dedicatedPhoto };
                   }
 
-                  if (!finalU.photoUrl) {
-                    const dedicatedPhoto = localStorage.getItem(`rescuetrack_user_photo_${finalU.id}`);
-                    const restoredPhoto = dedicatedPhoto || backupPhoto || (localU && localU.photoUrl) || '';
-                    if (restoredPhoto) {
-                      finalU = { ...finalU, photoUrl: restoredPhoto };
-                    }
-                  }
+                  // Always persist individual user backup so profile is retained across app updates
+                  try {
+                    localStorage.setItem(`rescuetrack_user_profile_${finalU.id}`, JSON.stringify(finalU));
+                  } catch {}
 
                   // Auto-heal cloud user if Firestore was missing memberId or photoUrl
                   if ((!cloudU.memberId && finalU.memberId) || (!cloudU.photoUrl && finalU.photoUrl)) {
@@ -1775,9 +1783,9 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
     watchPositionIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        const accuracyVal = Math.round(pos.coords.accuracy || 15);
-        // Ignore extremely inaccurate cell tower / wifi location jumps (> 45m accuracy)
-        if (accuracyVal > 45) {
+        const accuracyVal = Math.round(pos.coords.accuracy || 10);
+        // Ignore inaccurate cell tower / wifi location jumps (> 35m accuracy)
+        if (accuracyVal > 35) {
           console.warn('[GPS] Inaccurate GPS reading ignored (accuracy:', accuracyVal, 'm)');
           return;
         }
@@ -1929,7 +1937,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       },
       {
         enableHighAccuracy: true,
-        maximumAge: 4000,
+        maximumAge: 0,
         timeout: 10000,
       }
     );

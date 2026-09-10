@@ -42,8 +42,7 @@ const EQUIPMENT_OPTIONS: { id: EquipmentType; label: string; icon: string }[] = 
 ];
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
-  const { currentUser, updateUser, startTrackingTest } = useRescue();
-  const [showTestDuration, setShowTestDuration] = useState(false);
+  const { currentUser, updateUser } = useRescue();
 
   const [name, setName] = useState('');
   const [callSign, setCallSign] = useState('');
@@ -651,97 +650,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 <div className="text-[10px] text-amber-400/90 italic">
                   Hinweis: Wird beim Klick auf "Profil speichern" übernommen.
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* GPS Tracking & Hardware Readiness Test */}
-          <div className="bg-white dark:bg-slate-900/80 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700 space-y-2.5 font-mono">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Navigation className="w-4 h-4 text-blue-400" />
-                <span className="font-bold text-slate-900 dark:text-slate-200 text-xs uppercase tracking-wider">
-                  GPS-Trackingtest & Geräte-Funktionsprüfung:
-                </span>
-              </div>
-              {currentUser?.lastTrackingTest && (
-                <span
-                  className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold border ${
-                    currentUser.lastTrackingTest.passed
-                      ? 'bg-emerald-950 text-emerald-300 border-emerald-700'
-                      : 'bg-red-950 text-red-300 border-red-700'
-                  }`}
-                >
-                  {currentUser.lastTrackingTest.passed ? '✓ Geprüft' : '⚠️ Test unvollständig'}
-                </span>
-              )}
-            </div>
-
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-sans">
-              Hier kannst du jederzeit testen, ob dein Mobilgerät die GPS-Daten und Spuren zuverlässig aufzeichnet, bevor ein Ernstfalleinsatz beginnt.
-            </p>
-
-            {currentUser?.lastTrackingTest && (
-              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 text-[11px] grid grid-cols-3 gap-2">
-                <div>
-                  <span className="block text-[9px] text-slate-500 uppercase">Letzter Test</span>
-                  <span className="text-slate-700 dark:text-slate-300 font-bold">
-                    {new Date(currentUser.lastTrackingTest.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-[9px] text-slate-500 uppercase">Wegpunkte</span>
-                  <span className="text-slate-700 dark:text-slate-300 font-bold">{currentUser.lastTrackingTest.pointsCount} Pkt.</span>
-                </div>
-                <div>
-                  <span className="block text-[9px] text-slate-500 uppercase">Distanz</span>
-                  <span className="text-slate-700 dark:text-slate-300 font-bold">
-                    {currentUser.lastTrackingTest.distanceMeters >= 1000
-                      ? `${(currentUser.lastTrackingTest.distanceMeters / 1000).toFixed(2)} km`
-                      : `${currentUser.lastTrackingTest.distanceMeters} m`}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {!showTestDuration ? (
-              <button
-                type="button"
-                onClick={() => setShowTestDuration(true)}
-                className="w-full py-2.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase flex items-center justify-center gap-2 shadow transition cursor-pointer"
-              >
-                <Activity className="w-3.5 h-3.5" />
-                <span>Trackingtest jetzt starten</span>
-              </button>
-            ) : (
-              <div className="p-3 rounded-xl bg-blue-950/40 border border-blue-500/40 space-y-2">
-                <span className="block text-[10px] font-bold text-blue-300 uppercase tracking-widest text-center">
-                  Testdauer auswählen:
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  {[10, 20, 30].map((mins) => (
-                    <button
-                      key={mins}
-                      type="button"
-                      onClick={() => {
-                        if (currentUser) {
-                          onClose();
-                          startTrackingTest(currentUser, mins as 10 | 20 | 30);
-                        }
-                      }}
-                      className="py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow transition cursor-pointer"
-                    >
-                      {mins} Min.
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowTestDuration(false)}
-                  className="w-full text-center text-[10px] text-slate-400 hover:text-slate-200 underline pt-1"
-                >
-                  Abbrechen
-                </button>
               </div>
             )}
           </div>
