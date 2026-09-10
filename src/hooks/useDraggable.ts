@@ -35,14 +35,45 @@ export function useDraggable(options: UseDraggableOptions = {}) {
 
   const clampPosition = useCallback((pos: Position, node: HTMLElement): Position => {
     const rect = node.getBoundingClientRect();
-    const maxX = Math.max(0, window.innerWidth - rect.width);
-    const maxY = Math.max(0, window.innerHeight - rect.height);
+    const margin = 8;
+    const maxX = Math.max(margin, window.innerWidth - rect.width - margin);
+    const maxY = Math.max(margin, window.innerHeight - rect.height - margin);
 
     return {
-      x: Math.min(Math.max(0, pos.x), maxX),
-      y: Math.min(Math.max(0, pos.y), maxY),
+      x: Math.min(Math.max(margin, pos.x), maxX),
+      y: Math.min(Math.max(margin, pos.y), maxY),
     };
   }, []);
+
+  // Auto-clamp position whenever viewport resizes or device orientation changes (e.g. smartphone rotation)
+  useEffect(() => {
+    const checkAndClamp = () => {
+      if (!dragRef.current) return;
+      setPosition((prev) => {
+        if (!prev || !dragRef.current) return prev;
+        const clamped = clampPosition(prev, dragRef.current);
+        if (clamped.x !== prev.x || clamped.y !== prev.y) {
+          if (storageKey) {
+            try {
+              localStorage.setItem(`draggable_pos_${storageKey}`, JSON.stringify(clamped));
+            } catch {}
+          }
+          return clamped;
+        }
+        return prev;
+      });
+    };
+
+    window.addEventListener('resize', checkAndClamp);
+    window.addEventListener('orientationchange', checkAndClamp);
+    const timer = setTimeout(checkAndClamp, 200);
+
+    return () => {
+      window.removeEventListener('resize', checkAndClamp);
+      window.removeEventListener('orientationchange', checkAndClamp);
+      clearTimeout(timer);
+    };
+  }, [clampPosition, storageKey]);
 
   const handleStart = useCallback(
     (clientX: number, clientY: number) => {

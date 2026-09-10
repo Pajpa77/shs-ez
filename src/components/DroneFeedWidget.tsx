@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Video, X, Maximize2, Minimize2, RadioTower } from 'lucide-react';
+import { Video, X, Maximize2, Minimize2, RadioTower, GripVertical } from 'lucide-react';
+import { useDraggable } from '../hooks/useDraggable';
 
 interface DroneFeedWidgetProps {
   onClose: () => void;
@@ -7,14 +8,25 @@ interface DroneFeedWidgetProps {
 
 export const DroneFeedWidget: React.FC<DroneFeedWidgetProps> = ({ onClose }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { dragRef, position, dragProps } = useDraggable({ storageKey: 'drone_feed_widget' });
 
   return (
     <div 
-      className={`fixed z-[1000] bottom-20 right-4 md:right-6 md:bottom-24 bg-slate-900 border-2 border-slate-700 shadow-2xl rounded-xl overflow-hidden flex flex-col transition-all duration-300 ${isExpanded ? 'w-[85vw] h-[60vh] md:w-[640px] md:h-[480px]' : 'w-[280px] h-[200px] md:w-[320px] md:h-[240px]'}`}
+      ref={dragRef}
+      style={position ? { position: 'fixed', left: `${position.x}px`, top: `${position.y}px`, zIndex: 1000 } : undefined}
+      className={`${
+        position ? '' : 'fixed z-[1000] bottom-20 right-4 md:right-6 md:bottom-24'
+      } bg-slate-900 border-2 border-slate-700 shadow-2xl rounded-xl overflow-hidden flex flex-col transition-all duration-300 max-w-[calc(100vw-1rem)] ${
+        isExpanded ? 'w-[85vw] h-[60vh] md:w-[640px] md:h-[480px]' : 'w-[280px] h-[200px] md:w-[320px] md:h-[240px]'
+      }`}
     >
       {/* Header Bar */}
-      <div className="bg-slate-800 px-3 py-2 flex items-center justify-between border-b border-slate-700 select-none">
+      <div 
+        {...dragProps}
+        className="bg-slate-800 px-3 py-2 flex items-center justify-between border-b border-slate-700 select-none touch-none cursor-grab active:cursor-grabbing"
+      >
         <div className="flex items-center gap-2">
+          <GripVertical className="w-3.5 h-3.5 text-slate-400" />
           <RadioTower className="w-4 h-4 text-red-500 animate-pulse" />
           <span className="text-xs font-bold font-mono text-slate-200 tracking-wider">DROHNEN-UPLINK (TEST)</span>
         </div>

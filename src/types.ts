@@ -21,6 +21,7 @@ export interface User {
   canLeadOperations?: boolean; // Erlaubt operativer Einsatzleiter zu sein
   callSign: string; // Funkrufname (e.g. "Kater 1/4", "Sucher Alpha")
   licensePlate: string; // KFZ-Kennzeichen (e.g. "M-RD 204")
+  memberId?: string; // Ausweisnummer / Mitgliedsnummer (e.g. "RT-2026-004")
   photoUrl: string;
   phone: string;
   equipment: EquipmentType[];
@@ -138,6 +139,9 @@ export interface GpsPoint {
   accuracy?: number; // in meters
   speed?: number; // in km/h
   altitude?: number;
+  heading?: number; // Grad 0-360 Laufrichtung
+  isGapStart?: boolean; // Erster Punkt nach Signalverlust / Funkloch (> 45s)
+  gapDurationSec?: number; // Dauer der Funkloch-Lücke in Sekunden
 }
 
 export interface UserLocationState {

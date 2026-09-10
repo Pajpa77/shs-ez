@@ -1297,72 +1297,88 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       });
     }
 
-    // 2. Render user tracks from userLocations (in active or paused mode, keeping all recorded movement profiles visible!)
-    if (!isArchiveMode || (currentOperation?.archivedTracks?.length || 0) === 0) {
-      (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState]) => {
-        // If tracking test is active, skip (section 3 below renders activeTrackingTest specifically)
-        if (activeTrackingTest?.isActive) {
-          return;
-        }
-
-        const history = locState.trackHistory;
-        if (!history || history.length < 2) return;
-
-        // If this user track was already rendered in full via archivedTracks, avoid duplicate draw
-        if (renderedTrackUserIds.has(userId) && (currentOperation?.archivedTracks?.find(t => t.userId === userId)?.points.length || 0) >= history.length) {
-          return;
-        }
-
-        const user = allUsers.find((u) => u.id === userId);
-        const isDrone = user?.equipment?.includes('drone');
-        const trackColor = getUserTrackColor(user || userId, allUsers);
-
-        // Segment track to prevent drawing straight lines across extreme GPS jump/teleport (> 1200m)
-        const segments: [number, number][][] = [];
-        let currentSeg: [number, number][] = [];
-
-        for (let i = 0; i < history.length; i++) {
-          const pt = history[i];
-          if (currentSeg.length === 0) {
-            currentSeg.push([pt.lat, pt.lng]);
-          } else {
-            const prevPt = currentSeg[currentSeg.length - 1];
-            const dist = calculateDistanceMeters(prevPt[0], prevPt[1], pt.lat, pt.lng);
-            if (dist > 1200) {
-              if (currentSeg.length > 1) {
-                segments.push(currentSeg);
-              }
-              currentSeg = [[pt.lat, pt.lng]];
-            } else {
-              currentSeg.push([pt.lat, pt.lng]);
+        // 2. Render user tracks from userLocations (in active or paused mode, keeping all recorded movement profiles visible!)
+        if (!isArchiveMode || (currentOperation?.archivedTracks?.length || 0) === 0) {
+          (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState]) => {
+            // If tracking test is active, skip (section 3 below renders activeTrackingTest specifically)
+            if (activeTrackingTest?.isActive) {
+              return;
             }
-          }
-        }
-        if (currentSeg.length > 1) {
-          segments.push(currentSeg);
-        }
 
-        const isPaused = currentOperation?.status === 'paused';
-        const isCompleted = currentOperation?.status === 'completed';
-        const modeLabel = isPaused ? 'Pausiert' : isCompleted ? 'Abgeschlossen' : locState.isLive ? 'Live' : 'Gesichert';
+            const history = locState.trackHistory;
+            if (!history || history.length < 2) return;
 
-        segments.forEach((seg) => {
-          const polyline = L.polyline(seg, {
-            color: trackColor,
-            weight: isDrone ? 3 : 3.5,
-            opacity: 0.88,
-            dashArray: isDrone ? '4, 4' : undefined,
+            // If this user track was already rendered in full via archivedTracks, avoid duplicate draw
+            if (renderedTrackUserIds.has(userId) && (currentOperation?.archivedTracks?.find(t => t.userId === userId)?.points.length || 0) >= history.length) {
+              return;
+            }
+
+            const user = allUsers.find((u) => u.id === userId);
+            const isDrone = user?.equipment?.includes('drone');
+            const trackColor = getUserTrackColor(user || userId, allUsers);
+
+            const isPaused = currentOperation?.status === 'paused';
+            const isCompleted = currentOperation?.status === 'completed';
+            const modeLabel = isPaused ? 'Pausiert' : isCompleted ? 'Abgeschlossen' : locState.isLive ? 'Live' : 'Gesichert';
+
+            // Draw track segments with gap-awareness for Funklöcher (> 45s signal loss)
+            for (let i = 1; i < history.length; i++) {
+              const prevPt = history[i - 1];
+              const currPt = history[i];
+              const dist = calculateDistanceMeters(prevPt.lat, prevPt.lng, currPt.lat, currPt.lng);
+
+              // Skip extreme teleports / map bounds jumps (> 1200m)
+              if (dist > 1200) {
+                continue;
+              }
+
+              const timeDiffMs = Math.abs(new Date(currPt.timestamp).getTime() - new Date(prevPt.timestamp).getTime());
+              const isGap = currPt.isGapStart || timeDiffMs >= 45000;
+
+              if (isGap) {
+                // Render Funkloch-Lücke (Dashed Amber Polyline)
+                const gapPolyline = L.polyline(
+                  [
+                    [prevPt.lat, prevPt.lng],
+                    [currPt.lat, currPt.lng],
+                  ],
+                  {
+                    color: '#f59e0b',
+                    weight: 3,
+                    opacity: 0.8,
+                    dashArray: '6, 6',
+                  }
+                );
+                const gapSec = currPt.gapDurationSec || Math.round(timeDiffMs / 1000);
+                const gapMin = Math.max(1, Math.round(gapSec / 60));
+                gapPolyline.bindTooltip(
+                  `⚠️ Funkloch-Lücke (ca. ${gapMin} Min. ohne Signal): ${user?.name || 'Sucher'} (${user?.callSign || 'Unit'})`,
+                  { sticky: true }
+                );
+                tracksLayerRef.current?.addLayer(gapPolyline);
+              } else {
+                // Render normal continuous movement segment
+                const segPolyline = L.polyline(
+                  [
+                    [prevPt.lat, prevPt.lng],
+                    [currPt.lat, currPt.lng],
+                  ],
+                  {
+                    color: trackColor,
+                    weight: isDrone ? 3 : 3.5,
+                    opacity: 0.88,
+                    dashArray: isDrone ? '4, 4' : undefined,
+                  }
+                );
+                segPolyline.bindTooltip(
+                  `📍 Bewegungsprofil (${modeLabel}): ${user?.name || 'Sucher'} (${user?.callSign || 'Unit'}) • ${history.length} Wegpunkte`,
+                  { sticky: true }
+                );
+                tracksLayerRef.current?.addLayer(segPolyline);
+              }
+            }
           });
-
-          polyline.bindTooltip(
-            `📍 Bewegungsprofil (${modeLabel}): ${user?.name || 'Sucher'} (${user?.callSign || 'Unit'}) • ${history.length} Wegpunkte`,
-            { sticky: true }
-          );
-
-          tracksLayerRef.current?.addLayer(polyline);
-        });
-      });
-    }
+        }
 
     // 3. Render active Trackingtest tracks
     if (activeTrackingTest && activeTrackingTest.trackPoints.length >= 2) {
@@ -1553,6 +1569,27 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           : connStatus === 'stale'
           ? 'border-amber-400 ring-2 ring-amber-400/50'
           : 'border-rose-500 ring-2 ring-rose-500/50';
+
+        // Render Accuracy Confidence Halo for selected responder or current user
+        const posAcc = item.locState.currentPosition?.accuracy;
+        if (posAcc && posAcc > 0 && posAcc <= 100) {
+          const isSelected = selectedUser?.id === item.userId;
+          if (isSelected || (item.isMe && item.isOnline)) {
+            const accuracyCircle = L.circle([item.origLat, item.origLng], {
+              radius: posAcc,
+              color: item.isMe ? '#06b6d4' : item.trackColor,
+              fillColor: item.isMe ? '#06b6d4' : item.trackColor,
+              fillOpacity: 0.12,
+              weight: 1,
+              dashArray: '3, 3',
+            });
+            accuracyCircle.bindTooltip(
+              `🎯 GPS-Genauigkeit: ±${posAcc}m (${item.user.name})`,
+              { sticky: true }
+            );
+            respondersLayerRef.current?.addLayer(accuracyCircle);
+          }
+        }
 
         // Custom animated responder pin with photo/equipment & connection status
         const iconHtml = `
@@ -2221,15 +2258,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         <div
           ref={sidebarDragRef}
           style={sidebarPos ? { position: 'fixed', left: `${sidebarPos.x}px`, top: `${sidebarPos.y}px`, zIndex: 950 } : undefined}
-          className={`${sidebarPos ? '' : 'hidden md:flex absolute top-4 left-4 z-[900]'} flex-col gap-2 max-w-[290px] w-[290px] max-h-[calc(100vh-140px)] overflow-y-auto pr-1 select-none scrollbar-thin transition-all ${isSidebarDragging ? 'shadow-2xl shadow-blue-500/20 scale-[1.01]' : ''}`}
+          className={`hidden md:flex ${sidebarPos ? '' : 'absolute top-4 left-4 z-[900]'} flex-col gap-2 max-w-[290px] w-[290px] max-h-[calc(100vh-140px)] overflow-y-auto pr-1 select-none scrollbar-thin transition-all ${isSidebarDragging ? 'shadow-2xl shadow-blue-500/20 scale-[1.01]' : ''}`}
         >
           {/* Header Tab Bar */}
-          <div className="bg-[#1E293B]/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-xl flex items-center justify-between text-xs font-mono">
-            <div
-              {...sidebarDragProps}
-              className="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-white touch-none shrink-0"
-              title="Sidebar verschieben (Ziehen)"
-            >
+          <div
+            {...sidebarDragProps}
+            className="bg-[#1E293B]/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-xl flex items-center justify-between text-xs font-mono touch-none cursor-grab active:cursor-grabbing"
+          >
+            <div className="p-1 text-slate-400 hover:text-white shrink-0" title="Sidebar verschieben (Ziehen)">
               <GripVertical className="w-3.5 h-3.5" />
             </div>
             <div className="flex gap-1 flex-1 min-w-0">
@@ -2613,12 +2649,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         >
           <>
             {/* Card Header */}
-            <div className="flex items-center justify-between gap-2 p-3 pb-2.5 border-b border-slate-700 bg-slate-900/80">
-              <div
-                {...sectorCardDragProps}
-                className="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-white touch-none shrink-0"
-                title="Karte verschieben (Ziehen)"
-              >
+            <div
+              {...sectorCardDragProps}
+              className="flex items-center justify-between gap-2 p-3 pb-2.5 border-b border-slate-700 bg-slate-900/80 touch-none cursor-grab active:cursor-grabbing"
+            >
+              <div className="p-1 text-slate-400 hover:text-white shrink-0" title="Karte verschieben (Ziehen)">
                 <GripVertical className="w-4 h-4" />
               </div>
               <div className="min-w-0 flex-1">
@@ -2762,12 +2797,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         >
           <>
             {/* Card Header */}
-            <div className="flex items-center justify-between gap-3 p-3 pb-2.5 border-b border-slate-700 bg-slate-900/80">
-              <div
-                {...userCardDragProps}
-                className="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-white touch-none shrink-0"
-                title="Karte verschieben (Ziehen)"
-              >
+            <div
+              {...userCardDragProps}
+              className="flex items-center justify-between gap-3 p-3 pb-2.5 border-b border-slate-700 bg-slate-900/80 touch-none cursor-grab active:cursor-grabbing"
+            >
+              <div className="p-1 text-slate-400 hover:text-white shrink-0" title="Karte verschieben (Ziehen)">
                 <GripVertical className="w-4 h-4" />
               </div>
               <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -3107,13 +3141,13 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       {showWeatherOverlay && (
         <div
           ref={weatherDragRef}
+          {...weatherDragProps}
           style={weatherPos ? { position: 'fixed', left: `${weatherPos.x}px`, top: `${weatherPos.y}px`, zIndex: 900 } : undefined}
-          className={`${weatherPos ? '' : 'hidden md:block absolute top-14 right-4 z-[900]'} w-[340px] max-w-[calc(100vw-360px)] animate-in fade-in slide-in-from-top-2 duration-200`}
+          className={`hidden md:block ${weatherPos ? '' : 'absolute top-14 right-4 z-[900]'} w-[340px] max-w-[calc(100vw-1rem)] animate-in fade-in slide-in-from-top-2 duration-200 touch-none cursor-grab active:cursor-grabbing`}
         >
           <div className="relative group">
             <div
-              {...weatherDragProps}
-              className="absolute top-2 left-2 z-[950] p-1 rounded-md bg-slate-900/80 text-slate-400 hover:text-white cursor-grab active:cursor-grabbing border border-slate-700 touch-none"
+              className="absolute top-2 left-2 z-[950] p-1 rounded-md bg-slate-900/80 text-slate-400 hover:text-white border border-slate-700"
               title="Wetter-Widget verschieben (Ziehen)"
             >
               <GripVertical className="w-3.5 h-3.5" />

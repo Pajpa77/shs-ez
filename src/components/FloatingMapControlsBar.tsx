@@ -28,6 +28,7 @@ export const FloatingMapControlsBar: React.FC<FloatingMapControlsBarProps> = ({
   return (
     <div
       ref={dragRef}
+      {...dragProps}
       style={
         position
           ? {
@@ -39,15 +40,14 @@ export const FloatingMapControlsBar: React.FC<FloatingMapControlsBarProps> = ({
           : undefined
       }
       className={`${
-        position ? '' : 'fixed top-[64px] right-3 sm:right-6 z-[1200]'
-      } pointer-events-auto flex items-center gap-1.5 bg-[#1E293B]/95 border border-slate-700/90 rounded-full px-2.5 py-1.5 shadow-2xl backdrop-blur-md text-xs font-mono select-none ring-1 ring-white/10 text-slate-200 transition-shadow ${
+        position ? '' : 'fixed top-[56px] sm:top-[64px] right-2 sm:right-6 z-[1200]'
+      } pointer-events-auto flex items-center gap-1.5 max-w-[calc(100vw-1rem)] bg-[#1E293B]/95 border border-slate-700/90 rounded-full px-2 py-1.5 sm:px-2.5 shadow-2xl backdrop-blur-md text-xs font-mono select-none ring-1 ring-white/10 text-slate-200 transition-shadow touch-none cursor-grab active:cursor-grabbing ${
         isDragging ? 'shadow-blue-500/20 scale-[1.02] cursor-grabbing' : ''
       }`}
     >
       {/* Drag Handle */}
       <div
-        {...dragProps}
-        className="flex items-center justify-center text-slate-500 hover:text-slate-300 cursor-grab active:cursor-grabbing px-0.5 border-r border-slate-700/80 pr-1.5 touch-none"
+        className="flex items-center justify-center text-slate-500 hover:text-slate-300 px-0.5 border-r border-slate-700/80 pr-1.5"
         title="Bedienelemente verschieben (Ziehen)"
       >
         <GripVertical className="w-3.5 h-3.5" />

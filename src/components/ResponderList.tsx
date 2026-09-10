@@ -23,7 +23,11 @@ import {
   ChevronUp,
   UserCheck,
   UserX,
+  Scan,
+  CreditCard,
 } from 'lucide-react';
+import { BarcodeScannerModal } from './BarcodeScannerModal';
+import { MemberCardModal } from './MemberCardModal';
 
 interface ResponderListProps {
   onOpenCreateUser: () => void;
@@ -83,6 +87,8 @@ export const ResponderList: React.FC<ResponderListProps> = ({
   const [filterQuery, setFilterQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'einsatzleitung' | 'responder' | 'observer'>('all');
   const [showObserversSection, setShowObserversSection] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [cardUser, setCardUser] = useState<User | null>(null);
 
   // Filter allUsers to only contain participants of the active operation
   const currentOperationUsers = React.useMemo(() => {
@@ -156,6 +162,18 @@ export const ResponderList: React.FC<ResponderListProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end">
+          {/* Main Barcode Scanner Button for Command Center */}
+          {canLead && (
+            <button
+              onClick={() => setIsScannerOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg transition cursor-pointer font-mono"
+              title="Vereinsausweis-Strichcode / QR-Code der Einsatzkraft per Kamera scannen"
+            >
+              <Scan className="w-4 h-4 animate-pulse text-emerald-200" />
+              <span>📷 Ausweis Scannen</span>
+            </button>
+          )}
+
           {/* Main Search Teams Button */}
           <button
             onClick={onOpenSearchTeams}
@@ -272,6 +290,23 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                   <div className="text-[11px] text-slate-700 dark:text-slate-300 font-mono flex items-center justify-between bg-slate-50 dark:bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700/60">
                     <span>Entfernung zur EZ:</span>
                     <span className="font-bold text-white">{distText}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-700/60">
+                    <button
+                      type="button"
+                      onClick={() => setCardUser(user)}
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[11px] font-bold font-mono transition cursor-pointer flex items-center gap-1.5 border border-slate-700 shadow-sm"
+                      title="Vereinsausweis-Barcodes (1D & 2D) anzeigen & exportieren"
+                    >
+                      <CreditCard className="w-3.5 h-3.5 text-blue-400" />
+                      <span>🪪 Barcode / Ausweis</span>
+                    </button>
+                    {user.memberId && (
+                      <span className="text-[10px] font-mono text-slate-400">
+                        ID: <strong className="text-white">{user.memberId}</strong>
+                      </span>
+                    )}
                   </div>
 
                   {(canLead || currentUser?.id === user.id) && status !== 'ready' && (
@@ -778,6 +813,14 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                       <div className="text-[10px] text-purple-300 font-mono">{obs.callSign || obs.username}</div>
                       <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{obs.organization || 'Gast / Externe Stelle'}</div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => setCardUser(obs)}
+                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 cursor-pointer"
+                      title="Vereinsausweis / Barcodes anzeigen"
+                    >
+                      <CreditCard className="w-3.5 h-3.5 text-blue-400" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -785,6 +828,23 @@ export const ResponderList: React.FC<ResponderListProps> = ({
           </div>
         )}
       </div>
+
+      {/* Barcode Scanner Modal for Command Center */}
+      {isScannerOpen && (
+        <BarcodeScannerModal
+          allUsers={allUsers}
+          onConfirmReady={(userId) => confirmUserReady(userId)}
+          onClose={() => setIsScannerOpen(false)}
+        />
+      )}
+
+      {/* Member Card / Barcode Generator Export Modal */}
+      {cardUser && (
+        <MemberCardModal
+          user={cardUser}
+          onClose={() => setCardUser(null)}
+        />
+      )}
     </div>
   );
 };

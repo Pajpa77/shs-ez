@@ -1724,6 +1724,11 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
     watchPositionIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
+        const headingVal =
+          typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && pos.coords.heading >= 0
+            ? Math.round(pos.coords.heading)
+            : undefined;
+
         const point: GpsPoint = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
@@ -1731,6 +1736,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
           accuracy: Math.round(pos.coords.accuracy),
           speed: pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0,
           altitude: pos.coords.altitude ? Math.round(pos.coords.altitude) : undefined,
+          heading: headingVal,
         };
         setMyLocation(point);
         
@@ -1763,7 +1769,6 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             };
 
             // Safely handle track history: only drop the solitary initial seed mock point if present.
-            // NEVER wipe recorded tracks on distance jumps (> 1000m) – the map cleanly segments polylines!
             let cleanHistory = [...(userLoc.trackHistory || [])];
             if (cleanHistory.length === 1) {
               const pt0 = cleanHistory[0];
@@ -1784,17 +1789,36 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               const distMoved = lastHistorical
                 ? calculateDistanceMeters(lastHistorical.lat, lastHistorical.lng, point.lat, point.lng)
                 : 999;
-              const timeSinceLast = lastHistorical
+              const timeSinceLastMs = lastHistorical
                 ? Math.abs(new Date(point.timestamp).getTime() - new Date(lastHistorical.timestamp).getTime())
                 : 99999;
-              // Accept points with good accuracy (<= 40m) or if no accuracy metadata available
-              const isAccurate = !point.accuracy || point.accuracy <= 40;
-              // Record point if moved >= 2.0m (filters out stationary jitter) or every 20s if moved >= 1.0m
+
+              // Accept points with good accuracy (<= 40m)
+              const accuracy = point.accuracy || 15;
+              const isAccurate = accuracy <= 40;
+
+              // Stationary jitter filter: if stationary or high accuracy uncertainty, require slightly larger movement threshold
+              const minDistRequired = accuracy > 20 && (point.speed || 0) < 1 ? 3.0 : 1.8;
+
+              // Signal loss gap detection: if >= 45 seconds elapsed since last recorded point, annotate as gap start
+              const isGap = lastHistorical && timeSinceLastMs >= 45000;
+
               const shouldAdd =
                 !lastHistorical ||
-                (isAccurate && (distMoved >= 2.0 || (timeSinceLast >= 20000 && distMoved >= 1.0)));
+                (isAccurate && (distMoved >= minDistRequired || (timeSinceLastMs >= 20000 && distMoved >= 1.0)));
 
-              nextHistory = shouldAdd ? [...cleanHistory, point].slice(-MAX_TRACK_POINTS) : cleanHistory;
+              if (shouldAdd) {
+                const pointToStore: GpsPoint = isGap
+                  ? {
+                      ...point,
+                      isGapStart: true,
+                      gapDurationSec: Math.round(timeSinceLastMs / 1000),
+                    }
+                  : point;
+                nextHistory = [...cleanHistory, pointToStore].slice(-MAX_TRACK_POINTS);
+              } else {
+                nextHistory = cleanHistory;
+              }
             } else {
               nextHistory = [];
             }
@@ -1856,6 +1880,11 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       if (shouldRunBgGps) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
+            const headingVal =
+              typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && pos.coords.heading >= 0
+                ? Math.round(pos.coords.heading)
+                : undefined;
+
             const bgPoint: GpsPoint = {
               lat: pos.coords.latitude,
               lng: pos.coords.longitude,
@@ -1863,6 +1892,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               accuracy: Math.round(pos.coords.accuracy),
               speed: pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0,
               altitude: pos.coords.altitude ? Math.round(pos.coords.altitude) : undefined,
+              heading: headingVal,
             };
             setMyLocation(bgPoint);
 
@@ -1894,9 +1924,19 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 const distMoved = lastPt
                   ? calculateDistanceMeters(lastPt.lat, lastPt.lng, bgPoint.lat, bgPoint.lng)
                   : 999;
+                const timeSinceLastMs = lastPt
+                  ? Math.abs(new Date(bgPoint.timestamp).getTime() - new Date(lastPt.timestamp).getTime())
+                  : 99999;
                 const isAccurate = !bgPoint.accuracy || bgPoint.accuracy <= 40;
+                const isGap = lastPt && timeSinceLastMs >= 45000;
                 const shouldAdd = !lastPt || (isAccurate && distMoved >= 2.0);
-                nextHistory = shouldAdd ? [...nextHistory, bgPoint].slice(-MAX_TRACK_POINTS) : nextHistory;
+
+                if (shouldAdd) {
+                  const pointToStore: GpsPoint = isGap
+                    ? { ...bgPoint, isGapStart: true, gapDurationSec: Math.round(timeSinceLastMs / 1000) }
+                    : bgPoint;
+                  nextHistory = [...nextHistory, pointToStore].slice(-MAX_TRACK_POINTS);
+                }
               }
               const updatedState: UserLocationState = {
                 ...uLoc,

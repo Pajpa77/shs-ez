@@ -48,6 +48,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
   const [name, setName] = useState('');
   const [callSign, setCallSign] = useState('');
   const [licensePlate, setLicensePlate] = useState('');
+  const [memberId, setMemberId] = useState('');
   const [phone, setPhone] = useState('');
   const [organization, setOrganization] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
@@ -83,6 +84,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
         setName(currentUser.name || '');
         setCallSign(currentUser.callSign || '');
         setLicensePlate(currentUser.licensePlate || '');
+        setMemberId(currentUser.memberId || '');
         setPhone(currentUser.phone || '');
         setOrganization(currentUser.organization || '');
         setPhotoUrl(currentUser.photoUrl || '');
@@ -198,6 +200,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
       name: name.trim(),
       callSign: callSign.trim() || name.trim(),
       licensePlate: licensePlate.trim(),
+      memberId: memberId.trim(),
       phone: phone.trim(),
       organization: organization.trim(),
       photoUrl: photoUrl.trim(),
@@ -383,8 +386,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             </div>
           </div>
 
-          {/* License plate & Phone */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* License plate, MemberId & Phone */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 font-mono uppercase tracking-wider">KFZ-Kennzeichen:</label>
               <input
@@ -392,6 +395,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 value={licensePlate}
                 onChange={(e) => setLicensePlate(e.target.value)}
                 placeholder="z.B. M-RD 112"
+                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 font-mono uppercase tracking-wider">Ausweis- / Mitglieds-ID:</label>
+              <input
+                type="text"
+                value={memberId}
+                onChange={(e) => setMemberId(e.target.value)}
+                placeholder="z.B. RT-2026-004"
                 className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>
