@@ -1800,7 +1800,8 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         
         // Record for tracking test if active
         const currentTest = activeTrackingTestRef.current;
-        if (currentTest && currentTest.isActive && !currentTest.isCompleted) {
+        const isTestRunning = Boolean(currentTest && currentTest.isActive && !currentTest.isCompleted);
+        if (isTestRunning) {
           setActiveTrackingTest((prev) => {
             if (!prev) return null;
             const lastPt = prev.trackPoints[prev.trackPoints.length - 1];
@@ -1819,8 +1820,8 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
           });
         }
 
-        // Only broadcast GPS for active responders, NOT observers
-        if (currentUser && currentUser.role !== 'observer') {
+        // Only broadcast GPS for active responders on main operation map when NOT running a tracking test
+        if (currentUser && currentUser.role !== 'observer' && !isTestRunning) {
           setUserLocations((prev) => {
             const userLoc = prev[currentUser.id] || {
               userId: currentUser.id,
@@ -1845,8 +1846,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
             const isUserReady =
               currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
+            const isOpRunning = currentOperation && currentOperation.status === 'active';
             let nextHistory = cleanHistory;
-            if (isUserReady) {
+
+            if (isUserReady && isOpRunning) {
               const lastHistorical = cleanHistory[cleanHistory.length - 1];
               const distMoved = lastHistorical
                 ? calculateDistanceMeters(lastHistorical.lat, lastHistorical.lng, point.lat, point.lng)
@@ -1905,8 +1908,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             const distMoved = calculateDistanceMeters(lastSync.lat, lastSync.lng, point.lat, point.lng);
 
             if (timeDiff >= 15000 && (distMoved >= 8 || lastSync.timestamp === 0)) {
-              lastCloudGpsSyncRef.current = { timestamp: now, lat: point.lat, lng: point.lng };
-              syncLocationToCloud(currentUser.id, updatedLocState);
+              if (isUserReady && isOpRunning) {
+                lastCloudGpsSyncRef.current = { timestamp: now, lat: point.lat, lng: point.lng };
+                syncLocationToCloud(currentUser.id, updatedLocState);
+              }
             }
 
             // Broadcast to local tabs instantly for fluid UI
@@ -1975,41 +1980,46 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               });
             }
 
-            setUserLocations((prev) => {
-              const uLoc = prev[currentUser.id];
-              if (!uLoc) return prev;
-              const isReady =
-                currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
-              let nextHistory = uLoc.trackHistory || [];
-              if (isReady) {
-                const lastPt = nextHistory[nextHistory.length - 1];
-                const distMoved = lastPt
-                  ? calculateDistanceMeters(lastPt.lat, lastPt.lng, bgPoint.lat, bgPoint.lng)
-                  : 999;
-                const timeSinceLastMs = lastPt
-                  ? Math.abs(new Date(bgPoint.timestamp).getTime() - new Date(lastPt.timestamp).getTime())
-                  : 99999;
-                const isAccurate = !bgPoint.accuracy || bgPoint.accuracy <= 40;
-                const isGap = lastPt && timeSinceLastMs >= 45000;
-                const shouldAdd = !lastPt || (isAccurate && distMoved >= 2.0);
+            if (!isTestRunning && currentUser && currentUser.role !== 'observer') {
+              setUserLocations((prev) => {
+                const uLoc = prev[currentUser.id];
+                if (!uLoc) return prev;
+                const isReady =
+                  currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
+                const isOpRunning = currentOperation && currentOperation.status === 'active';
+                let nextHistory = uLoc.trackHistory || [];
+                if (isReady && isOpRunning) {
+                  const lastPt = nextHistory[nextHistory.length - 1];
+                  const distMoved = lastPt
+                    ? calculateDistanceMeters(lastPt.lat, lastPt.lng, bgPoint.lat, bgPoint.lng)
+                    : 999;
+                  const timeSinceLastMs = lastPt
+                    ? Math.abs(new Date(bgPoint.timestamp).getTime() - new Date(lastPt.timestamp).getTime())
+                    : 99999;
+                  const isAccurate = !bgPoint.accuracy || bgPoint.accuracy <= 40;
+                  const isGap = lastPt && timeSinceLastMs >= 45000;
+                  const shouldAdd = !lastPt || (isAccurate && distMoved >= 2.0);
 
-                if (shouldAdd) {
-                  const pointToStore: GpsPoint = isGap
-                    ? { ...bgPoint, isGapStart: true, gapDurationSec: Math.round(timeSinceLastMs / 1000) }
-                    : bgPoint;
-                  nextHistory = [...nextHistory, pointToStore].slice(-MAX_TRACK_POINTS);
+                  if (shouldAdd) {
+                    const pointToStore: GpsPoint = isGap
+                      ? { ...bgPoint, isGapStart: true, gapDurationSec: Math.round(timeSinceLastMs / 1000) }
+                      : bgPoint;
+                    nextHistory = [...nextHistory, pointToStore].slice(-MAX_TRACK_POINTS);
+                  }
                 }
-              }
-              const updatedState: UserLocationState = {
-                ...uLoc,
-                currentPosition: bgPoint,
-                trackHistory: nextHistory,
-                lastUpdated: new Date().toISOString(),
-                isLive: true,
-              };
-              syncLocationToCloud(currentUser.id, updatedState);
-              return { ...prev, [currentUser.id]: updatedState };
-            });
+                const updatedState: UserLocationState = {
+                  ...uLoc,
+                  currentPosition: bgPoint,
+                  trackHistory: nextHistory,
+                  lastUpdated: new Date().toISOString(),
+                  isLive: true,
+                };
+                if (isReady && isOpRunning) {
+                  syncLocationToCloud(currentUser.id, updatedState);
+                }
+                return { ...prev, [currentUser.id]: updatedState };
+              });
+            }
           },
           (err) => console.warn('Background GPS tick error:', err),
           { enableHighAccuracy: true, maximumAge: 5000, timeout: 8000 }

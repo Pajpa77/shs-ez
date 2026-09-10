@@ -854,7 +854,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
   // Render Point Last Seen (PLS), Home Address, Range Rings & HQ
   useEffect(() => {
-    if (!plsLayerRef.current || !currentOperation) return;
+    if (!plsLayerRef.current || !currentOperation || activeTrackingTest?.isActive) return;
     plsLayerRef.current.clearLayers();
 
     const pls = currentOperation.missingPerson?.lastSeenLocation;
@@ -1018,12 +1018,13 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       }
     }
 
-  }, [currentOperation, showRadiusRings, allUsers, userLocations]);
+  }, [currentOperation, showRadiusRings, allUsers, userLocations, activeTrackingTest]);
 
   // Render EZ / Vereinsbüro Marker (Dedicated Layer)
   useEffect(() => {
     if (!ezLayerRef.current) return;
     ezLayerRef.current.clearLayers();
+    if (activeTrackingTest?.isActive) return;
 
     let hqLat = VEREINSBUERO_LOCATION.lat;
     let hqLng = VEREINSBUERO_LOCATION.lng;
@@ -1110,7 +1111,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       </div>
     `);
     ezLayerRef.current.addLayer(hqMarker);
-  }, [currentOperation]);
+  }, [currentOperation, activeTrackingTest]);
 
   // Render Search Sectors (Suchsektoren)
   useEffect(() => {
@@ -1691,7 +1692,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     if (!findingsLayerRef.current || !currentOperation) return;
     findingsLayerRef.current.clearLayers();
 
-    if (!showFindings) return;
+    if (!showFindings || activeTrackingTest?.isActive) return;
 
     const visibleFindings = (currentOperation.findings || []).filter((finding) => {
       if (showFalseAlarms) return true;
@@ -1745,7 +1746,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       findingsLayerRef.current?.addLayer(marker);
     });
-  }, [currentOperation, showFindings, showFalseAlarms, onOpenFindingDetails, onOpenFindingDetail]);
+  }, [currentOperation, showFindings, showFalseAlarms, onOpenFindingDetails, onOpenFindingDetail, activeTrackingTest]);
 
   // Center on selected user when they change
   useEffect(() => {
