@@ -444,21 +444,21 @@ export const LoginScreen: React.FC = () => {
   const hasActiveOps = activeOperations.length > 0;
 
   return (
-    <div className="h-screen w-full bg-[#5A6D7A] text-slate-100 flex flex-col justify-start items-center p-3 sm:p-6 relative overflow-y-auto font-sans pt-8 sm:pt-16 pb-24 sm:pb-32">
-      {/* Background ambient tactical styling */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06)_0%,rgba(75,93,105,0.4)_85%)] pointer-events-none" />
+    <div className="h-screen w-full bg-[#001489] text-white flex flex-col justify-start items-center p-3 sm:p-6 relative overflow-y-auto font-sans pt-8 sm:pt-16 pb-24 sm:pb-32">
+      {/* Background ambient Pantone Reflex Blue tactical styling */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(20,50,220,0.85)_0%,#000B52_100%)] pointer-events-none" />
 
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-12 gap-6 relative z-10 py-4 mb-12">
         {/* Left Side: System Branding & Mission Overview */}
-        <div className="md:col-span-5 bg-[#475763] border border-[#6B7E8C] rounded-2xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl overflow-hidden relative">
+        <div className="md:col-span-5 bg-[#000E66]/95 border-2 border-[#1E35D4] rounded-2xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl shadow-blue-950/80 overflow-hidden relative">
           {/* Subtle background glow */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.05)_0%,transparent_70%)] pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(60,110,255,0.15)_0%,transparent_70%)] pointer-events-none" />
 
           <div className="space-y-6 relative z-10">
             {/* Logo Block */}
             <div className="flex flex-col items-center gap-4">
               {/* Logo with white-bg removal via invert+screen */}
-              <div className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-2xl overflow-hidden bg-slate-950 border border-slate-700/60 shadow-xl ring-1 ring-blue-500/20 shrink-0 flex items-center justify-center">
+              <div className="relative w-32 h-32 sm:w-36 sm:h-36 rounded-2xl overflow-hidden bg-slate-950 border-2 border-blue-400/50 shadow-xl ring-2 ring-blue-500/30 shrink-0 flex items-center justify-center">
                 <img
                   src="/logo-shs.jpg"
                   alt="Spürhunde Salzlandkreis"
@@ -486,54 +486,54 @@ export const LoginScreen: React.FC = () => {
                 <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight uppercase">
                   Einsatzzentrale
                 </h1>
-                <h2 className="text-sm font-bold text-blue-400 uppercase tracking-widest font-mono">
-                  SHS-EZ
+                <h2 className="text-sm font-bold text-cyan-300 uppercase tracking-widest font-mono">
+                  SHS-EZ (Reflex Blue Edition)
                 </h2>
               </div>
             </div>
 
-            <div className="space-y-3 pt-4 border-t border-slate-700/60 text-xs text-slate-300">
+            <div className="space-y-3 pt-4 border-t border-blue-700/60 text-xs text-blue-100">
               <div className="flex items-center gap-2.5">
-                <div className="h-7 w-7 rounded-lg bg-red-500/20 text-red-400 border border-red-500/40 flex items-center justify-center font-bold text-xs shrink-0">
+                <div className="h-7 w-7 rounded-lg bg-red-500/20 text-red-300 border border-red-500/40 flex items-center justify-center font-bold text-xs shrink-0">
                   🚨
                 </div>
                 <span>Echtzeit-GPS-Tracking mit automatischer Suchstrecken-Aufzeichnung</span>
               </div>
 
               <div className="flex items-center gap-2.5">
-                <div className="h-7 w-7 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-bold text-xs shrink-0">
+                <div className="h-7 w-7 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center justify-center font-bold text-xs shrink-0">
                   ✅
                 </div>
                 <span>Suchsektoren-Aufteilung mit visueller Markierung abgesuchter Flächen</span>
               </div>
 
               <div className="flex items-center gap-2.5">
-                <div className="h-7 w-7 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/40 flex items-center justify-center font-bold text-xs shrink-0">
+                <div className="h-7 w-7 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center justify-center font-bold text-xs shrink-0">
                   🐕
                 </div>
-                <span>Koordinierung von Suchhunde-Teams, Drohnen & externen Helfern</span>
+                <span>Koordinierung von Suchhunde-Teams, Drohnen &amp; externen Helfern</span>
               </div>
 
               <div className="flex items-center gap-2.5">
-                <div className="h-7 w-7 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/40 flex items-center justify-center font-bold text-xs shrink-0">
+                <div className="h-7 w-7 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center justify-center font-bold text-xs shrink-0">
                   🗄️
                 </div>
-                <span>Lückenloses Behördenprotokoll & Dokumentation für Polizei und Leitstelle</span>
+                <span>Lückenloses Behördenprotokoll &amp; Dokumentation für Polizei und Leitstelle</span>
               </div>
             </div>
           </div>
 
-          <div className="pt-6 mt-6 border-t border-slate-300 dark:border-slate-700 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+          <div className="pt-6 mt-6 border-t border-blue-700/60 flex items-center justify-between text-[11px] text-blue-200 font-mono">
             <span>Vereinsbüro Aschersleben</span>
-            <span className="text-emerald-400 font-bold flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="text-emerald-300 font-bold flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
               <span>Einsatzbereit</span>
             </span>
           </div>
         </div>
 
         {/* Right Side: Login Form & Quick Profile Selection */}
-        <div className="md:col-span-7 bg-[#475763] border border-[#6B7E8C] rounded-2xl p-5 sm:p-7 shadow-2xl flex flex-col justify-between">
+        <div className="md:col-span-7 bg-[#000E66]/95 border-2 border-[#1E35D4] rounded-2xl p-5 sm:p-7 shadow-2xl shadow-blue-950/80 flex flex-col justify-between">
           <div>
             {/* Auth Notification / Logout Banner */}
             {authNotification && (
@@ -708,7 +708,7 @@ export const LoginScreen: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleRoleSelected('active')}
-                          className="p-4 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 border-2 border-emerald-500/60 hover:border-emerald-400 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-md"
+                          className="p-4 rounded-xl bg-[#000840] hover:bg-[#001073] border-2 border-emerald-500/80 hover:border-emerald-400 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-lg"
                         >
                           <div>
                             <div className="flex items-center justify-between">
@@ -719,7 +719,7 @@ export const LoginScreen: React.FC = () => {
                                 Einsatzteilnehmer
                               </span>
                             </div>
-                            <p className="text-[11px] text-slate-300 mt-2 font-sans leading-relaxed">
+                            <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
                               Nimmt aktiv am Einsatz teil. GPS-Tracking, Sektorzuweisung, Fundmeldungen &amp; Chat passend zur Rolle (<span className="text-emerald-300 font-bold">{verifiedUser.role === 'admin' || verifiedUser.role === 'einsatzleitung' ? 'Einsatzleitung' : 'Einsatzkraft'}</span>).
                             </p>
                           </div>
@@ -733,7 +733,7 @@ export const LoginScreen: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleRoleSelected('observer')}
-                          className="p-4 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-50 border-2 border-purple-500/60 hover:border-purple-400 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-md"
+                          className="p-4 rounded-xl bg-[#000840] hover:bg-[#001073] border-2 border-purple-500/80 hover:border-purple-400 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-lg"
                         >
                           <div>
                             <div className="flex items-center justify-between">
@@ -744,7 +744,7 @@ export const LoginScreen: React.FC = () => {
                                 Nur Leseansicht
                               </span>
                             </div>
-                            <p className="text-[11px] text-slate-300 mt-2 font-sans leading-relaxed">
+                            <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
                               Nimmt <strong>nicht</strong> aktiv am Einsatz teil und wird keinen Sektoren zugeteilt. Sieht alle Live-Aktionen auf der Karte, Lageberichte und kann den Chat mitlesen.
                             </p>
                           </div>
@@ -755,33 +755,33 @@ export const LoginScreen: React.FC = () => {
                         </button>
 
                         {/* Option 3: Trackingtest */}
-                        <div className="space-y-2 pt-2 mt-2 border-t border-slate-700">
+                        <div className="space-y-2 pt-2 mt-2 border-t border-blue-700/60">
                           <div className="flex items-center gap-2 mb-1 px-1">
-                            <div className="h-px flex-1 bg-slate-700" />
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Alternativ</span>
-                            <div className="h-px flex-1 bg-slate-700" />
+                            <div className="h-px flex-1 bg-blue-700/60" />
+                            <span className="text-[10px] font-bold text-cyan-300 uppercase tracking-widest">Alternativ</span>
+                            <div className="h-px flex-1 bg-blue-700/60" />
                           </div>
 
                           <button
                             type="button"
                             onClick={() => setShowTestDuration(!showTestDuration)}
-                            className="w-full p-4 rounded-xl bg-white dark:bg-slate-900 border-2 border-blue-500/60 hover:border-blue-400 hover:bg-slate-50 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-md"
+                            className="w-full p-4 rounded-xl bg-[#000840] hover:bg-[#001073] border-2 border-cyan-400/80 hover:border-cyan-300 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-lg"
                           >
                             <div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm font-bold uppercase flex items-center gap-2 text-blue-200">
+                                <span className="text-sm font-bold uppercase flex items-center gap-2 text-cyan-200">
                                   <span>🛰️</span> Persönlicher Trackingtest
                                 </span>
-                                <span className="text-[10px] px-2 py-0.5 rounded font-mono border font-bold bg-blue-950 text-blue-300 border-blue-700">
+                                <span className="text-[10px] px-2 py-0.5 rounded font-mono border font-bold bg-cyan-950 text-cyan-300 border-cyan-700">
                                   Testmodus
                                 </span>
                               </div>
-                              <p className="text-[11px] text-slate-400 mt-2 font-sans leading-relaxed">
+                              <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
                                 Überprüft die GPS-Funktion und Genauigkeit deines Geräts im Vorfeld (10-30 Min). Erstellt am Ende ein Prüfprotokoll mit Karte zur Bestätigung.
                               </p>
                             </div>
                             {!showTestDuration && (
-                              <div className="w-full py-2.5 px-3 rounded-lg bg-blue-600 group-hover:bg-blue-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
+                              <div className="w-full py-2.5 px-3 rounded-lg bg-cyan-600 group-hover:bg-cyan-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
                                 <span>Testdauer wählen &amp; starten</span>
                                 <ChevronDown className="w-3.5 h-3.5" />
                               </div>
@@ -789,8 +789,8 @@ export const LoginScreen: React.FC = () => {
                           </button>
 
                           {showTestDuration && (
-                            <div className="p-3 rounded-xl bg-slate-950 border border-blue-500/40 animate-in slide-in-from-top-2 duration-200">
-                              <span className="block text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-3 text-center">
+                            <div className="p-3 rounded-xl bg-[#000529] border border-cyan-400/60 animate-in slide-in-from-top-2 duration-200">
+                              <span className="block text-[10px] font-bold text-cyan-300 uppercase tracking-widest mb-3 text-center">
                                 Wähle die Testdauer:
                               </span>
                               <div className="grid grid-cols-3 gap-2">
@@ -804,7 +804,7 @@ export const LoginScreen: React.FC = () => {
                                         startTrackingTest(verifiedUser, d as 10 | 20 | 30);
                                       }
                                     }}
-                                    className="py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition cursor-pointer"
+                                    className="py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-lg transition cursor-pointer"
                                   >
                                     {d} Min.
                                   </button>
@@ -813,7 +813,7 @@ export const LoginScreen: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => setShowTestDuration(false)}
-                                className="w-full mt-3 py-1.5 text-[10px] text-slate-400 hover:text-slate-200 transition underline"
+                                className="w-full mt-3 py-1.5 text-[10px] text-blue-200 hover:text-white transition underline"
                               >
                                 Abbrechen
                               </button>
@@ -831,10 +831,10 @@ export const LoginScreen: React.FC = () => {
                 {/* 1. Dedicated Device Unlock View */}
                 {loginMode === 'device_unlock' && rememberedUser && !selectedUser ? (
                   <div className="space-y-3 font-mono">
-                    <div className="p-4 rounded-2xl bg-blue-950/30 border-2 border-blue-500/70 space-y-3">
+                    <div className="p-4 rounded-2xl bg-[#000E66] border-2 border-[#2B42F2] space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-blue-300 flex items-center gap-1.5">
-                          <Smartphone className="w-4 h-4 text-blue-400" />
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
+                          <Smartphone className="w-4 h-4 text-cyan-400" />
                           <span>Persönliches Einsatzgerät</span>
                         </span>
                         <span className="text-[10px] text-emerald-400 flex items-center gap-1 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800">
@@ -843,8 +843,8 @@ export const LoginScreen: React.FC = () => {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700">
-                        <div className="h-12 w-12 rounded-xl overflow-hidden border border-slate-400 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                      <div className="flex items-center gap-3 p-3 rounded-xl bg-[#000840] border border-[#2B42F2]/60">
+                        <div className="h-12 w-12 rounded-xl overflow-hidden border border-[#2B42F2] bg-[#001489] flex items-center justify-center shrink-0">
                           {rememberedUser.photoUrl ? (
                             <img
                               src={rememberedUser.photoUrl}
@@ -859,8 +859,8 @@ export const LoginScreen: React.FC = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-bold text-base text-white truncate">{rememberedUser.name}</div>
-                          <div className="text-xs text-blue-400 font-mono">{rememberedUser.callSign}</div>
-                          <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                          <div className="text-xs text-cyan-300 font-mono">{rememberedUser.callSign}</div>
+                          <div className="text-[10px] text-blue-200 truncate mt-0.5">
                             {rememberedUser.organization || 'Spürhunde-Salzlandkreis e.V.'}
                           </div>
                         </div>
@@ -868,7 +868,7 @@ export const LoginScreen: React.FC = () => {
 
                       <form onSubmit={handleVerifyCredentials} className="space-y-3 pt-1">
                         <div className="space-y-1.5">
-                          <label className="block text-[11px] font-bold text-slate-900 dark:text-slate-200 uppercase tracking-wider">
+                          <label className="block text-[11px] font-bold text-blue-100 uppercase tracking-wider">
                             PIN oder Kennwort für {rememberedUser.name}:
                           </label>
                           <div className="relative">
@@ -880,12 +880,12 @@ export const LoginScreen: React.FC = () => {
                               value={password}
                               onChange={(e) => setPassword(e.target.value)}
                               placeholder="PIN / Kennwort eingeben..."
-                              className="w-full pl-3 pr-10 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-950 border-2 border-blue-500/60 focus:border-blue-400 text-black dark:text-slate-100 text-sm focus:outline-none"
+                              className="w-full pl-3 pr-10 py-2.5 rounded-xl bg-[#00073B] border-2 border-[#2B42F2] focus:border-cyan-400 text-white placeholder-blue-300/50 text-sm focus:outline-none"
                             />
                             <button
                               type="button"
                               onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-3 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200 cursor-pointer"
+                              className="absolute right-3 top-3 text-cyan-300 hover:text-white cursor-pointer"
                             >
                               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
@@ -895,7 +895,7 @@ export const LoginScreen: React.FC = () => {
                         <button
                           type="submit"
                           disabled={lockoutSeconds > 0}
-                          className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-100 dark:bg-slate-700 text-white font-bold text-xs shadow-lg transition cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider"
+                          className="w-full py-2.5 rounded-xl bg-[#2B42F2] hover:bg-blue-600 disabled:bg-blue-900/40 text-white font-bold text-xs shadow-lg transition cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider"
                         >
                           <Lock className="w-3.5 h-3.5" />
                           <span>Identität verifizieren</span>
@@ -903,21 +903,21 @@ export const LoginScreen: React.FC = () => {
                         </button>
                       </form>
 
-                      <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                      <div className="pt-2 border-t border-[#1E35D4]/40 flex items-center justify-between text-[11px] text-blue-200">
                         <button
                           type="button"
                           onClick={() => {
                             setLoginMode('direct');
                             handleClearSelection();
                           }}
-                          className="text-blue-400 hover:text-blue-300 underline cursor-pointer"
+                          className="text-cyan-300 hover:text-white underline cursor-pointer"
                         >
                           Nicht {rememberedUser.name}? Anderer Login
                         </button>
                         <button
                           type="button"
                           onClick={handleDisconnectDevice}
-                          className="text-slate-500 hover:text-red-400 transition cursor-pointer"
+                          className="text-red-300 hover:text-red-200 transition cursor-pointer"
                         >
                           Gerät entkoppeln
                         </button>
@@ -928,25 +928,25 @@ export const LoginScreen: React.FC = () => {
                   /* 2. Specific Profile Verification Dialog */
                   <form
                     onSubmit={handleVerifyCredentials}
-                    className="p-4 rounded-2xl bg-blue-950/40 border-2 border-blue-500/80 space-y-3.5 font-mono shadow-xl"
+                    className="p-4 rounded-2xl bg-[#000E66] border-2 border-[#2B42F2] space-y-3.5 font-mono shadow-xl"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-blue-300 flex items-center gap-1.5">
-                        <Shield className="w-4 h-4 text-blue-400" />
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
+                        <Shield className="w-4 h-4 text-cyan-400" />
                         <span>Identitätsprüfung</span>
                       </span>
                       <button
                         type="button"
                         onClick={handleClearSelection}
-                        className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200 underline cursor-pointer flex items-center gap-1"
+                        className="text-[11px] text-blue-200 hover:text-white underline cursor-pointer flex items-center gap-1"
                       >
                         <X className="w-3 h-3" />
                         <span>Anderes Profil</span>
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700">
-                      <div className="h-11 w-11 rounded-xl overflow-hidden border border-slate-400 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                    <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[#000840] border border-[#2B42F2]/60">
+                      <div className="h-11 w-11 rounded-xl overflow-hidden border border-[#2B42F2] bg-[#001489] flex items-center justify-center shrink-0">
                         {selectedUser.photoUrl ? (
                           <img
                             src={selectedUser.photoUrl}
@@ -961,8 +961,8 @@ export const LoginScreen: React.FC = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-bold text-sm text-white truncate">{selectedUser.name}</div>
-                        <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-                          <span className="text-blue-400 font-mono">
+                        <div className="flex items-center gap-2 text-[11px] text-blue-200">
+                          <span className="text-cyan-300 font-mono">
                             {selectedUser.callSign || selectedUser.username}
                           </span>
                         </div>
@@ -970,7 +970,7 @@ export const LoginScreen: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="block text-[11px] font-bold text-slate-900 dark:text-slate-200 uppercase tracking-wider">
+                      <label className="block text-[11px] font-bold text-blue-100 uppercase tracking-wider">
                         Kennwort oder PIN für {selectedUser.name}:
                       </label>
                       <div className="relative">
@@ -982,24 +982,24 @@ export const LoginScreen: React.FC = () => {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="Kennwort oder PIN..."
-                          className="w-full pl-3 pr-10 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-950 border-2 border-blue-500/60 focus:border-blue-400 text-black dark:text-slate-100 text-sm focus:outline-none"
+                          className="w-full pl-3 pr-10 py-2.5 rounded-xl bg-[#00073B] border-2 border-[#2B42F2] focus:border-cyan-400 text-white placeholder-blue-300/50 text-sm focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-3 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200 cursor-pointer"
+                          className="absolute right-3 top-3 text-cyan-300 hover:text-white cursor-pointer"
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
 
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700 dark:text-slate-300">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs text-blue-100">
                       <input
                         type="checkbox"
                         checked={rememberThisDevice}
                         onChange={(e) => setRememberThisDevice(e.target.checked)}
-                        className="rounded text-blue-500 focus:ring-0 cursor-pointer h-4 w-4 bg-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-700"
+                        className="rounded text-cyan-400 focus:ring-0 cursor-pointer h-4 w-4 bg-[#00073B] border-[#2B42F2]"
                       />
                       <span>Dieses Einsatzgerät für {selectedUser.name} merken</span>
                     </label>
@@ -1007,7 +1007,7 @@ export const LoginScreen: React.FC = () => {
                     <button
                       type="submit"
                       disabled={lockoutSeconds > 0}
-                      className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-100 dark:bg-slate-700 text-white font-bold text-xs shadow-lg transition cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider"
+                      className="w-full py-2.5 rounded-xl bg-[#2B42F2] hover:bg-blue-600 disabled:bg-blue-900/40 text-white font-bold text-xs shadow-lg transition cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider"
                     >
                       <Lock className="w-3.5 h-3.5" />
                       <span>Anmeldung prüfen</span>
@@ -1020,7 +1020,7 @@ export const LoginScreen: React.FC = () => {
                     {/* DIRECT SECURE LOGIN FORM */}
                     <form onSubmit={handleVerifyCredentials} className="space-y-3.5 pt-1">
                       <div className="space-y-1">
-                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                        <label className="block text-[11px] font-bold text-blue-100 uppercase tracking-wider">
                           Benutzername / Funkrufname / Name:
                         </label>
                         <div className="relative">
@@ -1031,14 +1031,14 @@ export const LoginScreen: React.FC = () => {
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="z.B. maria, jule, oder Sucher 1"
-                            className="w-full pl-3 pr-8 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                            className="w-full pl-3 pr-8 py-2.5 rounded-xl bg-[#00073B] border-2 border-[#2B42F2] text-white placeholder-blue-300/50 text-xs focus:outline-none focus:border-cyan-400 font-mono"
                           />
-                          <UserIcon className="w-3.5 h-3.5 text-slate-500 absolute right-3 top-3 pointer-events-none" />
+                          <UserIcon className="w-3.5 h-3.5 text-cyan-400 absolute right-3 top-3 pointer-events-none" />
                         </div>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                        <label className="block text-[11px] font-bold text-blue-100 uppercase tracking-wider">
                           Persönliches Kennwort oder PIN:
                         </label>
                         <div className="relative">
@@ -1049,24 +1049,24 @@ export const LoginScreen: React.FC = () => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Persönliches Kennwort oder PIN..."
-                            className="w-full pl-3 pr-8 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                            className="w-full pl-3 pr-8 py-2.5 rounded-xl bg-[#00073B] border-2 border-[#2B42F2] text-white placeholder-blue-300/50 text-xs focus:outline-none focus:border-cyan-400 font-mono"
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-700 dark:text-slate-300 transition cursor-pointer"
+                            className="absolute right-2.5 top-2.5 text-cyan-300 hover:text-white transition cursor-pointer"
                           >
                             {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                           </button>
                         </div>
                       </div>
 
-                      <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700 dark:text-slate-300 pt-1">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs text-blue-100 pt-1">
                         <input
                           type="checkbox"
                           checked={rememberThisDevice}
                           onChange={(e) => setRememberThisDevice(e.target.checked)}
-                          className="rounded text-blue-500 focus:ring-0 cursor-pointer h-4 w-4 bg-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-700"
+                          className="rounded text-cyan-400 focus:ring-0 cursor-pointer h-4 w-4 bg-[#00073B] border-[#2B42F2]"
                         />
                         <span>Dieses Gerät als mein persönliches Einsatzgerät merken</span>
                       </label>
@@ -1074,7 +1074,7 @@ export const LoginScreen: React.FC = () => {
                       <button
                         type="submit"
                         disabled={lockoutSeconds > 0}
-                        className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-100 dark:bg-slate-700 text-white font-bold text-xs shadow-lg transition cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider font-mono"
+                        className="w-full py-2.5 rounded-xl bg-[#2B42F2] hover:bg-blue-600 disabled:bg-blue-900/40 text-white font-bold text-xs shadow-lg transition cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider font-mono"
                       >
                         <Lock className="w-3.5 h-3.5" />
                         <span>Weiter zur Teilnahme-Wahl</span>
