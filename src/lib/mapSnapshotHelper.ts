@@ -330,19 +330,18 @@ function tileToLatLng(x: number, y: number, zoom: number): { lat: number; lng: n
   return { lat, lng };
 }
 
-/** Pick a zoom level so the bounding box covers the canvas well */
+/** Pick a zoom level so the bounding box covers the canvas with high detail */
 function pickZoom(minLat: number, maxLat: number, minLng: number, maxLng: number, canvasW: number, canvasH: number): number {
-  for (let z = 17; z >= 10; z--) {
+  for (let z = 17; z >= 11; z--) {
     const tl = latLngToTile(maxLat, minLng, z);
     const br = latLngToTile(minLat, maxLng, z);
     const tilesX = br.x - tl.x + 1;
     const tilesY = br.y - tl.y + 1;
-    // Target: tiles fill at most 3× the canvas size, but at least 1 tile each side
-    if (tilesX >= 1 && tilesY >= 1 && tilesX * 256 <= canvasW * 3 && tilesY * 256 <= canvasH * 3) {
+    if (tilesX >= 1 && tilesY >= 1 && tilesX * 256 <= canvasW * 1.6 && tilesY * 256 <= canvasH * 1.6) {
       return z;
     }
   }
-  return 13;
+  return 14;
 }
 
 /** Load a single OSM tile as HTMLImageElement */

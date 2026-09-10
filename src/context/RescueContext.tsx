@@ -300,7 +300,7 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
 
       const savedCurrUser = localStorage.getItem(STORAGE_KEY_CURRENT_USER);
-      list = list.map((u) => {
+      list = list.map((u, idx) => {
         if (!u || !u.id) return u;
         
         const uname = (u.username || '').toLowerCase();
@@ -308,9 +308,24 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         // Enforce Maria as First-Admin / Owner
         const isMaria = u.id === 'user-maria' || uname === 'maria' || rname === 'maria';
-        
-        // Enforce Jens as Admin (requested in earlier context)
+        // Enforce Jens as Admin
         const isJens = u.id === 'user-jens' || uname === 'jens' || rname === 'jens';
+        // Enforce Jule
+        const isJule = u.id === 'user-jule' || uname === 'jule' || rname === 'jule';
+        // Enforce Micha
+        const isMicha = u.id === 'user-micha' || uname === 'micha' || rname === 'micha';
+        // Enforce Gast
+        const isGast = u.id === 'user-gast' || uname === 'gast';
+
+        let defaultMemberId = u.memberId;
+        if (!defaultMemberId) {
+          if (isMaria) defaultMemberId = 'RT-2026-001';
+          else if (isJule) defaultMemberId = 'RT-2026-002';
+          else if (isJens) defaultMemberId = 'RT-2026-003';
+          else if (isMicha) defaultMemberId = 'RT-2026-004';
+          else if (isGast) defaultMemberId = 'RT-2026-000';
+          else defaultMemberId = `RT-2026-${String(idx + 5).padStart(3, '0')}`;
+        }
 
         if (isMaria) {
           return {
@@ -320,6 +335,7 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             isFirstAdmin: true,
             isOwner: true,
             canLeadOperations: true,
+            memberId: defaultMemberId,
             isActive: savedCurrUser ? u.id === savedCurrUser : u.isActive,
           };
         }
@@ -329,12 +345,14 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             ...u,
             role: 'admin' as const,
             isAdmin: true,
+            memberId: defaultMemberId,
             isActive: savedCurrUser ? u.id === savedCurrUser : u.isActive,
           };
         }
 
         return {
           ...u,
+          memberId: defaultMemberId,
           isActive: savedCurrUser ? u.id === savedCurrUser : u.isActive,
         };
       });
@@ -1157,7 +1175,11 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         } else if (type === 'USER_UPDATED') {
           setAllUsers((prev) => {
             const localU = prev.find((u) => u.id === payload.id);
-            if (localU && !isInitialCloudSyncRef.current) {
+            const myUser = prev.find((u) => u.id === currentUserIdRef.current);
+            const isMeAdminOrEL = Boolean(
+              myUser && (myUser.role === 'admin' || myUser.role === 'einsatzleitung' || myUser.isAdmin || myUser.canLeadOperations)
+            );
+            if (localU && !isInitialCloudSyncRef.current && isMeAdminOrEL) {
               if (payload.isActive && !localU.isActive) {
                 playAlertSound('notification');
                 if (payload.id !== currentUserIdRef.current) {
@@ -1515,39 +1537,46 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     }
                   });
 
-                  if (newlyActive.length > 0) {
-                    playAlertSound('notification');
-                    if (newlyActive.length === 1) {
-                      const u = newlyActive[0];
-                      setActiveAlertNotification({
-                        title: '🟢 Neuer Benutzer angemeldet',
-                        message: `${u.name} (${u.callSign || u.role}) hat sich soeben eingeloggt.`,
-                        timestamp: new Date().toLocaleTimeString(),
-                      });
-                    } else {
-                      setActiveAlertNotification({
-                        title: '🟢 Mehrere Benutzer angemeldet',
-                        message: `${newlyActive.length} Kräfte wurden soeben aktiviert: ${newlyActive.map(u => u.name).join(', ')}.`,
-                        timestamp: new Date().toLocaleTimeString(),
-                      });
-                    }
-                  }
+                  const myUser = prevLocalUsers.find((u) => u.id === currentUserIdRef.current);
+                  const isMeAdminOrEL = Boolean(
+                    myUser && (myUser.role === 'admin' || myUser.role === 'einsatzleitung' || myUser.isAdmin || myUser.canLeadOperations)
+                  );
 
-                  if (newlyOffline.length > 0 && newlyActive.length === 0) {
-                    playAlertSound('alert');
-                    if (newlyOffline.length === 1) {
-                      const u = newlyOffline[0];
-                      setActiveAlertNotification({
-                        title: '⚠️ Benutzer abgemeldet / offline',
-                        message: `${u.name} (${u.callSign || u.role}) hat das System verlassen.`,
-                        timestamp: new Date().toLocaleTimeString(),
-                      });
-                    } else {
-                      setActiveAlertNotification({
-                        title: '⚠️ Mehrere Benutzer offline',
-                        message: `${newlyOffline.length} Kräfte sind nun offline gegangen.`,
-                        timestamp: new Date().toLocaleTimeString(),
-                      });
+                  if (isMeAdminOrEL) {
+                    if (newlyActive.length > 0) {
+                      playAlertSound('notification');
+                      if (newlyActive.length === 1) {
+                        const u = newlyActive[0];
+                        setActiveAlertNotification({
+                          title: '🟢 Neuer Benutzer angemeldet',
+                          message: `${u.name} (${u.callSign || u.role}) hat sich soeben eingeloggt.`,
+                          timestamp: new Date().toLocaleTimeString(),
+                        });
+                      } else {
+                        setActiveAlertNotification({
+                          title: '🟢 Mehrere Benutzer angemeldet',
+                          message: `${newlyActive.length} Kräfte wurden soeben aktiviert: ${newlyActive.map(u => u.name).join(', ')}.`,
+                          timestamp: new Date().toLocaleTimeString(),
+                        });
+                      }
+                    }
+
+                    if (newlyOffline.length > 0 && newlyActive.length === 0) {
+                      playAlertSound('alert');
+                      if (newlyOffline.length === 1) {
+                        const u = newlyOffline[0];
+                        setActiveAlertNotification({
+                          title: '⚠️ Benutzer abgemeldet / offline',
+                          message: `${u.name} (${u.callSign || u.role}) hat das System verlassen.`,
+                          timestamp: new Date().toLocaleTimeString(),
+                        });
+                      } else {
+                        setActiveAlertNotification({
+                          title: '⚠️ Mehrere Benutzer offline',
+                          message: `${newlyOffline.length} Kräfte sind nun offline gegangen.`,
+                          timestamp: new Date().toLocaleTimeString(),
+                        });
+                      }
                     }
                   }
                 }
@@ -1746,6 +1775,13 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
     watchPositionIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
+        const accuracyVal = Math.round(pos.coords.accuracy || 15);
+        // Ignore extremely inaccurate cell tower / wifi location jumps (> 45m accuracy)
+        if (accuracyVal > 45) {
+          console.warn('[GPS] Inaccurate GPS reading ignored (accuracy:', accuracyVal, 'm)');
+          return;
+        }
+
         const headingVal =
           typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && pos.coords.heading >= 0
             ? Math.round(pos.coords.heading)
@@ -1755,7 +1791,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           timestamp: new Date().toISOString(),
-          accuracy: Math.round(pos.coords.accuracy),
+          accuracy: accuracyVal,
           speed: pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0,
           altitude: pos.coords.altitude ? Math.round(pos.coords.altitude) : undefined,
           heading: headingVal,
@@ -1770,7 +1806,11 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             const lastPt = prev.trackPoints[prev.trackPoints.length - 1];
             if (lastPt) {
               const d = calculateDistanceMeters(lastPt.lat, lastPt.lng, point.lat, point.lng);
-              if (d < 1.5) return prev; // Deduplicate stationary points
+              const timeDiffSec = Math.abs(new Date(point.timestamp).getTime() - new Date(lastPt.timestamp).getTime()) / 1000;
+              // Ignore teleport spikes (> 1500m in < 5s)
+              if (d > 1500 && timeDiffSec < 5) return prev;
+              // Add point if moved at least 1.0m or 3s passed
+              if (d < 1.0 && timeDiffSec < 3) return prev;
             }
             return {
               ...prev,

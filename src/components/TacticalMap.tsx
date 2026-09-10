@@ -577,12 +577,18 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     };
   }, []);
 
-  // Center map on tracking test start
+  // Auto-center map on user location when Tracking Test is active or updates
   useEffect(() => {
-    if (activeTrackingTest && activeTrackingTest.trackPoints.length === 0 && myLocation && mapInstanceRef.current) {
+    if (!mapInstanceRef.current || !activeTrackingTest || !activeTrackingTest.isActive) return;
+    const pts = activeTrackingTest.trackPoints;
+    if (pts.length > 0) {
+      const latest = pts[pts.length - 1];
+      const currentZoom = mapInstanceRef.current.getZoom();
+      mapInstanceRef.current.setView([latest.lat, latest.lng], Math.max(16, currentZoom));
+    } else if (myLocation) {
       mapInstanceRef.current.setView([myLocation.lat, myLocation.lng], 16);
     }
-  }, [activeTrackingTest, myLocation]);
+  }, [activeTrackingTest?.isActive, activeTrackingTest?.trackPoints.length, myLocation]);
 
   // Fit bounds to operation area (sectors, findings, tracks, PLS) especially in archive or when operation changes
   useEffect(() => {
@@ -1224,17 +1230,74 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     });
   }, [currentOperation, allUsers, showSectors]);
 
-  // Render GPS Movement Trails (Suchspuren / Tracks) - Live & Archiviert (Phase 1 / Reaktiviert)
+  // Render GPS Movement Trails (Suchspuren / Tracks) - Live & Archiviert (Phase 1 / Reaktiviert) & TrackingTest
   useEffect(() => {
     if (!tracksLayerRef.current) return;
     tracksLayerRef.current.clearLayers();
+
+    // 1. Render active Trackingtest tracks (unconditionally so test track is ALWAYS visible on map)
+    if (activeTrackingTest && activeTrackingTest.trackPoints.length >= 2) {
+      const points: [number, number][] = activeTrackingTest.trackPoints.map(p => [p.lat, p.lng]);
+      
+      // Background glow line for high contrast
+      const glowPolyline = L.polyline(points, {
+        color: '#0f172a',
+        weight: 7,
+        opacity: 0.7,
+        smoothFactor: 0,
+      });
+      tracksLayerRef.current.addLayer(glowPolyline);
+
+      // Main active test polyline (Vibrant Blue with smoothFactor 0 for zero zoom loss)
+      const polyline = L.polyline(points, {
+        color: '#3b82f6',
+        weight: 4,
+        opacity: 0.95,
+        smoothFactor: 0,
+      });
+
+      polyline.bindTooltip(
+        `⏱️ Trackingtest: ${activeTrackingTest.userName} • ${activeTrackingTest.trackPoints.length} Wegpunkte`,
+        { sticky: true, permanent: true, className: 'tactical-tooltip-test' }
+      );
+
+      tracksLayerRef.current.addLayer(polyline);
+
+      // Start & End markers for the active test
+      const startPt = activeTrackingTest.trackPoints[0];
+      const latestPt = activeTrackingTest.trackPoints[activeTrackingTest.trackPoints.length - 1];
+
+      if (startPt) {
+        const startMarker = L.circleMarker([startPt.lat, startPt.lng], {
+          radius: 7,
+          color: '#16a34a',
+          fillColor: '#4ade80',
+          fillOpacity: 1,
+          weight: 2,
+        });
+        startMarker.bindTooltip('🚀 Test Startpunkt', { permanent: false });
+        tracksLayerRef.current.addLayer(startMarker);
+      }
+
+      if (latestPt && activeTrackingTest.trackPoints.length > 1) {
+        const latestMarker = L.circleMarker([latestPt.lat, latestPt.lng], {
+          radius: 8,
+          color: '#2563eb',
+          fillColor: '#60a5fa',
+          fillOpacity: 1,
+          weight: 3,
+        });
+        latestMarker.bindTooltip('📍 Aktueller Test-Standort', { permanent: false });
+        tracksLayerRef.current.addLayer(latestMarker);
+      }
+    }
 
     if (!showTracks) return;
 
     // Track which user tracks have been rendered to prevent double-drawing identical lines
     const renderedTrackUserIds = new Set<string>();
 
-    // 1. Render historical / archived search tracks (from previous search phases or saved on pause/end)
+    // 2. Render historical / archived search tracks (from previous search phases or saved on pause/end)
     if (currentOperation?.archivedTracks && currentOperation.archivedTracks.length > 0 && !activeTrackingTest?.isActive) {
       currentOperation.archivedTracks.forEach((archivedTrack) => {
         if (!archivedTrack.points || archivedTrack.points.length < 2) return;
@@ -1284,6 +1347,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             color: archivedTrack.color || getUserTrackColor(archivedTrack.userId, allUsers),
             weight: 3.5,
             opacity: 0.85,
+            smoothFactor: 0,
             dashArray: isPhase1 && currentOperation.status === 'active' ? '8, 6' : undefined,
           });
 
@@ -1297,104 +1361,88 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       });
     }
 
-        // 2. Render user tracks from userLocations (in active or paused mode, keeping all recorded movement profiles visible!)
-        if (!isArchiveMode || (currentOperation?.archivedTracks?.length || 0) === 0) {
-          (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState]) => {
-            // If tracking test is active, skip (section 3 below renders activeTrackingTest specifically)
-            if (activeTrackingTest?.isActive) {
-              return;
-            }
-
-            const history = locState.trackHistory;
-            if (!history || history.length < 2) return;
-
-            // If this user track was already rendered in full via archivedTracks, avoid duplicate draw
-            if (renderedTrackUserIds.has(userId) && (currentOperation?.archivedTracks?.find(t => t.userId === userId)?.points.length || 0) >= history.length) {
-              return;
-            }
-
-            const user = allUsers.find((u) => u.id === userId);
-            const isDrone = user?.equipment?.includes('drone');
-            const trackColor = getUserTrackColor(user || userId, allUsers);
-
-            const isPaused = currentOperation?.status === 'paused';
-            const isCompleted = currentOperation?.status === 'completed';
-            const modeLabel = isPaused ? 'Pausiert' : isCompleted ? 'Abgeschlossen' : locState.isLive ? 'Live' : 'Gesichert';
-
-            // Draw track segments with gap-awareness for Funklöcher (> 45s signal loss)
-            for (let i = 1; i < history.length; i++) {
-              const prevPt = history[i - 1];
-              const currPt = history[i];
-              const dist = calculateDistanceMeters(prevPt.lat, prevPt.lng, currPt.lat, currPt.lng);
-
-              // Skip extreme teleports / map bounds jumps (> 1200m)
-              if (dist > 1200) {
-                continue;
-              }
-
-              const timeDiffMs = Math.abs(new Date(currPt.timestamp).getTime() - new Date(prevPt.timestamp).getTime());
-              const isGap = currPt.isGapStart || timeDiffMs >= 45000;
-
-              if (isGap) {
-                // Render Funkloch-Lücke (Dashed Amber Polyline)
-                const gapPolyline = L.polyline(
-                  [
-                    [prevPt.lat, prevPt.lng],
-                    [currPt.lat, currPt.lng],
-                  ],
-                  {
-                    color: '#f59e0b',
-                    weight: 3,
-                    opacity: 0.8,
-                    dashArray: '6, 6',
-                  }
-                );
-                const gapSec = currPt.gapDurationSec || Math.round(timeDiffMs / 1000);
-                const gapMin = Math.max(1, Math.round(gapSec / 60));
-                gapPolyline.bindTooltip(
-                  `⚠️ Funkloch-Lücke (ca. ${gapMin} Min. ohne Signal): ${user?.name || 'Sucher'} (${user?.callSign || 'Unit'})`,
-                  { sticky: true }
-                );
-                tracksLayerRef.current?.addLayer(gapPolyline);
-              } else {
-                // Render normal continuous movement segment
-                const segPolyline = L.polyline(
-                  [
-                    [prevPt.lat, prevPt.lng],
-                    [currPt.lat, currPt.lng],
-                  ],
-                  {
-                    color: trackColor,
-                    weight: isDrone ? 3 : 3.5,
-                    opacity: 0.88,
-                    dashArray: isDrone ? '4, 4' : undefined,
-                  }
-                );
-                segPolyline.bindTooltip(
-                  `📍 Bewegungsprofil (${modeLabel}): ${user?.name || 'Sucher'} (${user?.callSign || 'Unit'}) • ${history.length} Wegpunkte`,
-                  { sticky: true }
-                );
-                tracksLayerRef.current?.addLayer(segPolyline);
-              }
-            }
-          });
+    // 3. Render user tracks from userLocations (in active or paused mode)
+    if (!isArchiveMode || (currentOperation?.archivedTracks?.length || 0) === 0) {
+      (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState]) => {
+        if (activeTrackingTest?.isActive) {
+          return;
         }
 
-    // 3. Render active Trackingtest tracks
-    if (activeTrackingTest && activeTrackingTest.trackPoints.length >= 2) {
-      const points: [number, number][] = activeTrackingTest.trackPoints.map(p => [p.lat, p.lng]);
-      const polyline = L.polyline(points, {
-        color: '#3b82f6',
-        weight: 4,
-        opacity: 0.9,
+        const history = locState.trackHistory;
+        if (!history || history.length < 2) return;
+
+        // If this user track was already rendered in full via archivedTracks, avoid duplicate draw
+        if (renderedTrackUserIds.has(userId) && (currentOperation?.archivedTracks?.find(t => t.userId === userId)?.points.length || 0) >= history.length) {
+          return;
+        }
+
+        const user = allUsers.find((u) => u.id === userId);
+        const isDrone = user?.equipment?.includes('drone');
+        const trackColor = getUserTrackColor(user || userId, allUsers);
+
+        const isPaused = currentOperation?.status === 'paused';
+        const isCompleted = currentOperation?.status === 'completed';
+        const modeLabel = isPaused ? 'Pausiert' : isCompleted ? 'Abgeschlossen' : locState.isLive ? 'Live' : 'Gesichert';
+
+        // Draw track segments with gap-awareness for Funklöcher (> 45s signal loss)
+        for (let i = 1; i < history.length; i++) {
+          const prevPt = history[i - 1];
+          const currPt = history[i];
+          const dist = calculateDistanceMeters(prevPt.lat, prevPt.lng, currPt.lat, currPt.lng);
+
+          // Skip extreme teleports / map bounds jumps (> 1200m)
+          if (dist > 1200) {
+            continue;
+          }
+
+          const timeDiffMs = Math.abs(new Date(currPt.timestamp).getTime() - new Date(prevPt.timestamp).getTime());
+          const isGap = currPt.isGapStart || timeDiffMs >= 45000;
+
+          if (isGap) {
+            // Render Funkloch-Lücke (Dashed Amber Polyline)
+            const gapPolyline = L.polyline(
+              [
+                [prevPt.lat, prevPt.lng],
+                [currPt.lat, currPt.lng],
+              ],
+              {
+                color: '#f59e0b',
+                weight: 3,
+                opacity: 0.8,
+                smoothFactor: 0,
+                dashArray: '6, 6',
+              }
+            );
+            const gapSec = currPt.gapDurationSec || Math.round(timeDiffMs / 1000);
+            const gapMin = Math.max(1, Math.round(gapSec / 60));
+            gapPolyline.bindTooltip(
+              `⚠️ Funkloch-Lücke (ca. ${gapMin} Min. ohne Signal): ${user?.name || 'Sucher'} (${user?.callSign || 'Unit'})`,
+              { sticky: true }
+            );
+            tracksLayerRef.current?.addLayer(gapPolyline);
+          } else {
+            // Render normal continuous movement segment
+            const segPolyline = L.polyline(
+              [
+                [prevPt.lat, prevPt.lng],
+                [currPt.lat, currPt.lng],
+              ],
+              {
+                color: trackColor,
+                weight: isDrone ? 3 : 3.5,
+                opacity: 0.88,
+                smoothFactor: 0,
+                dashArray: isDrone ? '4, 4' : undefined,
+              }
+            );
+            segPolyline.bindTooltip(
+              `📍 Bewegungsprofil (${modeLabel}): ${user?.name || 'Sucher'} (${user?.callSign || 'Unit'}) • ${history.length} Wegpunkte`,
+              { sticky: true }
+            );
+            tracksLayerRef.current?.addLayer(segPolyline);
+          }
+        }
       });
-
-      polyline.bindTooltip(
-        `Trackingtest: ${activeTrackingTest.userName} • ${activeTrackingTest.trackPoints.length} Wegpunkte`,
-        { sticky: true, permanent: true }
-      );
-
-      tracksLayerRef.current?.addLayer(polyline);
     }
   }, [userLocations, allUsers, currentOperation, showTracks, showInactiveResponders, isArchiveMode, activeTrackingTest]);
 
