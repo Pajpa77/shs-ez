@@ -166,9 +166,8 @@ const MainApp: React.FC = () => {
   // If not authenticated, show login
   if (!currentUser) {
     return (
-      <div className="relative w-full h-full min-h-screen">
+      <div className="relative w-full h-full min-h-screen bg-reflex-blue" style={{ backgroundColor: '#001489' }}>
         <LoginScreen />
-        <SniffingDogAnimation />
       </div>
     );
   }

@@ -444,7 +444,10 @@ export const LoginScreen: React.FC = () => {
   const hasActiveOps = activeOperations.length > 0;
 
   return (
-    <div className="h-screen w-full bg-[#001489] text-white flex flex-col justify-start items-center p-3 sm:p-6 relative overflow-y-auto font-sans pt-8 sm:pt-16 pb-24 sm:pb-32">
+    <div
+      className="min-h-screen w-full bg-reflex-blue text-white flex flex-col justify-start items-center p-3 sm:p-6 relative overflow-y-auto font-sans pt-8 sm:pt-16 pb-24 sm:pb-32"
+      style={{ backgroundColor: '#001489' }}
+    >
       {/* Background ambient Pantone Reflex Blue tactical styling */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(20,50,220,0.85)_0%,#000B52_100%)] pointer-events-none" />
 

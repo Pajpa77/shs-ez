@@ -1,6 +1,39 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --color-reflex-blue: #001489;
+  --color-reflex-dark: #000E66;
+  --color-reflex-deep: #000840;
+  --color-reflex-input: #00073B;
+  --color-reflex-border: #1E35D4;
+  --color-reflex-border-bright: #2B42F2;
+}
+
+.bg-reflex-blue {
+  background-color: #001489 !important;
+}
+
+.bg-reflex-dark {
+  background-color: #000E66 !important;
+}
+
+.bg-reflex-deep {
+  background-color: #000840 !important;
+}
+
+.bg-reflex-input {
+  background-color: #00073B !important;
+}
+
+.border-reflex-bright {
+  border-color: #2B42F2 !important;
+}
+
+.border-reflex-default {
+  border-color: #1E35D4 !important;
+}
+
 /* Printable Official Rescue Mission Protocol Styling */
 @media screen {
   #printable-official-protocol:not(.screen-preview) {
