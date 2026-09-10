@@ -1400,24 +1400,40 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           const isGap = currPt.isGapStart || timeDiffMs >= 45000;
 
           if (isGap) {
-            // Render Funkloch-Lücke (Dashed Amber Polyline)
+            // Render high-contrast dark outline for gap segment
+            const gapGlow = L.polyline(
+              [
+                [prevPt.lat, prevPt.lng],
+                [currPt.lat, currPt.lng],
+              ],
+              {
+                color: '#0f172a',
+                weight: isDrone ? 5 : 6,
+                opacity: 0.6,
+                smoothFactor: 0,
+                dashArray: '6, 6',
+              }
+            );
+            tracksLayerRef.current?.addLayer(gapGlow);
+
+            // Render Funkloch-Lücke gestrichelt in der eigenen User-Farbe
             const gapPolyline = L.polyline(
               [
                 [prevPt.lat, prevPt.lng],
                 [currPt.lat, currPt.lng],
               ],
               {
-                color: '#f59e0b',
-                weight: 3,
-                opacity: 0.8,
+                color: trackColor, // Eigene User-Farbe!
+                weight: isDrone ? 3 : 3.5,
+                opacity: 0.9,
                 smoothFactor: 0,
-                dashArray: '6, 6',
+                dashArray: '6, 6', // Gestrichelt im Funklochbereich
               }
             );
             const gapSec = currPt.gapDurationSec || Math.round(timeDiffMs / 1000);
             const gapMin = Math.max(1, Math.round(gapSec / 60));
             gapPolyline.bindTooltip(
-              `⚠️ Funkloch-Lücke (ca. ${gapMin} Min. ohne Signal): ${user?.name || 'Sucher'} (${user?.callSign || 'Unit'})`,
+              `⚠️ Funkloch-Lücke (ca. ${gapMin} Min. ohne Signal, simulierter Verlauf): ${user?.name || 'Sucher'} (${user?.callSign || 'Unit'})`,
               { sticky: true }
             );
             tracksLayerRef.current?.addLayer(gapPolyline);
