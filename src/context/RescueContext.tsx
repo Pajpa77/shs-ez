@@ -1562,29 +1562,51 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     
                     if (cloudU.id === currentUserIdRef.current && localTime > cloudTime) {
                       finalU = localU;
+                    } else {
+                      // Preserve memberId and profile details if cloud record missing them
+                      finalU = {
+                        ...localU,
+                        ...cloudU,
+                        memberId: cloudU.memberId || localU.memberId || '',
+                        phone: cloudU.phone || localU.phone || '',
+                        licensePlate: cloudU.licensePlate || localU.licensePlate || '',
+                        organization: cloudU.organization || localU.organization || '',
+                        customEquipmentNotes: cloudU.customEquipmentNotes || localU.customEquipmentNotes || '',
+                        dogInfo: cloudU.dogInfo || localU.dogInfo,
+                        groupId: cloudU.groupId || localU.groupId,
+                      };
                     }
                   }
 
-                  // Photo Preservation & Auto-Heal across all users:
-                  // If cloud user has no photoUrl (or empty string), check local state or dedicated backup
+                  // Photo & Member ID Preservation & Auto-Heal across all users
+                  const profileBackupRaw = localStorage.getItem(`rescuetrack_user_profile_${finalU.id}`);
+                  let backupMemberId = '';
+                  let backupPhoto = '';
+                  if (profileBackupRaw) {
+                    try {
+                      const parsed = JSON.parse(profileBackupRaw);
+                      if (parsed) {
+                        if (parsed.memberId) backupMemberId = parsed.memberId;
+                        if (parsed.photoUrl) backupPhoto = parsed.photoUrl;
+                      }
+                    } catch {}
+                  }
+
+                  if (!finalU.memberId && backupMemberId) {
+                    finalU = { ...finalU, memberId: backupMemberId };
+                  }
+
                   if (!finalU.photoUrl) {
                     const dedicatedPhoto = localStorage.getItem(`rescuetrack_user_photo_${finalU.id}`);
-                    const profileBackupRaw = localStorage.getItem(`rescuetrack_user_profile_${finalU.id}`);
-                    let backupPhoto = '';
-                    if (profileBackupRaw) {
-                      try {
-                        const parsed = JSON.parse(profileBackupRaw);
-                        if (parsed && parsed.photoUrl) backupPhoto = parsed.photoUrl;
-                      } catch {}
-                    }
                     const restoredPhoto = dedicatedPhoto || backupPhoto || (localU && localU.photoUrl) || '';
                     if (restoredPhoto) {
                       finalU = { ...finalU, photoUrl: restoredPhoto };
-                      // Auto-heal cloud user if Firestore had no photoUrl
-                      if (!cloudU.photoUrl) {
-                        syncUserToCloud(finalU);
-                      }
                     }
+                  }
+
+                  // Auto-heal cloud user if Firestore was missing memberId or photoUrl
+                  if ((!cloudU.memberId && finalU.memberId) || (!cloudU.photoUrl && finalU.photoUrl)) {
+                    syncUserToCloud(finalU);
                   }
                   
                   return finalU;

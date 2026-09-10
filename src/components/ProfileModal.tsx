@@ -196,11 +196,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
       }
     }
 
+    const finalMemberId = memberId.trim() || `RT-2026-${Math.floor(100 + Math.random() * 900)}`;
+
     updateUser(currentUser.id, {
       name: name.trim(),
       callSign: callSign.trim() || name.trim(),
       licensePlate: licensePlate.trim(),
-      memberId: memberId.trim(),
+      memberId: finalMemberId,
       phone: phone.trim(),
       organization: organization.trim(),
       photoUrl: photoUrl.trim(),
@@ -400,7 +402,18 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 font-mono uppercase tracking-wider">Ausweis- / Mitglieds-ID:</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-bold text-slate-700 dark:text-slate-300 font-mono uppercase tracking-wider text-xs">
+                  Ausweis- / Mitglieds-ID:
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setMemberId(`RT-2026-${Math.floor(100 + Math.random() * 900)}`)}
+                  className="text-[10px] text-blue-400 hover:text-blue-300 font-mono font-bold hover:underline cursor-pointer"
+                >
+                  ⚡ Auto-Code generieren
+                </button>
+              </div>
               <input
                 type="text"
                 value={memberId}
