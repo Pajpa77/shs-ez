@@ -336,7 +336,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [activeTab, selectedArchiveOpId, currentOperation, allOperations]);
 
   return (
-    <header className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-5 bg-[#1E293B] border-b border-slate-700 shadow-lg shrink-0 sticky top-0 z-[1000] text-slate-200">
+    <header className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-5 bg-[#1E293B] border-b border-slate-700 shadow-lg shrink-0 sticky top-0 z-[4000] text-slate-200">
       {/* Brand & Central SHS Leitstellen Menu Button */}
       <div className="flex items-center gap-1.5 sm:gap-4 min-w-0">
         {/* Interactive White SHS Button / Admin Hub */}

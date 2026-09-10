@@ -36,12 +36,13 @@ export function useDraggable(options: UseDraggableOptions = {}) {
   const clampPosition = useCallback((pos: Position, node: HTMLElement): Position => {
     const rect = node.getBoundingClientRect();
     const margin = 8;
+    const minY = 60;
     const maxX = Math.max(margin, window.innerWidth - rect.width - margin);
-    const maxY = Math.max(margin, window.innerHeight - rect.height - margin);
+    const maxY = Math.max(minY, window.innerHeight - rect.height - 75);
 
     return {
       x: Math.min(Math.max(margin, pos.x), maxX),
-      y: Math.min(Math.max(margin, pos.y), maxY),
+      y: Math.min(Math.max(minY, pos.y), maxY),
     };
   }, []);
 

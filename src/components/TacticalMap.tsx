@@ -1968,7 +1968,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       )}
 
       {/* MOBILE FLOATING ACTION BAR (Top, compact, unobstructed view for smartphone searchers) */}
-      <div className="md:hidden absolute top-2 left-2 right-2 z-[900] flex items-center justify-between pointer-events-none">
+      <div className="md:hidden absolute top-2 left-2 z-[900] flex items-center gap-1.5 pointer-events-none">
         <div className="flex items-center gap-1.5 pointer-events-auto bg-[#1E293B]/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-xl">
           <button
             onClick={handleCenterOnMe}
