@@ -13,6 +13,8 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         manifest: false, // We use the manual manifest.json in public/
         workbox: {
+          skipWaiting: true,
+          clientsClaim: true,
           globPatterns: ['**/*.{js,css,html,ico,png,svg}']
         }
       })
