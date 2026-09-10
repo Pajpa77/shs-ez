@@ -50,10 +50,9 @@ function generateCode128Pattern(text: string): string {
 }
 
 export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'card' | 'barcode' | 'qrcode'>('card');
+  const [activeTab, setActiveTab] = useState<'barcode' | 'qrcode'>('barcode');
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
-  const cardRef = useRef<HTMLDivElement>(null);
   const barcodeCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const barcodeValue = user.memberId || user.id || user.username;
@@ -125,7 +124,7 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose 
       filename = `QR_${user.name.replace(/\s+/g, '_')}_${barcodeValue}.png`;
     } else if (barcodeCanvasRef.current) {
       dataUrl = barcodeCanvasRef.current.toDataURL('image/png');
-      filename = `Barcode_${user.name.replace(/\s+/g, '_')}_${barcodeValue}.png`;
+      filename = `Strichcode_${user.name.replace(/\s+/g, '_')}_${barcodeValue}.png`;
     }
 
     if (!dataUrl) return;
@@ -164,7 +163,6 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose 
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
           } else {
-            // Fallback: Copy raw text string
             await navigator.clipboard.writeText(barcodeValue);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
@@ -183,30 +181,27 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose 
     }
   };
 
-  const handlePrintCard = () => {
-    window.print();
-  };
-
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-[#1E293B] border border-slate-700 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col text-slate-100 font-sans">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn font-sans">
+      <div className="bg-[#1E293B] border border-slate-700 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col text-slate-100 font-sans">
         
         {/* Header */}
         <div className="p-5 border-b border-slate-700 flex items-center justify-between bg-slate-900/60">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30">
-              <CreditCard className="w-5 h-5" />
+              <BarIcon className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white uppercase tracking-wider">Vereinsausweis & Code-Export</h2>
-              <p className="text-xs text-slate-400 font-mono">
-                {user.name} ({user.callSign})
+              <h2 className="text-base font-bold text-white uppercase tracking-wider">Ausweis-Strichcode Export</h2>
+              <p className="text-xs text-blue-400 font-mono font-bold">
+                {user.name} ({user.callSign}) • Ausweis-ID: <span className="underline">{barcodeValue}</span>
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer"
+            title="Schließen"
           >
             <X className="w-5 h-5" />
           </button>
@@ -214,17 +209,6 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose 
 
         {/* Tab Selector */}
         <div className="flex border-b border-slate-700 bg-slate-900/40 p-1.5 gap-1.5">
-          <button
-            onClick={() => setActiveTab('card')}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-              activeTab === 'card'
-                ? 'bg-blue-600 text-white shadow'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <CreditCard className="w-4 h-4" />
-            <span>🪪 Ausweis-Karte</span>
-          </button>
           <button
             onClick={() => setActiveTab('barcode')}
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
@@ -234,7 +218,7 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose 
             }`}
           >
             <BarIcon className="w-4 h-4" />
-            <span>📊 1D Strichcode</span>
+            <span>📊 1D Strichcode (Code 128)</span>
           </button>
           <button
             onClick={() => setActiveTab('qrcode')}
@@ -249,127 +233,80 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose 
           </button>
         </div>
 
-        {/* Body Content */}
-        <div className="p-6 flex flex-col items-center justify-center min-h-[280px]">
+        {/* Body Content - Direct Click to Save Image */}
+        <div className="p-6 flex flex-col items-center justify-center min-h-[260px]">
 
-          {/* TAB 1: Printable Member Card (Vereinsausweis) */}
-          {activeTab === 'card' && (
-            <div
-              ref={cardRef}
-              className="w-full max-w-md bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 border-2 border-slate-600 rounded-2xl p-5 shadow-2xl relative overflow-hidden space-y-4 text-white"
-            >
-              <div className="flex items-center justify-between border-b border-slate-700/80 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">🐾</span>
-                  <div>
-                    <div className="text-xs font-black uppercase tracking-wider text-blue-400">
-                      {user.organization || 'Spürhunde-Salzlandkreis e.V.'}
-                    </div>
-                    <div className="text-[10px] text-slate-400 uppercase font-mono">Einsatzkräfte-Vereinsausweis</div>
-                  </div>
-                </div>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                  AKTIV ✓
-                </span>
-              </div>
-
-              <div className="flex gap-4 items-center">
-                <div className="w-20 h-24 rounded-xl bg-slate-800 border-2 border-blue-500/50 overflow-hidden shrink-0 shadow-lg flex items-center justify-center">
-                  {user.photoUrl ? (
-                    <img src={user.photoUrl} alt={user.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-2xl font-bold text-slate-400">{user.name.charAt(0)}</span>
-                  )}
-                </div>
-
-                <div className="space-y-1 text-xs">
-                  <div className="text-base font-bold text-white leading-tight">{user.name}</div>
-                  <div className="text-blue-300 font-mono font-semibold">Funkrufname: {user.callSign}</div>
-                  <div className="text-slate-300">Rolle: <span className="font-semibold uppercase">{user.role}</span></div>
-                  {user.licensePlate && <div className="text-slate-400 font-mono text-[11px]">KFZ: {user.licensePlate}</div>}
-                  <div className="pt-1">
-                    <span className="inline-block bg-blue-950 text-blue-300 border border-blue-700 font-mono text-[11px] px-2 py-0.5 rounded font-bold">
-                      Ausweis-ID: {barcodeValue}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Embedded Barcode at bottom of card */}
-              <div className="bg-white p-2 rounded-xl flex flex-col items-center justify-center border border-slate-300">
-                <img src={qrDataUrl} alt="QR Code" className="w-16 h-16" />
-                <span className="text-[10px] font-mono font-bold text-slate-900 mt-0.5">{barcodeValue}</span>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: 1D Barcode (Code 128) */}
+          {/* TAB 1: 1D Barcode (Code 128) */}
           {activeTab === 'barcode' && (
-            <div className="flex flex-col items-center space-y-4 w-full">
-              <div className="p-4 bg-white rounded-2xl border-2 border-slate-300 shadow-xl max-w-full overflow-x-auto">
-                <canvas ref={barcodeCanvasRef} className="max-w-full h-auto block" />
+            <div className="flex flex-col items-center space-y-3 w-full">
+              <div 
+                onClick={handleDownloadPNG}
+                className="p-4 bg-white rounded-2xl border-2 border-slate-300 shadow-xl max-w-full overflow-x-auto cursor-pointer hover:scale-[1.02] hover:border-blue-500 transition-all duration-200 group relative"
+                title="Klicke auf den Strichcode, um ihn sofort als PNG-Bildspeichern"
+              >
+                <canvas ref={barcodeCanvasRef} className="max-w-full h-auto block pointer-events-none" />
+                <div className="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 rounded-2xl transition flex items-center justify-center font-bold text-blue-900 text-xs font-mono">
+                  💾 Klick = PNG Speichern
+                </div>
               </div>
-              <div className="text-xs text-slate-400 font-mono text-center">
-                Format: <strong className="text-white">Code 128 (1D Strichcode)</strong> • Inhalt: <strong className="text-blue-400">{barcodeValue}</strong>
-              </div>
+              <p className="text-[11px] text-emerald-400 font-mono font-semibold text-center flex items-center gap-1">
+                <span>💡 Tipp:</span>
+                <span>Klicke direkt auf den Strichcode, um ihn als PNG-Bilddatei herunterzuladen.</span>
+              </p>
             </div>
           )}
 
-          {/* TAB 3: 2D QR Code */}
+          {/* TAB 2: 2D QR Code */}
           {activeTab === 'qrcode' && (
-            <div className="flex flex-col items-center space-y-4">
-              <div className="p-4 bg-white rounded-2xl border-2 border-slate-300 shadow-xl">
+            <div className="flex flex-col items-center space-y-3">
+              <div 
+                onClick={handleDownloadPNG}
+                className="p-4 bg-white rounded-2xl border-2 border-slate-300 shadow-xl cursor-pointer hover:scale-[1.02] hover:border-blue-500 transition-all duration-200 group relative"
+                title="Klicke auf den QR-Code, um ihn sofort als PNG-Bild zu speichern"
+              >
                 {qrDataUrl ? (
-                  <img src={qrDataUrl} alt="QR Code" className="w-56 h-56 block" />
+                  <img src={qrDataUrl} alt="QR Code" className="w-56 h-56 block pointer-events-none" />
                 ) : (
                   <div className="w-56 h-56 flex items-center justify-center text-slate-500 font-mono">
                     Wird generiert…
                   </div>
                 )}
+                <div className="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 rounded-2xl transition flex items-center justify-center font-bold text-blue-900 text-xs font-mono">
+                  💾 Klick = PNG Speichern
+                </div>
               </div>
-              <div className="text-xs text-slate-400 font-mono text-center">
-                Format: <strong className="text-white">QR-Code (2D Barcode)</strong> • Inhalt: <strong className="text-blue-400">{barcodeValue}</strong>
-              </div>
+              <p className="text-[11px] text-emerald-400 font-mono font-semibold text-center flex items-center gap-1">
+                <span>💡 Tipp:</span>
+                <span>Klicke direkt auf den QR-Code, um ihn als PNG-Bilddatei herunterzuladen.</span>
+              </p>
             </div>
           )}
 
         </div>
 
-        {/* Footer Actions (PNG Download, Copy to Clipboard, Print) */}
+        {/* Footer Actions */}
         <div className="p-5 border-t border-slate-700 bg-slate-900/60 flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs text-slate-400 font-mono">
-            {activeTab === 'card' ? 'Ausweis drucken oder exportieren' : 'Code als PNG-Bild speichern / in externe Programme einfügen'}
+            Code-Inhalt: <strong className="text-blue-400 font-bold">{barcodeValue}</strong>
           </div>
 
           <div className="flex items-center gap-2">
-            {activeTab === 'card' ? (
-              <button
-                onClick={handlePrintCard}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Ausweis Drucken</span>
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={handleCopyToClipboard}
-                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer border border-slate-700 shadow"
-                  title="Bild / Code in Zwischenablage kopieren (Strg+V)"
-                >
-                  {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                  <span>{copied ? 'Kopiert! ✓' : 'In Zwischenablage'}</span>
-                </button>
-                <button
-                  onClick={handleDownloadPNG}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow"
-                  title="Als Bild-Datei (PNG) herunterladen"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Als PNG Speichern</span>
-                </button>
-              </>
-            )}
+            <button
+              onClick={handleCopyToClipboard}
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer border border-slate-700 shadow"
+              title="Code-Bild in Zwischenablage kopieren (Strg+V)"
+            >
+              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              <span>{copied ? 'Kopiert! ✓' : 'In Zwischenablage'}</span>
+            </button>
+            <button
+              onClick={handleDownloadPNG}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow"
+              title="Als Bild-Datei (PNG) herunterladen"
+            >
+              <Download className="w-4 h-4" />
+              <span>Als PNG Speichern</span>
+            </button>
           </div>
         </div>
 
