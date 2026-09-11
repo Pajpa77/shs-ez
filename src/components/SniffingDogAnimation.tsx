@@ -3,22 +3,66 @@ import React from 'react';
 export const SniffingDogAnimation: React.FC = () => {
   return (
     <div className="fixed bottom-0 left-0 right-0 h-36 pointer-events-none z-[9999] overflow-hidden select-none">
-      {/* Continuous Crisp Bright Neon Purple Ground Line */}
-      <div className="absolute bottom-[18px] left-0 right-0 h-[3px] bg-[#00f0ff] shadow-[0_0_14px_rgba(0,240,255,0.95)]" />
+      {/* Continuous Animated Neon Rainbow Ground Line */}
+      <div className="absolute bottom-[18px] left-0 right-0 h-[3.5px] animate-rainbow-ground" />
 
       {/* Walking Dog Outer Container: Travels 100% Screen Width from Far-Right to Far-Left */}
       <div className="absolute bottom-[6px] left-0 animate-dog-walk-across flex items-end">
-        {/* German Shepherd in Bright Neon Purple (#00f0ff) */}
+        {/* German Shepherd in Dynamic Animated Neon Rainbow Gradient */}
         <svg
           width="240"
           height="140"
           viewBox="0 0 240 140"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="text-[#00f0ff] drop-shadow-[0_0_16px_rgba(0,240,255,0.98)] overflow-visible"
+          className="animate-rainbow-dog-glow overflow-visible"
         >
           <defs>
+            {/* Dynamic Multi-Color Neon Rainbow Linear Gradient */}
+            <linearGradient id="neonRainbowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#00f0ff" />
+              <stop offset="20%" stopColor="#3b82f6" />
+              <stop offset="40%" stopColor="#a855f7" />
+              <stop offset="60%" stopColor="#ec4899" />
+              <stop offset="80%" stopColor="#f97316" />
+              <stop offset="100%" stopColor="#10b981" />
+            </linearGradient>
+
             <style>{`
+              /* Ground Line Animated Neon Gradient Shift */
+              @keyframes rainbowGroundShift {
+                0% {
+                  background: linear-gradient(90deg, #00f0ff, #a855f7, #ec4899, #f97316, #eab308, #10b981, #00f0ff);
+                  background-size: 200% 100%;
+                  background-position: 0% 50%;
+                  box-shadow: 0 0 16px rgba(0, 240, 255, 0.95);
+                }
+                50% {
+                  background-position: 100% 50%;
+                  box-shadow: 0 0 22px rgba(236, 72, 153, 0.98);
+                }
+                100% {
+                  background-position: 200% 50%;
+                  box-shadow: 0 0 16px rgba(0, 240, 255, 0.95);
+                }
+              }
+
+              /* Dynamic Rainbow Glow & Hue Rotation for Dog Vector */
+              @keyframes rainbowDogHueShift {
+                0% {
+                  filter: hue-rotate(0deg) drop-shadow(0 0 16px rgba(0, 240, 255, 0.95));
+                }
+                33% {
+                  filter: hue-rotate(120deg) drop-shadow(0 0 20px rgba(168, 85, 247, 0.98));
+                }
+                66% {
+                  filter: hue-rotate(240deg) drop-shadow(0 0 20px rgba(236, 72, 153, 0.98));
+                }
+                100% {
+                  filter: hue-rotate(360deg) drop-shadow(0 0 16px rgba(0, 240, 255, 0.95));
+                }
+              }
+
               /* Horizontal Travel Across Entire Screen (100vw -> -260px) */
               @keyframes dogWalkAcrossScreen {
                 0% {
@@ -29,7 +73,7 @@ export const SniffingDogAnimation: React.FC = () => {
                 }
               }
 
-              /* Pure Leg Stepping Animations (Laufbeine) */
+              /* Leg Stepping Animations (Laufbeine) */
               @keyframes legWalkFL {
                 0%, 100% { transform: rotate(-22deg); }
                 25%      { transform: rotate(0deg); }
@@ -78,15 +122,23 @@ export const SniffingDogAnimation: React.FC = () => {
 
               /* Wagging Motion Arcs Pulse */
               @keyframes wagLinesPulse {
-                0%, 100% { opacity: 0.3; transform: scale(0.95); }
+                0%, 100% { opacity: 0.4; transform: scale(0.95); }
                 50%      { opacity: 1; transform: scale(1.15); }
               }
 
               /* Scent Particles Bubble Up */
               @keyframes sniffParticle {
                 0%   { opacity: 0; transform: translate(0, 0) scale(0.4); }
-                50%  { opacity: 0.85; }
-                100% { opacity: 0; transform: translate(-14px, -12px) scale(1.2); }
+                50%  { opacity: 0.9; }
+                100% { opacity: 0; transform: translate(-14px, -12px) scale(1.25); }
+              }
+
+              .animate-rainbow-ground {
+                animation: rainbowGroundShift 6s linear infinite;
+              }
+
+              .animate-rainbow-dog-glow {
+                animation: rainbowDogHueShift 5s linear infinite;
               }
 
               .animate-dog-walk-across {
@@ -137,18 +189,18 @@ export const SniffingDogAnimation: React.FC = () => {
             `}</style>
           </defs>
 
-          {/* SCENT PARTICLES AT NOSE */}
-          <circle cx="24" cy="116" r="2.2" fill="#00f0ff" className="sniff-dot-1" />
-          <circle cx="18" cy="111" r="2.8" fill="#00f0ff" className="sniff-dot-2" />
+          {/* SCENT PARTICLES AT NOSE IN NEON RAINBOW GRADIENT */}
+          <circle cx="24" cy="116" r="2.4" fill="url(#neonRainbowGrad)" className="sniff-dot-1" />
+          <circle cx="18" cy="111" r="3.0" fill="url(#neonRainbowGrad)" className="sniff-dot-2" />
 
-          {/* REALISTIC MULTI-PATH VECTOR STROKES IN NEON PURPLE */}
-          <g stroke="#00f0ff" strokeWidth="4.2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+          {/* REALISTIC MULTI-PATH VECTOR STROKES IN NEON RAINBOW GRADIENT */}
+          <g stroke="url(#neonRainbowGrad)" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
             
             {/* BACKGROUND LEGS */}
-            <g className="anim-leg-br" opacity="0.5">
+            <g className="anim-leg-br" opacity="0.55">
               <path d="M162 70 C172 84 178 98 156 112 L172 112" />
             </g>
-            <g className="anim-leg-fr" opacity="0.5">
+            <g className="anim-leg-fr" opacity="0.55">
               <path d="M94 75 C86 88 78 100 68 112 L82 112" />
             </g>
 
@@ -159,8 +211,8 @@ export const SniffingDogAnimation: React.FC = () => {
 
             {/* Wagging lines above tail tip (( )) */}
             <g className="anim-wag-lines">
-              <path d="M204 12 C208 15 210 21 207 26" strokeWidth="3.2" />
-              <path d="M212 7 C218 12 220 24 215 31" strokeWidth="3.2" />
+              <path d="M204 12 C208 15 210 21 207 26" strokeWidth="3.4" />
+              <path d="M212 7 C218 12 220 24 215 31" strokeWidth="3.4" />
             </g>
 
             {/* STABLE TORSO & BACKLINE */}
@@ -191,16 +243,16 @@ export const SniffingDogAnimation: React.FC = () => {
 
               {/* Expressive Eye */}
               <g stroke="none">
-                <ellipse cx="46" cy="58" rx="3.5" ry="5.5" fill="#00f0ff" />
+                <ellipse cx="46" cy="58" rx="3.5" ry="5.5" fill="url(#neonRainbowGrad)" />
                 <ellipse cx="44.5" cy="58.5" rx="2" ry="3" fill="#0F172A" />
-                <ellipse cx="47" cy="56" rx="1" ry="1.5" fill="#00f0ff" />
+                <ellipse cx="47" cy="56" rx="1" ry="1.5" fill="url(#neonRainbowGrad)" />
               </g>
 
               {/* Prominent Animated Schnüffelnase */}
               <g className="anim-sniff-nose" stroke="none">
-                <ellipse cx="25" cy="91" rx="4.5" ry="3.2" fill="#00f0ff" />
+                <ellipse cx="25" cy="91" rx="4.8" ry="3.4" fill="url(#neonRainbowGrad)" />
                 <ellipse cx="24" cy="91.5" rx="1.8" ry="1.2" fill="#0F172A" />
-                <circle cx="26.2" cy="89.8" r="0.8" fill="#00f0ff" />
+                <circle cx="26.2" cy="89.8" r="0.9" fill="url(#neonRainbowGrad)" />
               </g>
             </g>
           </g>
