@@ -37,20 +37,20 @@ interface ProfileModalProps {
 // Code 128 B pattern definitions (width of bars and spaces for values 0..106)
 const CODE128_PATTERNS = [
   '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312', '132212', '221213',
-  '221312', '222311', '122221', '122122', '122221', '123221', '221221', '221122', '212212', '222112',
-  '122122', '121222', '122212', '122221', '112222', '121222', '122212', '122221', '112222', '122212',
-  '112222', '122212', '221122', '212212', '222112', '122122', '121222', '122212', '122221', '112222',
+  '221312', '222311', '121232', '123212', '122231', '132212', '221213', '221312', '231212', '232211',
+  '221122', '212212', '222112', '112232', '122132', '122312', '132122', '132212', '221122', '221212',
+  '112322', '122312', '132212', '221122', '221212', '212312', '232112', '212213', '212312', '213212',
   '211213', '211312', '213112', '213211', '221113', '221311', '231112', '231211', '232111', '211132',
   '211331', '213131', '213311', '213113', '213312', '231131', '231311', '233111', '211412', '211214',
   '211232', '233112', '211322', '211232', '233112', '231212', '232211', '231122', '213212', '223112',
   '312131', '311222', '321122', '321221', '312212', '322112', '322211', '212123', '212321', '232121',
   '111323', '131123', '131321', '112313', '132113', '132311', '211313', '231113', '231311', '112133',
-  '112331', '132131', '113123', '113321', '133121', '313121', '211331', '231311', '213131', '213311',
-  '213113', '213312', '231131', '231311', '233111', '211412', '2331112'
+  '112331', '132131', '113123', '113321', '133121', '313121', '211331', '241112', '131114', '213111',
+  '211411', '211141', '411112', '211412', '211214', '211232', '2331112'
 ];
 
 function generateCode128Pattern(text: string): string {
-  const cleanText = text.replace(/[^\x20-\x7E]/g, '');
+  const cleanText = text.trim().replace(/[^\x20-\x7E]/g, '');
   if (!cleanText) return '';
   let checksum = 104;
   const indices: number[] = [104];
@@ -127,8 +127,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
         setName(currentUser.name || '');
         setCallSign(currentUser.callSign || '');
         setLicensePlate(currentUser.licensePlate || '');
-        const existingMemberId = currentUser.memberId || `RT-2026-${Math.floor(100 + Math.random() * 900)}`;
-        setMemberId(existingMemberId);
+        setMemberId(currentUser.memberId || '');
         setPhone(currentUser.phone || '');
         setOrganization(currentUser.organization || '');
         setPhotoUrl(currentUser.photoUrl || '');
@@ -539,23 +538,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block font-bold text-slate-700 dark:text-slate-300 font-mono uppercase tracking-wider text-xs">
-                  Ausweis- / Mitglieds-ID:
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setMemberId(`RT-2026-${Math.floor(100 + Math.random() * 900)}`)}
-                  className="text-[10px] text-blue-400 hover:text-blue-300 font-mono font-bold hover:underline cursor-pointer"
-                >
-                  ⚡ Auto-Code generieren
-                </button>
-              </div>
+              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 font-mono uppercase tracking-wider text-xs">
+                Ausweis- / Mitglieds-ID:
+              </label>
               <input
                 type="text"
                 value={memberId}
                 onChange={(e) => setMemberId(e.target.value)}
-                placeholder="z.B. RT-2026-004"
+                placeholder="Ausweisnummer manuell eingeben (z.B. RT-2026-004)..."
                 className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>
