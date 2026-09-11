@@ -94,7 +94,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       setIsAlsoAdmin(false);
       setCallSign('Sucher ' + Math.floor(10 + Math.random() * 90));
       setLicensePlate('SLK-' + Math.floor(100 + Math.random() * 900));
-      setMemberId('RT-2026-' + Math.floor(100 + Math.random() * 900));
+      setMemberId('SHS-' + Math.floor(100000 + Math.random() * 900000));
       setPhone('+49 170 ' + Math.floor(1000000 + Math.random() * 9000000));
       setOrganization('Spürhunde-Salzlandkreis e.V.');
       setPhotoUrl('');
@@ -656,19 +656,22 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 <label className="block font-bold text-slate-700 dark:text-slate-300 font-mono uppercase tracking-wider text-xs">
                   Ausweis- / Mitglieds-ID:
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setMemberId(`RT-2026-${Math.floor(100 + Math.random() * 900)}`)}
-                  className="text-[10px] text-blue-400 hover:text-blue-300 font-mono font-bold hover:underline cursor-pointer"
-                >
-                  ⚡ Auto-Code generieren
-                </button>
+                {!memberId.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setMemberId(`SHS-${Math.floor(100000 + Math.random() * 900000)}`)}
+                    className="text-[10px] text-blue-400 hover:text-blue-300 font-mono font-bold hover:underline cursor-pointer"
+                    title="Einmalig neuen Code generieren"
+                  >
+                    ⚡ Auto-Code generieren
+                  </button>
+                )}
               </div>
               <input
                 type="text"
                 value={memberId}
                 onChange={(e) => setMemberId(e.target.value)}
-                placeholder="z.B. RT-2026-004"
+                placeholder="z.B. SHS-482910"
                 className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>

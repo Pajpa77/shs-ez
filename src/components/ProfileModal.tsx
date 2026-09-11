@@ -538,14 +538,26 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1 font-mono uppercase tracking-wider text-xs">
-                Ausweis- / Mitglieds-ID:
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block font-bold text-slate-700 dark:text-slate-300 font-mono uppercase tracking-wider text-xs">
+                  Ausweis- / Mitglieds-ID:
+                </label>
+                {!memberId.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setMemberId(`SHS-${Math.floor(100000 + Math.random() * 900000)}`)}
+                    className="text-[10px] text-blue-400 hover:text-blue-300 font-mono font-bold hover:underline cursor-pointer"
+                    title="Einmalig neuen Ausweis-Code generieren"
+                  >
+                    ⚡ Auto-Code generieren
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
                 value={memberId}
                 onChange={(e) => setMemberId(e.target.value)}
-                placeholder="Ausweisnummer manuell eingeben (z.B. RT-2026-004)..."
+                placeholder="Ausweisnummer manuell eingeben (z.B. SHS-482910)..."
                 className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>
