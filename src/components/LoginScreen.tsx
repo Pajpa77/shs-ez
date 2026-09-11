@@ -445,7 +445,7 @@ export const LoginScreen: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen w-full bg-reflex-blue text-white flex flex-col justify-start items-center p-3 sm:p-6 relative overflow-y-auto font-sans pt-8 sm:pt-16 pb-24 sm:pb-32"
+      className="w-full min-h-full bg-reflex-blue text-white flex flex-col justify-start items-center p-3 sm:p-6 relative font-sans pt-4 sm:pt-12 pb-28 sm:pb-36"
       style={{ backgroundColor: '#001489' }}
     >
       {/* Background ambient Pantone Reflex Blue tactical styling */}

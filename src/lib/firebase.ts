@@ -169,34 +169,35 @@ export function serializeUserForFirestore(user: User): Record<string, any> {
     password: user.password || 'sucher123',
     name: user.name || '',
     role: user.role || 'responder',
-    callSign: user.callSign || '',
-    licensePlate: user.licensePlate || '',
-    memberId: user.memberId || '',
-    phone: user.phone || '',
     equipment: Array.isArray(user.equipment) ? user.equipment : ['foot_search'],
     customEquipmentTags: Array.isArray(user.customEquipmentTags) ? user.customEquipmentTags : [],
-    customEquipmentNotes: user.customEquipmentNotes || '',
-    organization: user.organization || '',
-    assignedSectorId: user.assignedSectorId || '',
-    groupId: user.groupId || '',
-    dogInfo: user.dogInfo || null,
     isActive: user.isActive ?? true,
     batteryLevel: user.batteryLevel !== undefined ? user.batteryLevel : 100,
     batteryCharging: Boolean(user.batteryCharging),
     lastSeen: user.lastSeen || 'Online',
-    activeSessionId: user.activeSessionId || '',
-    lastHeartbeat: user.lastHeartbeat || 0,
     isAdmin: Boolean(user.isAdmin || user.role === 'admin' || user.isFirstAdmin),
     canLeadOperations: Boolean(user.canLeadOperations || user.role === 'einsatzleitung' || user.role === 'admin' || user.isFirstAdmin),
     isFirstAdmin: Boolean(user.isFirstAdmin || user.id === 'user-maria' || (user.username?.toLowerCase() === 'maria' && user.id === 'user-maria')),
     isOwner: Boolean(user.isOwner || user.id === 'user-maria' || (user.username?.toLowerCase() === 'maria' && user.id === 'user-maria')),
-    arrivalStatus: user.arrivalStatus || '',
-    trackColor: user.trackColor || '',
-    lastTrackingTest: user.lastTrackingTest || null,
     updatedAt: user.updatedAt || new Date().toISOString(),
   };
 
-  // Only include photoUrl if it's set or non-empty so initial seeds never wipe existing user photos in Firestore
+  if (user.callSign) data.callSign = user.callSign;
+  if (user.licensePlate) data.licensePlate = user.licensePlate;
+  if (user.memberId) data.memberId = user.memberId;
+  if (user.phone) data.phone = user.phone;
+  if (user.organization) data.organization = user.organization;
+  if (user.customEquipmentNotes) data.customEquipmentNotes = user.customEquipmentNotes;
+  if (user.assignedSectorId) data.assignedSectorId = user.assignedSectorId;
+  if (user.groupId) data.groupId = user.groupId;
+  if (user.dogInfo) data.dogInfo = user.dogInfo;
+  if (user.activeSessionId) data.activeSessionId = user.activeSessionId;
+  if (user.lastHeartbeat) data.lastHeartbeat = user.lastHeartbeat;
+  if (user.arrivalStatus) data.arrivalStatus = user.arrivalStatus;
+  if (user.trackColor) data.trackColor = user.trackColor;
+  if (user.lastTrackingTest) data.lastTrackingTest = user.lastTrackingTest;
+
+  // Include photoUrl if set or non-empty
   if (user.photoUrl !== undefined && user.photoUrl !== '') {
     data.photoUrl = user.photoUrl;
   }

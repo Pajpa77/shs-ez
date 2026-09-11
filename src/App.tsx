@@ -166,7 +166,7 @@ const MainApp: React.FC = () => {
   // If not authenticated, show login
   if (!currentUser) {
     return (
-      <div className="relative w-full h-full min-h-screen bg-reflex-blue" style={{ backgroundColor: '#001489' }}>
+      <div className="fixed inset-0 w-full h-full overflow-y-auto bg-reflex-blue z-[9999]" style={{ backgroundColor: '#001489', WebkitOverflowScrolling: 'touch' }}>
         <LoginScreen />
       </div>
     );

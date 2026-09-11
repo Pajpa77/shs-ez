@@ -1592,17 +1592,22 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     if (cloudU.id === currentUserIdRef.current && localTime > cloudTime) {
                       finalU = localU;
                     } else {
-                      // Preserve memberId and profile details if cloud record missing them
+                      // Preserve memberId, phone, licensePlate, callSign, and all profile details if cloud record missing or has empty values
                       finalU = {
                         ...localU,
                         ...cloudU,
+                        name: cloudU.name || localU.name || '',
+                        callSign: cloudU.callSign || localU.callSign || '',
                         memberId: cloudU.memberId || localU.memberId || '',
                         phone: cloudU.phone || localU.phone || '',
                         licensePlate: cloudU.licensePlate || localU.licensePlate || '',
                         organization: cloudU.organization || localU.organization || '',
                         customEquipmentNotes: cloudU.customEquipmentNotes || localU.customEquipmentNotes || '',
+                        customEquipmentTags: (cloudU.customEquipmentTags && cloudU.customEquipmentTags.length > 0) ? cloudU.customEquipmentTags : (localU.customEquipmentTags || []),
+                        equipment: (cloudU.equipment && cloudU.equipment.length > 0) ? cloudU.equipment : (localU.equipment || ['foot_search']),
                         dogInfo: cloudU.dogInfo || localU.dogInfo,
                         groupId: cloudU.groupId || localU.groupId,
+                        photoUrl: cloudU.photoUrl || localU.photoUrl || '',
                       };
                     }
                   }
@@ -1614,14 +1619,15 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                       const parsed = JSON.parse(profileBackupRaw);
                       if (parsed && typeof parsed === 'object') {
                         finalU = {
-                          ...parsed,
                           ...finalU,
+                          name: finalU.name || parsed.name || '',
+                          callSign: finalU.callSign || parsed.callSign || '',
                           memberId: finalU.memberId || parsed.memberId || '',
                           phone: finalU.phone || parsed.phone || '',
                           licensePlate: finalU.licensePlate || parsed.licensePlate || '',
                           organization: finalU.organization || parsed.organization || '',
                           customEquipmentNotes: finalU.customEquipmentNotes || parsed.customEquipmentNotes || '',
-                          callSign: finalU.callSign || parsed.callSign || '',
+                          customEquipmentTags: (finalU.customEquipmentTags && finalU.customEquipmentTags.length > 0) ? finalU.customEquipmentTags : (parsed.customEquipmentTags || []),
                           equipment: (finalU.equipment && finalU.equipment.length > 0) ? finalU.equipment : (parsed.equipment || []),
                           dogInfo: finalU.dogInfo || parsed.dogInfo,
                           groupId: finalU.groupId || parsed.groupId,
@@ -1818,8 +1824,8 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               const timeDiffSec = Math.abs(new Date(point.timestamp).getTime() - new Date(lastPt.timestamp).getTime()) / 1000;
               // Ignore teleport spikes (> 1500m in < 5s)
               if (d > 1500 && timeDiffSec < 5) return prev;
-              // Add point if moved at least 1.0m or 3s passed
-              if (d < 1.0 && timeDiffSec < 3) return prev;
+              // Add point if moved at least 0.5m (maximum hardware accuracy) or 2s passed
+              if (d < 0.5 && timeDiffSec < 2) return prev;
             }
             return {
               ...prev,
@@ -1870,15 +1876,15 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               const accuracy = point.accuracy || 15;
               const isAccurate = accuracy <= 40;
 
-              // Stationary jitter filter: high precision micro-movement threshold (down to 1.0m)
-              const minDistRequired = accuracy > 20 && (point.speed || 0) < 1 ? 2.2 : 1.0;
+              // Maximum precision micro-movement threshold: capture movements down to 0.5m
+              const minDistRequired = accuracy > 20 && (point.speed || 0) < 1 ? 1.2 : 0.5;
 
               // Signal loss gap detection: if >= 45 seconds elapsed since last recorded point, annotate as gap start
               const isGap = lastHistorical && timeSinceLastMs >= 45000;
 
               const shouldAdd =
                 !lastHistorical ||
-                (isAccurate && (distMoved >= minDistRequired || (timeSinceLastMs >= 15000 && distMoved >= 0.8)));
+                (isAccurate && (distMoved >= minDistRequired || (timeSinceLastMs >= 10000 && distMoved >= 0.3)));
 
               if (shouldAdd) {
                 const pointToStore: GpsPoint = isGap
@@ -1909,13 +1915,13 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               [currentUser.id]: updatedLocState,
             };
 
-            // Throttled Cloud sync: at most once every 15s AND moved at least 8 meters
+            // High-precision Cloud sync: sync position when moved at least 2 meters or 10 seconds elapsed
             const now = Date.now();
             const lastSync = lastCloudGpsSyncRef.current;
             const timeDiff = now - lastSync.timestamp;
             const distMoved = calculateDistanceMeters(lastSync.lat, lastSync.lng, point.lat, point.lng);
 
-            if (timeDiff >= 15000 && (distMoved >= 8 || lastSync.timestamp === 0)) {
+            if (timeDiff >= 10000 && (distMoved >= 2.0 || lastSync.timestamp === 0)) {
               if (isUserReady && isOpRunning) {
                 lastCloudGpsSyncRef.current = { timestamp: now, lat: point.lat, lng: point.lng };
                 syncLocationToCloud(currentUser.id, updatedLocState);
@@ -1979,7 +1985,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 const lastPt = prev.trackPoints[prev.trackPoints.length - 1];
                 if (lastPt) {
                   const d = calculateDistanceMeters(lastPt.lat, lastPt.lng, bgPoint.lat, bgPoint.lng);
-                  if (d < 1.5) return prev; // Deduplicate stationary points
+                  if (d < 0.5) return prev; // Deduplicate stationary points down to 0.5m
                 }
                 return {
                   ...prev,
@@ -2006,7 +2012,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                     : 99999;
                   const isAccurate = !bgPoint.accuracy || bgPoint.accuracy <= 40;
                   const isGap = lastPt && timeSinceLastMs >= 45000;
-                  const shouldAdd = !lastPt || (isAccurate && distMoved >= 2.0);
+                  const shouldAdd = !lastPt || (isAccurate && distMoved >= 0.5);
 
                   if (shouldAdd) {
                     const pointToStore: GpsPoint = isGap
@@ -2030,7 +2036,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             }
           },
           (err) => console.warn('Background GPS tick error:', err),
-          { enableHighAccuracy: true, maximumAge: 5000, timeout: 8000 }
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }
         );
       }
     }, 12000);

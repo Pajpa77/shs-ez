@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { EquipmentType, isFirstAdmin } from '../types';
 import { compressImageFile } from '../lib/imageUtils';
+import { MemberCardModal } from './MemberCardModal';
 import {
   User,
   X,
@@ -22,11 +23,50 @@ import {
   EyeOff,
   Navigation,
   Activity,
+  Download,
+  CreditCard,
+  Barcode as BarIcon,
+  QrCode as QrIcon,
 } from 'lucide-react';
 
 interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+// Code 128 B pattern definitions (width of bars and spaces for values 0..106)
+const CODE128_PATTERNS = [
+  '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312', '132212', '221213',
+  '221312', '222311', '122221', '122122', '122221', '123221', '221221', '221122', '212212', '222112',
+  '122122', '121222', '122212', '122221', '112222', '121222', '122212', '122221', '112222', '122212',
+  '112222', '122212', '221122', '212212', '222112', '122122', '121222', '122212', '122221', '112222',
+  '211213', '211312', '213112', '213211', '221113', '221311', '231112', '231211', '232111', '211132',
+  '211331', '213131', '213311', '213113', '213312', '231131', '231311', '233111', '211412', '211214',
+  '211232', '233112', '211322', '211232', '233112', '231212', '232211', '231122', '213212', '223112',
+  '312131', '311222', '321122', '321221', '312212', '322112', '322211', '212123', '212321', '232121',
+  '111323', '131123', '131321', '112313', '132113', '132311', '211313', '231113', '231311', '112133',
+  '112331', '132131', '113123', '113321', '133121', '313121', '211331', '231311', '213131', '213311',
+  '213113', '213312', '231131', '231311', '233111', '211412', '2331112'
+];
+
+function generateCode128Pattern(text: string): string {
+  const cleanText = text.replace(/[^\x20-\x7E]/g, '');
+  if (!cleanText) return '';
+  let checksum = 104;
+  const indices: number[] = [104];
+  for (let i = 0; i < cleanText.length; i++) {
+    const code = cleanText.charCodeAt(i) - 32;
+    indices.push(code);
+    checksum += code * (i + 1);
+  }
+  const checkDigit = checksum % 103;
+  indices.push(checkDigit);
+  indices.push(106);
+  let patternStr = '';
+  indices.forEach((idx) => {
+    patternStr += CODE128_PATTERNS[idx] || CODE128_PATTERNS[0];
+  });
+  return patternStr;
 }
 
 const EQUIPMENT_OPTIONS: { id: EquipmentType; label: string; icon: string }[] = [
@@ -64,6 +104,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
   const [savedSuccess, setSavedSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Barcode Canvas & Full Card Modal state
+  const barcodeCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [showMemberCardModal, setShowMemberCardModal] = useState(false);
+
   // Security & Password / PIN State
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -83,7 +127,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
         setName(currentUser.name || '');
         setCallSign(currentUser.callSign || '');
         setLicensePlate(currentUser.licensePlate || '');
-        setMemberId(currentUser.memberId || '');
+        const existingMemberId = currentUser.memberId || `RT-2026-${Math.floor(100 + Math.random() * 900)}`;
+        setMemberId(existingMemberId);
         setPhone(currentUser.phone || '');
         setOrganization(currentUser.organization || '');
         setPhotoUrl(currentUser.photoUrl || '');
@@ -103,6 +148,57 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     }
     prevIsOpenRef.current = isOpen;
   }, [currentUser?.id, isOpen]);
+
+  const activeBarcodeValue = memberId.trim() || currentUser?.memberId || currentUser?.id || 'RT-2026-001';
+
+  // Draw Code 128 Barcode on canvas next to user photo
+  useEffect(() => {
+    if (!barcodeCanvasRef.current || !isOpen || !activeBarcodeValue) return;
+    const canvas = barcodeCanvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const pattern = generateCode128Pattern(activeBarcodeValue);
+    if (!pattern) return;
+
+    const barWidth = 2;
+    const quietZone = 10;
+    const height = 44;
+    const totalWidth = pattern.split('').reduce((sum, w) => sum + parseInt(w, 10) * barWidth, 0) + quietZone * 2;
+
+    canvas.width = totalWidth;
+    canvas.height = height + 22;
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = '#000000';
+    let currentX = quietZone;
+    let isBar = true;
+
+    for (let i = 0; i < pattern.length; i++) {
+      const width = parseInt(pattern[i], 10) * barWidth;
+      if (isBar) {
+        ctx.fillRect(currentX, 4, width, height);
+      }
+      currentX += width;
+      isBar = !isBar;
+    }
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(activeBarcodeValue, canvas.width / 2, height + 17);
+  }, [activeBarcodeValue, isOpen]);
+
+  const handleDownloadBarcodePNG = () => {
+    if (!barcodeCanvasRef.current) return;
+    const dataUrl = barcodeCanvasRef.current.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `Strichcode_${(name || currentUser?.name || 'User').replace(/\s+/g, '_')}_${activeBarcodeValue}.png`;
+    a.click();
+  };
 
   // Query hardware battery status
   useEffect(() => {
@@ -262,16 +358,16 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             </div>
           )}
 
-          {/* Photo selection with Custom Upload and Camera */}
+          {/* Photo selection with Custom Upload, Camera & VISIBLE BARCODE */}
           <div className="bg-white dark:bg-slate-900/70 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700 space-y-3">
             <div className="flex items-center justify-between">
               <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono text-[11px]">
-                Profilfoto:
+                Profilfoto &amp; Ausweis-Strichcode:
               </label>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Eigenes Foto hochladen oder initiales Symbol</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Foto &amp; Ausweis-ID (Klick = PNG Speichern)</span>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
               {/* Active Photo or Clean Initials Badge */}
               <div className="relative group shrink-0">
                 <div className="h-20 w-20 rounded-2xl overflow-hidden border-2 border-blue-500 shadow-xl bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
@@ -299,7 +395,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 </button>
               </div>
 
-              {/* Upload Controls */}
+              {/* VISIBLE BARCODE DIRECTLY NEXT TO THE USER PHOTO */}
+              <div
+                onClick={handleDownloadBarcodePNG}
+                className="p-2 bg-white rounded-2xl border-2 border-slate-300 hover:border-blue-500 shadow-xl cursor-pointer group relative shrink-0 transition-all duration-200 flex flex-col items-center justify-center"
+                title="Klicke auf den Strichcode, um ihn sofort als PNG-Bilddatei herunterzuladen"
+              >
+                <canvas ref={barcodeCanvasRef} className="h-14 max-w-[180px] block pointer-events-none" />
+                <div className="text-[9px] font-mono font-bold text-blue-900 bg-blue-100 px-2 py-0.5 rounded mt-1 flex items-center gap-1 group-hover:bg-blue-600 group-hover:text-white transition">
+                  <Download className="w-3 h-3" />
+                  <span>💾 Klick = PNG Speichern</span>
+                </div>
+              </div>
+
+              {/* Upload Controls & Full Card Modal trigger */}
               <div className="flex-1 space-y-2 w-full">
                 <input
                   type="file"
@@ -319,6 +428,16 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                     <span>{isCompressing ? 'Wird optimiert...' : 'Foto aufnehmen / hochladen'}</span>
                   </label>
 
+                  <button
+                    type="button"
+                    onClick={() => setShowMemberCardModal(true)}
+                    className="px-3 py-2 rounded-xl bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-600/60 font-mono font-bold text-[11px] flex items-center gap-1.5 cursor-pointer shadow transition"
+                    title="Ausweis-Karte im Vollbild mit 2D QR-Code & 1D Strichcode öffnen"
+                  >
+                    <CreditCard className="w-3.5 h-3.5 text-blue-400" />
+                    <span>2D QR / Ausweis-Karte</span>
+                  </button>
+
                   {photoUrl && (
                     <button
                       type="button"
@@ -327,7 +446,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                       title="Foto entfernen und Initialen verwenden"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>Foto entfernen</span>
+                      <span>Entfernen</span>
                     </button>
                   )}
 
@@ -673,6 +792,18 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
           </div>
         </form>
       </div>
+
+      {showMemberCardModal && currentUser && (
+        <MemberCardModal
+          user={{
+            ...currentUser,
+            name: name || currentUser.name,
+            callSign: callSign || currentUser.callSign,
+            memberId: activeBarcodeValue,
+          }}
+          onClose={() => setShowMemberCardModal(false)}
+        />
+      )}
     </div>
   );
 };

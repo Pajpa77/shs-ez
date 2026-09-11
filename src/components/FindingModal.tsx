@@ -110,6 +110,11 @@ export const FindingModal: React.FC<FindingModalProps> = ({
               accuracy: 5,
             });
             setIsCapturingLocation(false);
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 8000,
           }
         );
       }

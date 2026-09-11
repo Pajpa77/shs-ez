@@ -937,6 +937,11 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                       (err) => {
                         console.warn(`GPS-Abfrage fehlgeschlagen: ${err.message}`);
                         setFormError(`GPS-Abfrage nicht möglich: ${err.message}`);
+                      },
+                      {
+                        enableHighAccuracy: true,
+                        maximumAge: 0,
+                        timeout: 8000,
                       }
                     );
                   }
