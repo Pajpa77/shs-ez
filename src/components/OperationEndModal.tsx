@@ -48,17 +48,26 @@ export const OperationEndModal: React.FC<OperationEndModalProps> = ({
 
   if (!isOpen || !currentOperation) return null;
 
-  // Explicit admin-only guard clause
-  if (currentUser?.role !== 'admin') {
+  const canControl = Boolean(
+    currentUser && (
+      currentUser.role === 'admin' ||
+      currentUser.isAdmin ||
+      currentUser.role === 'einsatzleitung' ||
+      currentUser.canLeadOperations
+    )
+  );
+
+  // Explicit admin & Einsatzleitung guard clause
+  if (!canControl) {
     return (
       <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md font-sans">
         <div className="bg-[#1E293B] border border-red-500/50 rounded-2xl p-6 max-w-md text-center space-y-4 shadow-2xl text-black dark:text-slate-100">
           <div className="w-12 h-12 rounded-full bg-red-600/20 text-red-400 mx-auto flex items-center justify-center border border-red-500/40">
             <Shield className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold text-white uppercase tracking-wide">Zugriff verweigert (Admin-Bereich)</h3>
+          <h3 className="text-base font-bold text-white uppercase tracking-wide">Zugriff verweigert</h3>
           <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-            Nur Einsatzleiter und Administratoren (Rolle: <span className="font-mono text-red-400 font-bold">admin</span>) sind autorisiert, Einsätze offiziell zu beenden, auszuwerten und zu archivieren.
+            Nur Einsatzleiter und Administratoren sind autorisiert, Einsätze offiziell zu beenden, auszuwerten und zu archivieren.
           </p>
           <button
             onClick={onClose}
@@ -80,8 +89,8 @@ export const OperationEndModal: React.FC<OperationEndModalProps> = ({
   const handleEndOperation = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    if (currentUser?.role !== 'admin') {
-      setErrorMsg('Aktion verweigert: Nur Administratoren dürfen Einsätze beenden.');
+    if (!canControl) {
+      setErrorMsg('Aktion verweigert: Nur Einsatzleiter und Administratoren dürfen Einsätze beenden.');
       return;
     }
     if (!confirmCheckbox) {

@@ -42,7 +42,14 @@ export const OperationPauseModal: React.FC<OperationPauseModalProps> = ({
   if (!isOpen || !currentOperation) return null;
 
   // Admin and Einsatzleitung guard
-  const canControl = currentUser?.role === 'admin' || currentUser?.role === 'einsatzleitung';
+  const canControl = Boolean(
+    currentUser && (
+      currentUser.role === 'admin' ||
+      currentUser.isAdmin ||
+      currentUser.role === 'einsatzleitung' ||
+      currentUser.canLeadOperations
+    )
+  );
   if (!canControl) {
     return (
       <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md font-sans">

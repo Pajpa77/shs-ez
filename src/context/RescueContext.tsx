@@ -1335,7 +1335,12 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                   } else {
                     const localTime = localOp.updatedAt ? new Date(localOp.updatedAt).getTime() : 0;
                     const cloudTime = cloudOp.updatedAt ? new Date(cloudOp.updatedAt).getTime() : 0;
-                    if (cloudTime >= localTime) {
+                    const isLocalRunning = localOp.status === 'active' || localOp.status === 'paused';
+                    const isCloudCompleted = cloudOp.status === 'completed' || cloudOp.status === 'archived';
+
+                    if (isLocalRunning && isCloudCompleted && cloudTime <= localTime) {
+                      merged.push(cleanOperation(localOp));
+                    } else if (cloudTime >= localTime) {
                       merged.push(cleanOperation({ ...localOp, ...cloudOp }));
                     } else {
                       merged.push(cleanOperation(localOp));
@@ -2218,20 +2223,20 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const newLastSeen = isActive ? 'Online' : `Abgemeldet (${timeStr})`;
 
-    // Reset arrival status to 'in_transit' whenever a user logs in (isActive becomes true)
-    // This forces admin re-confirmation after every login
-    const shouldResetArrival = isActive;
+    const existingArrival = userArrivalStatuses[userId] || targetUser?.arrivalStatus;
+    const isAlreadyReady = existingArrival === 'ready';
 
     updateUser(userId, {
       isActive,
       lastSeen: newLastSeen,
       activeSessionId: isActive ? deviceSessionId : '',
-      ...(shouldResetArrival ? { arrivalStatus: 'in_transit' } : {}),
+      ...(isActive && !isAlreadyReady ? { arrivalStatus: 'in_transit' } : {}),
     });
 
-    if (isActive) {
-      // Also reset in userArrivalStatuses state and storage so stale "ready" status from prior sessions does not linger
+    if (isActive && !isAlreadyReady) {
+      // Also reset in userArrivalStatuses state and storage if not already marked ready
       setUserArrivalStatuses((prev) => {
+        if (prev[userId] === 'ready') return prev;
         const next = { ...prev, [userId]: 'in_transit' as const };
         try {
           localStorage.setItem('rescue_app_arrival_statuses_slk_v4', JSON.stringify(next));
@@ -3042,11 +3047,33 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     id: string,
     updates: Partial<SearchOperation> | ((prevOp: SearchOperation) => Partial<SearchOperation>)
   ) => {
+    const isAuthToChangeOpStatus = Boolean(
+      currentUser && (
+        currentUser.role === 'admin' ||
+        currentUser.isAdmin ||
+        currentUser.role === 'einsatzleitung' ||
+        currentUser.canLeadOperations
+      )
+    );
+
     const now = new Date().toISOString();
     setAllOperations((prev) => {
       const next = prev.map((op) => {
         if (op.id === id) {
-          const appliedUpdates = typeof updates === 'function' ? updates(op) : updates;
+          let appliedUpdates = typeof updates === 'function' ? updates(op) : updates;
+
+          // SECURITY GUARD: If attempting to change status to completed/paused/archived without Admin or EL role, block status change
+          if (
+            appliedUpdates.status &&
+            appliedUpdates.status !== op.status &&
+            (appliedUpdates.status === 'completed' || appliedUpdates.status === 'paused' || appliedUpdates.status === 'archived') &&
+            !isAuthToChangeOpStatus
+          ) {
+            console.warn(`[Security Guard] Non-admin/EL user '${currentUser?.name || 'unknown'}' attempted unauthorized operation status change to '${appliedUpdates.status}'. Status modification blocked.`);
+            const { status: _blockedStatus, ...rest } = appliedUpdates;
+            appliedUpdates = rest;
+          }
+
           const updated = cleanOperation({ ...op, ...appliedUpdates, updatedAt: now });
           syncOperationToCloud(updated);
           return updated;
@@ -3063,6 +3090,24 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   };
 
   const pauseOperation = async (id: string, reason?: string, snapshotUrl?: string) => {
+    const isAuthToManageOp = Boolean(
+      currentUser && (
+        currentUser.role === 'admin' ||
+        currentUser.isAdmin ||
+        currentUser.role === 'einsatzleitung' ||
+        currentUser.canLeadOperations
+      )
+    );
+    if (!isAuthToManageOp) {
+      console.warn('[Security Guard] Unauthorized attempt to pause operation');
+      setActiveAlertNotification({
+        title: '⚠️ Zugriffsverweigerung',
+        message: 'Nur Einsatzleiter und Administratoren sind autorisiert, den Einsatz zu pausieren.',
+        timestamp: new Date().toLocaleTimeString(),
+      });
+      return;
+    }
+
     const now = new Date().toISOString();
     const reasonText = reason ? `: ${reason}` : '';
 
@@ -3288,6 +3333,24 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     outcome?: 'person_alive' | 'person_transferred' | 'aborted' | 'person_deceased' | 'exercise_completed',
     mapSnapshotUrl?: string
   ) => {
+    const isAuthToManageOp = Boolean(
+      currentUser && (
+        currentUser.role === 'admin' ||
+        currentUser.isAdmin ||
+        currentUser.role === 'einsatzleitung' ||
+        currentUser.canLeadOperations
+      )
+    );
+    if (!isAuthToManageOp) {
+      console.warn('[Security Guard] Unauthorized attempt to end operation');
+      setActiveAlertNotification({
+        title: '⚠️ Zugriffsverweigerung',
+        message: 'Nur Einsatzleiter und Administratoren sind autorisiert, Einsätze zu beenden.',
+        timestamp: new Date().toLocaleTimeString(),
+      });
+      return;
+    }
+
     const now = new Date().toISOString();
     const targetOp = allOperations.find((o) => o.id === id);
     const finalSnapshot =
@@ -3669,6 +3732,24 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
 
   const deleteOperation = (id: string) => {
+    const isAuthToManageOp = Boolean(
+      currentUser && (
+        currentUser.role === 'admin' ||
+        currentUser.isAdmin ||
+        currentUser.role === 'einsatzleitung' ||
+        currentUser.canLeadOperations
+      )
+    );
+    if (!isAuthToManageOp) {
+      console.warn('[Security Guard] Unauthorized attempt to delete operation');
+      setActiveAlertNotification({
+        title: '⚠️ Zugriffsverweigerung',
+        message: 'Nur Einsatzleiter und Administratoren dürfen Einsätze löschen.',
+        timestamp: new Date().toLocaleTimeString(),
+      });
+      return;
+    }
+
     deletedOpIdsRef.current.add(id);
 
     // Delete from Firestore Cloud Database
