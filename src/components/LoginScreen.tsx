@@ -526,8 +526,27 @@ export const LoginScreen: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-6 mt-6 border-t border-blue-700/60 flex items-center justify-between text-[11px] text-blue-200 font-mono">
-            <span>Vereinsbüro Aschersleben</span>
+          <div className="pt-6 mt-6 border-t border-blue-700/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-blue-200 font-mono">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-amber-300">v2.5 (Orange Suchhund)</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()));
+                  }
+                  if ('caches' in window) {
+                    caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+                  }
+                  localStorage.removeItem('shs_ez_cache_version');
+                  window.location.reload();
+                }}
+                className="px-2 py-0.5 rounded bg-blue-900/90 hover:bg-blue-800 text-cyan-300 border border-cyan-400/50 text-[10px] font-bold transition cursor-pointer flex items-center gap-1 shadow-sm"
+                title="Erzwingt das sofortige Leeren aller alten Caches und holt die neuste Version vom Server"
+              >
+                <span>🔄 App-Update erzwingen</span>
+              </button>
+            </div>
             <span className="text-emerald-300 font-bold flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
               <span>Einsatzbereit</span>

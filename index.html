@@ -19,6 +19,36 @@
     <meta name="theme-color" content="#0F172A" />
 
     <script>
+      // Force purge outdated ServiceWorker caches when a major build deployment lands
+      (function() {
+        var CURRENT_VERSION = '2026-09-11-v5-reflex-orange';
+        var storedVersion = localStorage.getItem('shs_ez_cache_version');
+
+        if (storedVersion !== CURRENT_VERSION) {
+          localStorage.setItem('shs_ez_cache_version', CURRENT_VERSION);
+          
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              for (var i = 0; i < regs.length; i++) {
+                regs[i].unregister();
+              }
+            }).catch(function(){});
+          }
+
+          if ('caches' in window) {
+            caches.keys().then(function(keys) {
+              for (var j = 0; j < keys.length; j++) {
+                caches.delete(keys[j]);
+              }
+            }).catch(function(){});
+          }
+
+          if (storedVersion) {
+            window.location.reload();
+          }
+        }
+      })();
+
       // Global error listener to prevent blank screen and show diagnostics
       window.addEventListener('error', function(e) {
         console.error('[BOOT-ERROR]', e);
