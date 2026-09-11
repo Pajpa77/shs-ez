@@ -153,42 +153,58 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
   // Draw Code 128 Barcode on canvas next to user photo
   useEffect(() => {
-    if (!barcodeCanvasRef.current || !isOpen || !activeBarcodeValue) return;
-    const canvas = barcodeCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!isOpen || !activeBarcodeValue) return;
 
-    const pattern = generateCode128Pattern(activeBarcodeValue);
-    if (!pattern) return;
+    const renderBarcode = () => {
+      const canvas = barcodeCanvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    const barWidth = 2;
-    const quietZone = 10;
-    const height = 44;
-    const totalWidth = pattern.split('').reduce((sum, w) => sum + parseInt(w, 10) * barWidth, 0) + quietZone * 2;
+      const pattern = generateCode128Pattern(activeBarcodeValue);
+      if (!pattern) return;
 
-    canvas.width = totalWidth;
-    canvas.height = height + 22;
+      const barWidth = 2;
+      const quietZone = 12;
+      const height = 48;
+      const totalWidth = pattern.split('').reduce((sum, w) => sum + parseInt(w, 10) * barWidth, 0) + quietZone * 2;
 
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+      canvas.width = totalWidth;
+      canvas.height = height + 24;
 
-    ctx.fillStyle = '#000000';
-    let currentX = quietZone;
-    let isBar = true;
+      // Pure White Background Box
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    for (let i = 0; i < pattern.length; i++) {
-      const width = parseInt(pattern[i], 10) * barWidth;
-      if (isBar) {
-        ctx.fillRect(currentX, 4, width, height);
+      // Deep Black Bars
+      ctx.fillStyle = '#000000';
+      let currentX = quietZone;
+      let isBar = true;
+
+      for (let i = 0; i < pattern.length; i++) {
+        const width = parseInt(pattern[i], 10) * barWidth;
+        if (isBar) {
+          ctx.fillRect(currentX, 4, width, height);
+        }
+        currentX += width;
+        isBar = !isBar;
       }
-      currentX += width;
-      isBar = !isBar;
-    }
 
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 11px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(activeBarcodeValue, canvas.width / 2, height + 17);
+      // Barcode Text Below
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(activeBarcodeValue, canvas.width / 2, height + 18);
+    };
+
+    renderBarcode();
+    const t1 = setTimeout(renderBarcode, 50);
+    const t2 = setTimeout(renderBarcode, 200);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, [activeBarcodeValue, isOpen]);
 
   const handleDownloadBarcodePNG = () => {
@@ -367,7 +383,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Foto &amp; Ausweis-ID (Klick = PNG Speichern)</span>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="flex flex-row items-center gap-3 overflow-x-auto pb-1">
               {/* Active Photo or Clean Initials Badge */}
               <div className="relative group shrink-0">
                 <div className="h-20 w-20 rounded-2xl overflow-hidden border-2 border-blue-500 shadow-xl bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
@@ -395,18 +411,22 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 </button>
               </div>
 
-              {/* VISIBLE BARCODE DIRECTLY NEXT TO THE USER PHOTO */}
+              {/* PROMINENT WHITE BACKGROUND RECTANGLE WITH BARCODE DIRECTLY NEXT TO USER PHOTO */}
               <div
                 onClick={handleDownloadBarcodePNG}
-                className="p-2 bg-white rounded-2xl border-2 border-slate-300 hover:border-blue-500 shadow-xl cursor-pointer group relative shrink-0 transition-all duration-200 flex flex-col items-center justify-center"
+                className="p-2.5 bg-white rounded-2xl border-2 border-slate-300 hover:border-blue-500 shadow-xl cursor-pointer group relative shrink-0 transition-all duration-200 flex flex-col items-center justify-center min-w-[170px]"
                 title="Klicke auf den Strichcode, um ihn sofort als PNG-Bilddatei herunterzuladen"
               >
-                <canvas ref={barcodeCanvasRef} className="h-14 max-w-[180px] block pointer-events-none" />
-                <div className="text-[9px] font-mono font-bold text-blue-900 bg-blue-100 px-2 py-0.5 rounded mt-1 flex items-center gap-1 group-hover:bg-blue-600 group-hover:text-white transition">
+                <div className="text-[9px] font-mono font-bold text-slate-700 uppercase tracking-wider mb-0.5">
+                  Ausweis-Strichcode
+                </div>
+                <canvas ref={barcodeCanvasRef} className="h-14 max-w-[200px] w-auto block pointer-events-none" />
+                <div className="text-[9px] font-mono font-bold text-blue-900 bg-blue-100 px-2 py-1 rounded-lg mt-1 flex items-center gap-1 group-hover:bg-blue-600 group-hover:text-white transition shadow-sm">
                   <Download className="w-3 h-3" />
-                  <span>💾 Klick = PNG Speichern</span>
+                  <span>💾 PNG Herunterladen</span>
                 </div>
               </div>
+            </div>
 
               {/* Upload Controls & Full Card Modal trigger */}
               <div className="flex-1 space-y-2 w-full">
@@ -479,7 +499,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   </div>
                 )}
               </div>
-            </div>
           </div>
 
           {/* Name & Funkrufname */}
