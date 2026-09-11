@@ -3,6 +3,7 @@ import { useRescue } from '../context/RescueContext';
 import { EquipmentType, isFirstAdmin } from '../types';
 import { compressImageFile } from '../lib/imageUtils';
 import { MemberCardModal } from './MemberCardModal';
+import JsBarcode from 'jsbarcode';
 import {
   User,
   X,
@@ -150,55 +151,34 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
 
   const activeBarcodeValue = memberId.trim() || currentUser?.memberId || currentUser?.id || 'RT-2026-001';
 
-  // Draw Code 128 Barcode on canvas next to user photo
   useEffect(() => {
     if (!isOpen || !activeBarcodeValue) return;
 
     const renderBarcode = () => {
       const canvas = barcodeCanvasRef.current;
       if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      const pattern = generateCode128Pattern(activeBarcodeValue);
-      if (!pattern) return;
-
-      const barWidth = 2;
-      const quietZone = 12;
-      const height = 48;
-      const totalWidth = pattern.split('').reduce((sum, w) => sum + parseInt(w, 10) * barWidth, 0) + quietZone * 2;
-
-      canvas.width = totalWidth;
-      canvas.height = height + 24;
-
-      // Pure White Background Box
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Deep Black Bars
-      ctx.fillStyle = '#000000';
-      let currentX = quietZone;
-      let isBar = true;
-
-      for (let i = 0; i < pattern.length; i++) {
-        const width = parseInt(pattern[i], 10) * barWidth;
-        if (isBar) {
-          ctx.fillRect(currentX, 4, width, height);
-        }
-        currentX += width;
-        isBar = !isBar;
+      try {
+        JsBarcode(canvas, activeBarcodeValue, {
+          format: 'CODE128',
+          width: 2,
+          height: 48,
+          displayValue: true,
+          font: 'monospace',
+          fontSize: 13,
+          fontOptions: 'bold',
+          textMargin: 4,
+          margin: 10,
+          background: '#FFFFFF',
+          lineColor: '#000000',
+        });
+      } catch (err) {
+        console.warn('JsBarcode render error:', err);
       }
-
-      // Barcode Text Below
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 12px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(activeBarcodeValue, canvas.width / 2, height + 18);
     };
 
     renderBarcode();
     const t1 = setTimeout(renderBarcode, 50);
-    const t2 = setTimeout(renderBarcode, 200);
+    const t2 = setTimeout(renderBarcode, 150);
 
     return () => {
       clearTimeout(t1);
@@ -373,19 +353,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
             </div>
           )}
 
-          {/* Photo selection with Custom Upload & Camera */}
+          {/* Photo selection with Custom Upload, Camera & VISIBLE BARCODE */}
           <div className="bg-white dark:bg-slate-900/70 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700 space-y-3">
             <div className="flex items-center justify-between">
               <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono text-[11px]">
-                Profilfoto:
+                Profilfoto &amp; Ausweis-Strichcode:
               </label>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Eigenes Foto oder Initialen</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Foto &amp; Ausweis-ID (Klick = PNG Speichern)</span>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex flex-row items-center gap-3 overflow-x-auto pb-1">
               {/* Active Photo or Clean Initials Badge */}
               <div className="relative group shrink-0">
-                <div className="h-16 w-16 rounded-xl overflow-hidden border-2 border-blue-500 shadow-lg bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
+                <div className="h-20 w-20 rounded-2xl overflow-hidden border-2 border-blue-500 shadow-xl bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
                   {photoUrl ? (
                     <img
                       src={photoUrl}
@@ -394,20 +374,38 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                     />
                   ) : (
                     <div className="h-full w-full bg-gradient-to-br from-blue-700 to-indigo-900 flex flex-col items-center justify-center text-white">
-                      <span className="text-xl font-black font-mono">{name ? name.charAt(0).toUpperCase() : 'M'}</span>
-                      <span className="text-[8px] font-mono text-blue-200">Kein Foto</span>
+                      <span className="text-2xl font-black font-mono">{name ? name.charAt(0).toUpperCase() : 'M'}</span>
+                      <span className="text-[9px] font-mono text-blue-200 mt-0.5 font-semibold">Kein Foto</span>
                     </div>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute inset-0 bg-slate-100 dark:bg-slate-950/75 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-blue-300 transition rounded-xl cursor-pointer"
+                  className="absolute inset-0 bg-slate-100 dark:bg-slate-950/75 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-blue-300 transition rounded-2xl cursor-pointer"
                   title="Neues Foto aufnehmen / hochladen"
                 >
-                  <Camera className="w-4 h-4" />
+                  <Camera className="w-5 h-5" />
+                  <span className="text-[9px] font-mono mt-1 font-bold">Ändern</span>
                 </button>
               </div>
+
+              {/* PROMINENT WHITE BACKGROUND RECTANGLE WITH BARCODE DIRECTLY NEXT TO USER PHOTO */}
+              <div
+                onClick={handleDownloadBarcodePNG}
+                className="p-2.5 bg-white rounded-2xl border-2 border-slate-300 hover:border-blue-500 shadow-xl cursor-pointer group relative shrink-0 transition-all duration-200 flex flex-col items-center justify-center min-w-[170px]"
+                title="Klicke auf den Strichcode, um ihn sofort als PNG-Bilddatei herunterzuladen"
+              >
+                <div className="text-[9px] font-mono font-bold text-slate-700 uppercase tracking-wider mb-0.5">
+                  Ausweis-Strichcode
+                </div>
+                <canvas ref={barcodeCanvasRef} className="h-14 max-w-[200px] w-auto block pointer-events-none" />
+                <div className="text-[9px] font-mono font-bold text-blue-900 bg-blue-100 px-2 py-1 rounded-lg mt-1 flex items-center gap-1 group-hover:bg-blue-600 group-hover:text-white transition shadow-sm">
+                  <Download className="w-3 h-3" />
+                  <span>💾 PNG Herunterladen</span>
+                </div>
+              </div>
+            </div>
 
               {/* Upload Controls & Full Card Modal trigger */}
               <div className="flex-1 space-y-2 w-full">
@@ -480,7 +478,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   </div>
                 )}
               </div>
-            </div>
           </div>
 
           {/* Name & Funkrufname */}
@@ -525,7 +522,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                 <label className="block font-bold text-slate-700 dark:text-slate-300 font-mono uppercase tracking-wider text-xs">
                   Ausweis- / Mitglieds-ID:
                 </label>
-                {!memberId.trim() && (
+                {currentUser?.role === 'admin' && !memberId.trim() && (
                   <button
                     type="button"
                     onClick={() => setMemberId(`SHS-${Math.floor(100000 + Math.random() * 900000)}`)}
@@ -539,9 +536,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               <input
                 type="text"
                 value={memberId}
-                onChange={(e) => setMemberId(e.target.value)}
-                placeholder="Ausweisnummer manuell eingeben (z.B. SHS-482910)..."
-                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                readOnly={currentUser?.role !== 'admin'}
+                onChange={(e) => currentUser?.role === 'admin' && setMemberId(e.target.value)}
+                placeholder="Ausweisnummer (z.B. SHS-482910)..."
+                className={`w-full px-3 py-2 rounded-xl border text-xs font-mono ${
+                  currentUser?.role === 'admin'
+                    ? 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 focus:outline-none focus:border-blue-500'
+                    : 'bg-slate-100 dark:bg-slate-950/80 border-slate-300 dark:border-slate-800 text-slate-400 cursor-not-allowed'
+                }`}
+                title={currentUser?.role === 'admin' ? 'Ausweisnummer bearbeiten' : 'Ausweisnummer kann nur von Administratoren in der Accountverwaltung geändert werden'}
               />
             </div>
 

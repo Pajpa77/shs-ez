@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
 import QRCode from 'qrcode';
+import JsBarcode from 'jsbarcode';
 import { X, Download, Copy, Printer, Check, CreditCard, QrCode as QrIcon, Barcode as BarIcon } from 'lucide-react';
 
 interface MemberCardModalProps {
@@ -71,47 +72,26 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose 
       .catch((err) => console.error('QR code generation failed:', err));
   }, [barcodeValue]);
 
-  // Draw 1D Barcode on Canvas
+  // Draw 1D Barcode on Canvas using verified JsBarcode
   useEffect(() => {
-    if (!barcodeCanvasRef.current) return;
-    const canvas = barcodeCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const pattern = generateCode128Pattern(barcodeValue);
-    if (!pattern) return;
-
-    const barWidth = 3;
-    const quietZone = 20;
-    const height = 100;
-    const totalWidth = pattern.split('').reduce((sum, w) => sum + parseInt(w, 10) * barWidth, 0) + quietZone * 2;
-
-    canvas.width = totalWidth;
-    canvas.height = height + 35; // Extra height for text below
-
-    // Background
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw Bars
-    ctx.fillStyle = '#000000';
-    let currentX = quietZone;
-    let isBar = true;
-
-    for (let i = 0; i < pattern.length; i++) {
-      const width = parseInt(pattern[i], 10) * barWidth;
-      if (isBar) {
-        ctx.fillRect(currentX, 15, width, height);
-      }
-      currentX += width;
-      isBar = !isBar;
+    if (!barcodeCanvasRef.current || !barcodeValue) return;
+    try {
+      JsBarcode(barcodeCanvasRef.current, barcodeValue, {
+        format: 'CODE128',
+        width: 3,
+        height: 90,
+        displayValue: true,
+        font: 'monospace',
+        fontSize: 16,
+        fontOptions: 'bold',
+        textMargin: 6,
+        margin: 15,
+        background: '#FFFFFF',
+        lineColor: '#000000',
+      });
+    } catch (err) {
+      console.warn('JsBarcode render error in MemberCardModal:', err);
     }
-
-    // Text below barcode
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 16px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(barcodeValue, canvas.width / 2, height + 30);
   }, [barcodeValue]);
 
   // Save Barcode / QR Code as PNG image file

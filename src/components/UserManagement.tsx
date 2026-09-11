@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { User, UserRole, EquipmentType, isFirstAdmin, isOwner } from '../types';
 import { compressImageFile } from '../lib/imageUtils';
+import JsBarcode from 'jsbarcode';
 import {
   Users,
   Key,
@@ -113,48 +114,28 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     const renderBarcode = () => {
       const canvas = barcodeCanvasRef.current;
       if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      const pattern = generateCode128Pattern(activeBarcodeValue);
-      if (!pattern) return;
-
-      const barWidth = 2;
-      const quietZone = 12;
-      const height = 48;
-      const totalWidth = pattern.split('').reduce((sum, w) => sum + parseInt(w, 10) * barWidth, 0) + quietZone * 2;
-
-      canvas.width = totalWidth;
-      canvas.height = height + 24;
-
-      // Pure White Background Box
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Deep Black Bars
-      ctx.fillStyle = '#000000';
-      let currentX = quietZone;
-      let isBar = true;
-
-      for (let i = 0; i < pattern.length; i++) {
-        const width = parseInt(pattern[i], 10) * barWidth;
-        if (isBar) {
-          ctx.fillRect(currentX, 4, width, height);
-        }
-        currentX += width;
-        isBar = !isBar;
+      try {
+        JsBarcode(canvas, activeBarcodeValue, {
+          format: 'CODE128',
+          width: 2,
+          height: 48,
+          displayValue: true,
+          font: 'monospace',
+          fontSize: 13,
+          fontOptions: 'bold',
+          textMargin: 4,
+          margin: 10,
+          background: '#FFFFFF',
+          lineColor: '#000000',
+        });
+      } catch (err) {
+        console.warn('JsBarcode render error:', err);
       }
-
-      // Barcode Text Below
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 12px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(activeBarcodeValue, canvas.width / 2, height + 18);
     };
 
     renderBarcode();
     const t1 = setTimeout(renderBarcode, 50);
-    const t2 = setTimeout(renderBarcode, 200);
+    const t2 = setTimeout(renderBarcode, 150);
 
     return () => {
       clearTimeout(t1);
