@@ -48,6 +48,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
   const [manualCode, setManualCode] = useState<string>('');
   const [lastScannedUser, setLastScannedUser] = useState<{ user: User; timestamp: string } | null>(null);
+  const [notLoggedInUser, setNotLoggedInUser] = useState<{ user: User; timestamp: string } | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
 
   const isScanningRef = useRef<boolean>(true);
@@ -159,6 +160,18 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
     if (matchedUser) {
       lastScannedTimeRef.current = now;
+
+      // Wahrheitsgemäße Prüfung: Ist die Einsatzkraft im System eingeloggt?
+      if (!matchedUser.isActive) {
+        setNotLoggedInUser({
+          user: matchedUser,
+          timestamp: new Date().toLocaleTimeString('de-DE'),
+        });
+        setLastScannedUser(null);
+        setScanError(null);
+        return;
+      }
+
       playSuccessBeep();
       onConfirmReady(matchedUser.id);
 
@@ -166,6 +179,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
         user: matchedUser,
         timestamp: new Date().toLocaleTimeString('de-DE'),
       });
+      setNotLoggedInUser(null);
       setScanError(null);
     } else {
       lastScannedTimeRef.current = now;
@@ -273,6 +287,39 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {notLoggedInUser && (
+            <div className="p-3.5 rounded-2xl bg-amber-950/90 border-2 border-amber-500/80 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fadeIn">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/40">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="text-xs font-mono text-amber-300 uppercase font-bold flex items-center gap-1">
+                    <span>⚠️ USER AKTUELL NICHT EINGELOGGT ({notLoggedInUser.timestamp})</span>
+                  </div>
+                  <div className="text-sm font-bold text-white leading-tight">
+                    {notLoggedInUser.user.name} ({notLoggedInUser.user.callSign})
+                  </div>
+                  <div className="text-[10px] text-amber-200/90 font-mono mt-0.5">
+                    Ausweis-ID: {notLoggedInUser.user.memberId || notLoggedInUser.user.id} • Bitte zuerst am Smartphone in der App einloggen!
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onConfirmReady(notLoggedInUser.user.id);
+                  setLastScannedUser(notLoggedInUser);
+                  setNotLoggedInUser(null);
+                }}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs font-mono rounded-xl transition cursor-pointer shrink-0 shadow border border-amber-400"
+                title="Manuell im Einsatz anmelden und auf Bereitschaft setzen"
+              >
+                ⚡ Dennoch anmelden
+              </button>
             </div>
           )}
 

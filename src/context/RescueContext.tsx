@@ -2654,9 +2654,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   }, [allUsers, userArrivalStatuses, userLocations, calculateDistanceToEzMeters]);
 
   const confirmUserReady = useCallback((userId: string) => {
-    // 1. Set status to ready via synchronized user properties and state
+    // 1. Set status to ready and set user active in system
     updateUser(userId, {
       arrivalStatus: 'ready',
+      isActive: true,
     });
     setUserArrivalStatuses((prev) => {
       const next = { ...prev, [userId]: 'ready' as const };
@@ -2682,13 +2683,16 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       };
     });
 
-    // 3. Log to current operation's logs
+    // 3. Log to current operation's logs & ensure participantIds includes userId
     setAllOperations((prevOps) => {
       const activeOp = prevOps.find((op) => op.status === 'active' || op.status === 'paused');
       if (!activeOp) return prevOps;
 
       const u = allUsers.find((user) => user.id === userId);
       if (!u) return prevOps;
+
+      const existingPIds = activeOp.participantIds || [];
+      const updatedParticipantIds = existingPIds.includes(userId) ? existingPIds : [...existingPIds, userId];
 
       const logEntry: OperationLogEntry = {
         id: `log-${Date.now()}`,
@@ -2702,6 +2706,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
       const updatedOp: SearchOperation = {
         ...activeOp,
+        participantIds: updatedParticipantIds,
         logs: [logEntry, ...(activeOp.logs || [])],
         updatedAt: new Date().toISOString(),
       };
