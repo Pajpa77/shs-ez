@@ -19,7 +19,43 @@ import {
   LogOut,
   AlertTriangle,
   Eye,
+  Download,
 } from 'lucide-react';
+
+// Code 128 B pattern definitions (width of bars and spaces for values 0..106)
+const CODE128_PATTERNS = [
+  '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312', '132212', '221213',
+  '221312', '222311', '121232', '123212', '122231', '132212', '221213', '221312', '231212', '232211',
+  '221122', '212212', '222112', '112232', '122132', '122312', '132122', '132212', '221122', '221212',
+  '112322', '122312', '132212', '221122', '221212', '212312', '232112', '212213', '212312', '213212',
+  '211213', '211312', '213112', '213211', '221113', '221311', '231112', '231211', '232111', '211132',
+  '211331', '213131', '213311', '213113', '213312', '231131', '231311', '233111', '211412', '211214',
+  '211232', '233112', '211322', '211232', '233112', '231212', '232211', '231122', '213212', '223112',
+  '312131', '311222', '321122', '321221', '312212', '322112', '322211', '212123', '212321', '232121',
+  '111323', '131123', '131321', '112313', '132113', '132311', '211313', '231113', '231311', '112133',
+  '112331', '132131', '113123', '113321', '133121', '313121', '211331', '241112', '131114', '213111',
+  '211411', '211141', '411112', '211412', '211214', '211232', '2331112'
+];
+
+function generateCode128Pattern(text: string): string {
+  const cleanText = text.trim().replace(/[^\x20-\x7E]/g, '');
+  if (!cleanText) return '';
+  let checksum = 104;
+  const indices: number[] = [104];
+  for (let i = 0; i < cleanText.length; i++) {
+    const code = cleanText.charCodeAt(i) - 32;
+    indices.push(code);
+    checksum += code * (i + 1);
+  }
+  const checkDigit = checksum % 103;
+  indices.push(checkDigit);
+  indices.push(106);
+  let patternStr = '';
+  indices.forEach((idx) => {
+    patternStr += CODE128_PATTERNS[idx] || CODE128_PATTERNS[0];
+  });
+  return patternStr;
+}
 
 interface UserManagementModalProps {
   userToEdit: User | null;
@@ -67,6 +103,73 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [customEquipmentNotes, setCustomEquipmentNotes] = useState('');
   const [statusMessage, setStatusMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
   const userFileInputRef = useRef<HTMLInputElement | null>(null);
+  const barcodeCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const activeBarcodeValue = memberId.trim() || activeUser?.memberId || activeUser?.id || 'SHS-000000';
+
+  useEffect(() => {
+    if (!isOpen || !activeBarcodeValue) return;
+
+    const renderBarcode = () => {
+      const canvas = barcodeCanvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const pattern = generateCode128Pattern(activeBarcodeValue);
+      if (!pattern) return;
+
+      const barWidth = 2;
+      const quietZone = 12;
+      const height = 48;
+      const totalWidth = pattern.split('').reduce((sum, w) => sum + parseInt(w, 10) * barWidth, 0) + quietZone * 2;
+
+      canvas.width = totalWidth;
+      canvas.height = height + 24;
+
+      // Pure White Background Box
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Deep Black Bars
+      ctx.fillStyle = '#000000';
+      let currentX = quietZone;
+      let isBar = true;
+
+      for (let i = 0; i < pattern.length; i++) {
+        const width = parseInt(pattern[i], 10) * barWidth;
+        if (isBar) {
+          ctx.fillRect(currentX, 4, width, height);
+        }
+        currentX += width;
+        isBar = !isBar;
+      }
+
+      // Barcode Text Below
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(activeBarcodeValue, canvas.width / 2, height + 18);
+    };
+
+    renderBarcode();
+    const t1 = setTimeout(renderBarcode, 50);
+    const t2 = setTimeout(renderBarcode, 200);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [activeBarcodeValue, isOpen]);
+
+  const handleDownloadBarcodePNG = () => {
+    if (!barcodeCanvasRef.current) return;
+    const dataUrl = barcodeCanvasRef.current.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `Strichcode_${(name || activeUser?.name || 'User').replace(/\s+/g, '_')}_${activeBarcodeValue}.png`;
+    a.click();
+  };
 
   const populateForm = (user: User | null) => {
     setStatusMessage(null);
@@ -789,18 +892,19 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
             />
           </div>
 
-          {/* Photo Avatar Picker with Upload */}
+          {/* Photo Avatar Picker with Upload & VISIBLE BARCODE */}
           <div className="bg-white dark:bg-slate-900/70 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700 space-y-3">
             <div className="flex items-center justify-between">
               <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono text-[11px]">
-                Profilfoto:
+                Profilfoto &amp; Ausweis-Strichcode:
               </label>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Eigenes Foto oder Initialen</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Foto &amp; Ausweis-ID (Klick = PNG Speichern)</span>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex flex-row items-center gap-3 overflow-x-auto pb-1">
+              {/* User Photo Avatar */}
               <div className="relative group shrink-0">
-                <div className="h-16 w-16 rounded-xl overflow-hidden border-2 border-blue-500 shadow-lg bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
+                <div className="h-20 w-20 rounded-2xl overflow-hidden border-2 border-blue-500 shadow-xl bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
                   {photoUrl ? (
                     <img
                       src={photoUrl}
@@ -809,20 +913,38 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     />
                   ) : (
                     <div className="h-full w-full bg-gradient-to-br from-blue-700 to-indigo-900 flex flex-col items-center justify-center text-white">
-                      <span className="text-xl font-black font-mono">{name ? name.charAt(0).toUpperCase() : 'U'}</span>
-                      <span className="text-[8px] font-mono text-blue-200">Kein Foto</span>
+                      <span className="text-2xl font-black font-mono">{name ? name.charAt(0).toUpperCase() : 'U'}</span>
+                      <span className="text-[9px] font-mono text-blue-200 mt-0.5 font-semibold">Kein Foto</span>
                     </div>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={() => userFileInputRef.current?.click()}
-                  className="absolute inset-0 bg-slate-100 dark:bg-slate-950/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-blue-300 transition rounded-xl cursor-pointer"
+                  className="absolute inset-0 bg-slate-100 dark:bg-slate-950/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-blue-300 transition rounded-2xl cursor-pointer"
                   title="Foto hochladen"
                 >
-                  <Camera className="w-4 h-4" />
+                  <Camera className="w-5 h-5" />
+                  <span className="text-[9px] font-mono mt-1 font-bold">Ändern</span>
                 </button>
               </div>
+
+              {/* PROMINENT WHITE BACKGROUND RECTANGLE WITH BARCODE DIRECTLY NEXT TO USER PHOTO */}
+              <div
+                onClick={handleDownloadBarcodePNG}
+                className="p-2.5 bg-white rounded-2xl border-2 border-slate-300 hover:border-blue-500 shadow-xl cursor-pointer group relative shrink-0 transition-all duration-200 flex flex-col items-center justify-center min-w-[170px]"
+                title="Klicke auf den Strichcode, um ihn sofort als PNG-Bilddatei herunterzuladen"
+              >
+                <div className="text-[9px] font-mono font-bold text-slate-700 uppercase tracking-wider mb-0.5">
+                  Ausweis-Strichcode
+                </div>
+                <canvas ref={barcodeCanvasRef} className="h-14 max-w-[200px] w-auto block pointer-events-none" />
+                <div className="text-[9px] font-mono font-bold text-blue-900 bg-blue-100 px-2 py-1 rounded-lg mt-1 flex items-center gap-1 group-hover:bg-blue-600 group-hover:text-white transition shadow-sm">
+                  <Download className="w-3 h-3" />
+                  <span>💾 PNG Herunterladen</span>
+                </div>
+              </div>
+            </div>
 
               <div className="flex-1 space-y-2 w-full">
                 <input
@@ -884,7 +1006,6 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   </div>
                 )}
               </div>
-            </div>
           </div>
 
           {/* Actions */}
