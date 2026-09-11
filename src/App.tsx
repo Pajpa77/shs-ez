@@ -84,26 +84,26 @@ const MainApp: React.FC = () => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [pwaBannerDismissed, setPwaBannerDismissed] = useState(false);
   
-  // Prevent accidental page leave during active session/operation
+  // Prevent accidental page leave during active session/operation (Native Browser Warning Modal)
   useEffect(() => {
+    if (!currentUser) return;
+
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (currentUser) {
-        // Warn the user before accidentally navigating away or closing tab
-        event.preventDefault();
-        event.returnValue = 'Achtung: Du befindest dich in einer aktiven Rettungssitzung. Beim Schließen der Seite wird das GPS-Tracking unterbrochen.'; 
-        return event.returnValue;
-      }
+      // Standard browser confirmation prompt when closing/reloading tab or navigating away
+      event.preventDefault();
+      event.returnValue = 'WARNUNG: Einsatz-App aktiv! Beim Schließen dieser Seite wird das GPS-Tracking und die Verbindung zur Einsatzzentrale beendet. Möchtest du wirklich fortfahren?'; 
+      return event.returnValue;
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('beforeunload', handleBeforeUnload, { capture: true });
     
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('beforeunload', handleBeforeUnload, { capture: true });
     };
   }, [currentUser]);
 
-  // Activate Wake Lock if operation is active OR tracking test is active
-  const isTrackingActive = !!(isOperationActive || activeTrackingTest);
+  // Activate Wake Lock & Background GPS Heartbeat whenever user is logged in
+  const isTrackingActive = Boolean(currentUser || isOperationActive || activeTrackingTest);
   useWakeLock(isTrackingActive);
 
   // Apply UI Scale to document root
