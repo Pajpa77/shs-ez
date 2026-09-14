@@ -1506,6 +1506,30 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
           tracksLayerRef.current?.addLayer(polyline);
         });
+
+        // Start & End markers for archived track (start=green, end=black, radius 4, no label)
+        const startPt = archivedTrack.points[0];
+        const endPt = archivedTrack.points[archivedTrack.points.length - 1];
+        if (startPt) {
+          const startMarker = L.circleMarker([startPt.lat, startPt.lng], {
+            radius: 4,
+            color: '#ffffff',
+            fillColor: '#16a34a',
+            fillOpacity: 1,
+            weight: 1.5,
+          });
+          tracksLayerRef.current?.addLayer(startMarker);
+        }
+        if (endPt && archivedTrack.points.length > 1) {
+          const endMarker = L.circleMarker([endPt.lat, endPt.lng], {
+            radius: 4,
+            color: '#ffffff',
+            fillColor: '#000000',
+            fillOpacity: 1,
+            weight: 1.5,
+          });
+          tracksLayerRef.current?.addLayer(endMarker);
+        }
       });
     }
 
@@ -1619,6 +1643,34 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               { sticky: true }
             );
             tracksLayerRef.current?.addLayer(segPolyline);
+          }
+        }
+
+        // Render Start point (green) for this user's recorded track
+        const startPt = history[0];
+        if (startPt) {
+          const startMarker = L.circleMarker([startPt.lat, startPt.lng], {
+            radius: 4,
+            color: '#ffffff',
+            fillColor: '#16a34a',
+            fillOpacity: 1,
+            weight: 1.5,
+          });
+          tracksLayerRef.current?.addLayer(startMarker);
+        }
+
+        // If operation is paused or completed, render End point (black)
+        if ((isPaused || isCompleted) && history.length > 1) {
+          const endPt = history[history.length - 1];
+          if (endPt) {
+            const endMarker = L.circleMarker([endPt.lat, endPt.lng], {
+              radius: 4,
+              color: '#ffffff',
+              fillColor: '#000000',
+              fillOpacity: 1,
+              weight: 1.5,
+            });
+            tracksLayerRef.current?.addLayer(endMarker);
           }
         }
       });
