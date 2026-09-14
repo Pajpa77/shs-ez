@@ -623,9 +623,24 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         <div className="flex flex-col justify-center min-w-0">
           <div className="flex items-center gap-1 sm:gap-2">
-            <h1 className="text-xs sm:text-sm md:text-base font-bold leading-tight uppercase tracking-wider text-white truncate">
+            <button
+              type="button"
+              onClick={() => {
+                setShowSarAdminMenu((prev) => {
+                  const next = !prev;
+                  if (next) {
+                    setShowOpDropdown(false);
+                    setShowUserDropdown(false);
+                    setShowResponderListDropdown(false);
+                  }
+                  return next;
+                });
+              }}
+              className="text-xs sm:text-sm md:text-base font-bold leading-tight uppercase tracking-wider text-white hover:text-blue-300 transition cursor-pointer truncate text-left"
+              title="SHS EZ Hauptmenü öffnen"
+            >
               SHS EZ
-            </h1>
+            </button>
             {/* Quick Operation Selector Button - styled like the Share button */}
             <div className="relative inline-block shrink-0">
               <button

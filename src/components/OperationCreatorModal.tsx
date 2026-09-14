@@ -526,12 +526,33 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 flex items-center justify-center transition cursor-pointer"
-          >
-            <X className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                // Trigger form submission programmatically
+                const form = (e.currentTarget.closest('.animate-in') as HTMLElement)?.querySelector('form');
+                if (form) {
+                  form.requestSubmit();
+                }
+              }}
+              className={`px-3.5 py-1.5 rounded-xl text-white font-bold transition cursor-pointer flex items-center gap-1.5 shadow font-mono text-xs ${
+                mode === 'edit'
+                  ? 'bg-blue-600 hover:bg-blue-500'
+                  : 'bg-red-600 hover:bg-red-500'
+              }`}
+              title={mode === 'edit' ? 'Änderungen sofort speichern' : 'Einsatz starten'}
+            >
+              {mode === 'edit' ? <Save className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+              <span>Speichern</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 flex items-center justify-center transition cursor-pointer"
+            >
+              <X className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto text-xs">
@@ -1424,43 +1445,21 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
 
           </div>
 
-          {/* Actions */}
-          <div className="pt-3 border-t border-slate-300 dark:border-slate-700 flex items-center justify-between gap-2">
-            <div>
-              {mode === 'edit' && targetOp && isAdmin && (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const confirmed = window.confirm(
-                        `🚨 Einsatz "${targetOp.title}" wirklich endgültig löschen?\n\nAlle Sektoren, Funde und Protokolle werden gelöscht.`
-                      );
-                      if (confirmed) {
-                        deleteOperation(targetOp.id);
-                        onClose();
-                      }
-                    }}
-                    className="px-3 py-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-800/60 transition cursor-pointer flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider"
-                    title="Einsatz löschen"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Löschen</span>
-                  </button>
-
-                  {onStartDrawingSector && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onClose();
-                        onStartDrawingSector();
-                      }}
-                      className="px-3 py-2 rounded-xl bg-purple-950/50 hover:bg-purple-900/70 text-purple-200 border border-purple-700/60 transition cursor-pointer flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider"
-                      title="Suchgebiet / Sektor auf Karte einzeichnen"
-                    >
-                      <span>📐 Suchgebiet zeichnen</span>
-                    </button>
-                  )}
-                </div>
+          {/* Sticky Actions Footer */}
+          <div className="pt-3 pb-1 border-t border-slate-300 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 bg-[#1E293B] sticky bottom-0 z-20">
+            <div className="flex items-center gap-2">
+              {onStartDrawingSector && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onStartDrawingSector();
+                  }}
+                  className="px-3 py-2 rounded-xl bg-purple-950/50 hover:bg-purple-900/70 text-purple-200 border border-purple-700/60 transition cursor-pointer flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider"
+                  title="Suchgebiet / Sektor auf Karte einzeichnen"
+                >
+                  <span>📐 Suchgebiet zeichnen</span>
+                </button>
               )}
             </div>
 
@@ -1474,10 +1473,10 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
               </button>
               <button
                 type="submit"
-                className={`px-6 py-2.5 rounded-xl text-white font-bold transition cursor-pointer flex items-center gap-2 shadow uppercase tracking-wider font-mono text-xs ${
+                className={`px-6 py-2.5 rounded-xl text-white font-bold transition cursor-pointer flex items-center gap-2 shadow-lg uppercase tracking-wider font-mono text-xs ${
                   mode === 'edit'
-                    ? 'bg-blue-600 hover:bg-blue-500'
-                    : 'bg-red-600 hover:bg-red-500'
+                    ? 'bg-blue-600 hover:bg-blue-500 ring-2 ring-blue-400/40'
+                    : 'bg-red-600 hover:bg-red-500 ring-2 ring-red-400/40'
                 }`}
               >
                 {mode === 'edit' ? <Save className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
