@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 interface Position {
   x: number;
   y: number;
+  orientation?: 'portrait' | 'landscape';
 }
 
 interface UseDraggableOptions {
@@ -15,10 +16,19 @@ export function useDraggable(options: UseDraggableOptions = {}) {
   const { storageKey, defaultPosition, disabled = false } = options;
 
   const [position, setPosition] = useState<Position | null>(() => {
-    if (storageKey && typeof localStorage !== 'undefined') {
+    if (storageKey && typeof localStorage !== 'undefined' && typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem(`draggable_pos_${storageKey}`);
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const isMobile = window.innerWidth < 768 || window.innerHeight <= 500;
+          const currentOrientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
+          // On mobile smartphones, if saved coordinates belong to a different orientation, discard them so responsive CSS takes over
+          if (isMobile && parsed.orientation && parsed.orientation !== currentOrientation) {
+            return defaultPosition || null;
+          }
+          return parsed;
+        }
       } catch {}
     }
     return defaultPosition || null;
@@ -36,20 +46,44 @@ export function useDraggable(options: UseDraggableOptions = {}) {
   const clampPosition = useCallback((pos: Position, node: HTMLElement): Position => {
     const rect = node.getBoundingClientRect();
     const margin = 8;
-    const minY = 60;
+    const isLandscapeMobile = window.innerHeight <= 500;
+    const minY = isLandscapeMobile ? 56 : 60;
+    const bottomNavHeight = isLandscapeMobile ? 56 : 75;
     const maxX = Math.max(margin, window.innerWidth - rect.width - margin);
-    const maxY = Math.max(minY, window.innerHeight - rect.height - 75);
+    const maxY = Math.max(minY, window.innerHeight - rect.height - bottomNavHeight);
 
+    const currentOrientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
     return {
       x: Math.min(Math.max(margin, pos.x), maxX),
       y: Math.min(Math.max(minY, pos.y), maxY),
+      orientation: currentOrientation,
     };
   }, []);
 
   // Auto-clamp position whenever viewport resizes or device orientation changes (e.g. smartphone rotation)
   useEffect(() => {
+    let lastOrientation = typeof window !== 'undefined' && window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
+
     const checkAndClamp = () => {
       if (!dragRef.current) return;
+
+      const isMobile = window.innerWidth < 768 || window.innerHeight <= 500;
+      const currentOrientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
+
+      // On mobile smartphones rotating between portrait and landscape (in either direction):
+      // Reset position to null so default responsive CSS dock classes take over without collision
+      if (isMobile && currentOrientation !== lastOrientation) {
+        lastOrientation = currentOrientation;
+        setPosition(null);
+        if (storageKey) {
+          try {
+            localStorage.removeItem(`draggable_pos_${storageKey}`);
+          } catch {}
+        }
+        return;
+      }
+      lastOrientation = currentOrientation;
+
       setPosition((prev) => {
         if (!prev || !dragRef.current) return prev;
         const clamped = clampPosition(prev, dragRef.current);
@@ -65,13 +99,20 @@ export function useDraggable(options: UseDraggableOptions = {}) {
       });
     };
 
-    window.addEventListener('resize', checkAndClamp);
-    window.addEventListener('orientationchange', checkAndClamp);
+    const handleOrientationOrResize = () => {
+      checkAndClamp();
+      setTimeout(checkAndClamp, 80);
+      setTimeout(checkAndClamp, 200);
+      setTimeout(checkAndClamp, 350);
+    };
+
+    window.addEventListener('resize', handleOrientationOrResize);
+    window.addEventListener('orientationchange', handleOrientationOrResize);
     const timer = setTimeout(checkAndClamp, 200);
 
     return () => {
-      window.removeEventListener('resize', checkAndClamp);
-      window.removeEventListener('orientationchange', checkAndClamp);
+      window.removeEventListener('resize', handleOrientationOrResize);
+      window.removeEventListener('orientationchange', handleOrientationOrResize);
       clearTimeout(timer);
     };
   }, [clampPosition, storageKey]);
@@ -147,7 +188,11 @@ export function useDraggable(options: UseDraggableOptions = {}) {
       setIsDragging(false);
       if (position && storageKey) {
         try {
-          localStorage.setItem(`draggable_pos_${storageKey}`, JSON.stringify(position));
+          const currentOrientation = window.innerWidth > window.innerHeight ? 'landscape' : 'portrait';
+          localStorage.setItem(
+            `draggable_pos_${storageKey}`,
+            JSON.stringify({ ...position, orientation: currentOrientation })
+          );
         } catch {}
       }
     };

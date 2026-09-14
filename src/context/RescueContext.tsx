@@ -54,6 +54,7 @@ import {
   onSnapshot,
   updateDoc,
   serverTimestamp,
+  getDocs,
 } from 'firebase/firestore';
 
 export interface ConfirmModalOptions {
@@ -187,6 +188,8 @@ interface RescueContextType {
   isCloudSynced: boolean;
   cloudSyncStatus: 'connected' | 'connecting' | 'offline' | 'quota_exceeded';
   isQuotaExceeded: boolean;
+  isRefreshing: boolean;
+  refreshData: () => Promise<void>;
 
   // Audio / Emergency alerts
   playAlertSound: (type?: string) => void;
@@ -1417,7 +1420,27 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 console.warn('Error deserializing location:', err);
               }
             });
-            setUserLocations((prev) => ({ ...prev, ...cloudLocs }));
+            setUserLocations((prev) => {
+              const next = { ...prev };
+              Object.entries(cloudLocs).forEach(([uid, cloudLoc]) => {
+                const localLoc = prev[uid];
+                if (uid === currentUserIdRef.current && localLoc) {
+                  // Protect local recorder: NEVER truncate or regress the user's own live track history from cloud lag
+                  const localCount = localLoc.trackHistory?.length || 0;
+                  const cloudCount = cloudLoc.trackHistory?.length || 0;
+                  next[uid] = {
+                    ...cloudLoc,
+                    currentPosition: localLoc.currentPosition || cloudLoc.currentPosition,
+                    trackHistory: localCount >= cloudCount ? localLoc.trackHistory : cloudLoc.trackHistory,
+                    isLive: true,
+                    lastUpdated: localLoc.lastUpdated || cloudLoc.lastUpdated,
+                  };
+                } else {
+                  next[uid] = cloudLoc;
+                }
+              });
+              return next;
+            });
           }
         },
         (err) => {
@@ -1724,6 +1747,143 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, []);
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Manual Soft Refresh: fetch all latest data from Firestore without reloading the browser page
+  const refreshData = useCallback(async () => {
+    if (!isFirebaseConfigured || isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      // 1. Refresh Operations
+      const opsSnap = await getDocs(collection(db, 'operations'));
+      if (!opsSnap.empty) {
+        const cloudOps: SearchOperation[] = [];
+        opsSnap.forEach((docSnap) => {
+          try {
+            if (!deletedOpIdsRef.current.has(docSnap.id) && docSnap.id !== 'op-1788338712628' && docSnap.id !== 'op-1788338712629') {
+              const op = deserializeOperationFromFirestore(docSnap.data());
+              op.sectors = cleanSectors(op.sectors);
+              if (op.id === 'op-salzland-001') {
+                op.status = 'completed';
+                op.headquartersLocation = VEREINSBUERO_LOCATION;
+                if (op.missingPerson) {
+                  op.missingPerson.lastSeenLocation = VEREINSBUERO_LOCATION;
+                  op.missingPerson.homeAddress = VEREINSBUERO_LOCATION;
+                }
+              } else if (
+                op.headquartersLocation &&
+                Math.abs(op.headquartersLocation.lat - 51.845) < 0.01 &&
+                Math.abs(op.headquartersLocation.lng - 11.635) < 0.01
+              ) {
+                op.headquartersLocation = VEREINSBUERO_LOCATION;
+              }
+              cloudOps.push(op);
+            }
+          } catch (err) {
+            console.warn('Error refreshing operation:', err);
+          }
+        });
+        if (cloudOps.length > 0) {
+          setAllOperations((prevLocalOps) => {
+            const cloudMap = new Map(cloudOps.map((o) => [o.id, o]));
+            const merged: SearchOperation[] = [];
+            const processedIds = new Set<string>();
+            prevLocalOps.forEach((localOp) => {
+              if (deletedOpIdsRef.current.has(localOp.id)) return;
+              processedIds.add(localOp.id);
+              const cloudOp = cloudMap.get(localOp.id);
+              if (!cloudOp) {
+                merged.push(cleanOperation(localOp));
+              } else {
+                merged.push(cleanOperation({ ...localOp, ...cloudOp }));
+              }
+            });
+            cloudOps.forEach((cloudOp) => {
+              if (!deletedOpIdsRef.current.has(cloudOp.id) && !processedIds.has(cloudOp.id)) {
+                merged.push(cleanOperation(cloudOp));
+              }
+            });
+            return merged;
+          });
+        }
+      }
+
+      // 2. Refresh User Locations
+      const locsSnap = await getDocs(collection(db, 'user_locations'));
+      if (!locsSnap.empty) {
+        const cloudLocs: Record<string, UserLocationState> = {};
+        locsSnap.forEach((docSnap) => {
+          try {
+            const data = deserializeLocationFromFirestore(docSnap.data());
+            if (data.userId) {
+              cloudLocs[data.userId] = data;
+            }
+          } catch (err) {
+            console.warn('Error refreshing location:', err);
+          }
+        });
+        setUserLocations((prev) => {
+          const next = { ...prev };
+          Object.entries(cloudLocs).forEach(([uid, cloudLoc]) => {
+            const localLoc = prev[uid];
+            if (uid === currentUserIdRef.current && localLoc) {
+              const localCount = localLoc.trackHistory?.length || 0;
+              const cloudCount = cloudLoc.trackHistory?.length || 0;
+              next[uid] = {
+                ...cloudLoc,
+                currentPosition: localLoc.currentPosition || cloudLoc.currentPosition,
+                trackHistory: localCount >= cloudCount ? localLoc.trackHistory : cloudLoc.trackHistory,
+                isLive: true,
+                lastUpdated: localLoc.lastUpdated || cloudLoc.lastUpdated,
+              };
+            } else {
+              next[uid] = cloudLoc;
+            }
+          });
+          return next;
+        });
+      }
+
+      // 3. Refresh Users
+      const usersSnap = await getDocs(collection(db, 'users'));
+      if (!usersSnap.empty) {
+        const cloudUsers: User[] = [];
+        usersSnap.forEach((docSnap) => {
+          try {
+            const u = deserializeUserFromFirestore(docSnap.data());
+            cloudUsers.push(u);
+          } catch (err) {
+            console.warn('Error refreshing user:', err);
+          }
+        });
+        if (cloudUsers.length > 0) {
+          setAllUsers((prevLocalUsers) => {
+            const localMap = new Map<string, User>(prevLocalUsers.map((u) => [u.id, u]));
+            return cloudUsers.map((cloudU) => {
+              const localU = localMap.get(cloudU.id);
+              return localU ? { ...localU, ...cloudU } : cloudU;
+            });
+          });
+          setUserArrivalStatuses((prev) => {
+            const next = { ...prev };
+            cloudUsers.forEach((u) => {
+              if (u.arrivalStatus) {
+                next[u.id] = u.arrivalStatus as 'in_transit' | 'ez_reached' | 'ready';
+              }
+            });
+            return next;
+          });
+        }
+      }
+
+      playAlertSound('notification');
+    } catch (err) {
+      console.warn('Manual refreshData error:', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, playAlertSound]);
+
   // Safe Helper functions to push updates to Firebase
   const syncOperationToCloud = useCallback((op: SearchOperation) => {
     if (!isFirebaseConfigured) return;
@@ -1792,171 +1952,202 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       return;
     }
 
-    watchPositionIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const accuracyVal = Math.round(pos.coords.accuracy || 10);
-        // Ignore inaccurate cell tower / wifi location jumps (> 35m accuracy)
-        if (accuracyVal > 35) {
-          console.warn('[GPS] Inaccurate GPS reading ignored (accuracy:', accuracyVal, 'm)');
-          return;
-        }
+    let lastGpsFixTimestamp = Date.now();
 
-        const headingVal =
-          typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && pos.coords.heading >= 0
-            ? Math.round(pos.coords.heading)
-            : undefined;
+    const startWatcher = () => {
+      if (watchPositionIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchPositionIdRef.current);
+      }
 
-        const point: GpsPoint = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          timestamp: new Date().toISOString(),
-          accuracy: accuracyVal,
-          speed: pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0,
-          altitude: pos.coords.altitude ? Math.round(pos.coords.altitude) : undefined,
-          heading: headingVal,
-        };
-        setMyLocation(point);
-        
-        // Record for tracking test if active
-        const currentTest = activeTrackingTestRef.current;
-        const isTestRunning = Boolean(currentTest && currentTest.isActive && !currentTest.isCompleted);
-        if (isTestRunning) {
-          setActiveTrackingTest((prev) => {
-            if (!prev) return null;
-            const lastPt = prev.trackPoints[prev.trackPoints.length - 1];
-            if (lastPt) {
-              const d = calculateDistanceMeters(lastPt.lat, lastPt.lng, point.lat, point.lng);
-              const timeDiffSec = Math.abs(new Date(point.timestamp).getTime() - new Date(lastPt.timestamp).getTime()) / 1000;
-              // Ignore teleport spikes (> 1500m in < 5s)
-              if (d > 1500 && timeDiffSec < 5) return prev;
-              // Add point if moved at least 0.5m (maximum hardware accuracy) or 2s passed
-              if (d < 0.5 && timeDiffSec < 2) return prev;
-            }
-            return {
-              ...prev,
-              trackPoints: [...prev.trackPoints, point].slice(-MAX_TRACK_POINTS),
-            };
-          });
-        }
+      watchPositionIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          lastGpsFixTimestamp = Date.now();
+          const accuracyVal = Math.round(pos.coords.accuracy || 10);
+          // Accept up to 100m for initial GPS fix, and filter out jumps > 50m once established
+          const hasExistingLocation = Boolean(myLocation);
+          const maxAllowedAccuracy = hasExistingLocation ? 50 : 100;
+          if (accuracyVal > maxAllowedAccuracy) {
+            console.warn('[GPS] Inaccurate GPS reading ignored (accuracy:', accuracyVal, 'm, max allowed:', maxAllowedAccuracy, 'm)');
+            return;
+          }
 
-        // Only broadcast GPS for active responders on main operation map when NOT running a tracking test
-        if (currentUser && currentUser.role !== 'observer' && !isTestRunning) {
-          setUserLocations((prev) => {
-            const userLoc = prev[currentUser.id] || {
-              userId: currentUser.id,
-              isLive: true,
-              lastUpdated: new Date().toISOString(),
-              currentPosition: point,
-              trackHistory: [],
-            };
+          const headingVal =
+            typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && pos.coords.heading >= 0
+              ? Math.round(pos.coords.heading)
+              : undefined;
 
-            // Safely handle track history: only drop the solitary initial seed mock point if present.
-            let cleanHistory = [...(userLoc.trackHistory || [])];
-            if (cleanHistory.length === 1) {
-              const pt0 = cleanHistory[0];
-              const isNearDummy =
-                (Math.abs(pt0.lat - 51.845) < 0.01 && Math.abs(pt0.lng - 11.635) < 0.01) ||
-                (Math.abs(pt0.lat - VEREINSBUERO_LOCATION.lat) < 0.001 &&
-                  Math.abs(pt0.lng - VEREINSBUERO_LOCATION.lng) < 0.001);
-              if (isNearDummy) {
-                cleanHistory = [];
+          const point: GpsPoint = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            timestamp: new Date().toISOString(),
+            accuracy: accuracyVal,
+            speed: pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0,
+            altitude: pos.coords.altitude ? Math.round(pos.coords.altitude) : undefined,
+            heading: headingVal,
+          };
+          setMyLocation(point);
+          
+          // Record for tracking test if active
+          const currentTest = activeTrackingTestRef.current;
+          const isTestRunning = Boolean(currentTest && currentTest.isActive && !currentTest.isCompleted);
+          if (isTestRunning) {
+            setActiveTrackingTest((prev) => {
+              if (!prev) return null;
+              const lastPt = prev.trackPoints[prev.trackPoints.length - 1];
+              if (lastPt) {
+                const d = calculateDistanceMeters(lastPt.lat, lastPt.lng, point.lat, point.lng);
+                const timeDiffSec = Math.abs(new Date(point.timestamp).getTime() - new Date(lastPt.timestamp).getTime()) / 1000;
+                // Ignore teleport spikes (> 1500m in < 5s)
+                if (d > 1500 && timeDiffSec < 5) return prev;
+                // Add point if moved at least 0.5m (maximum hardware accuracy) or 2s passed
+                if (d < 0.5 && timeDiffSec < 2) return prev;
               }
-            }
+              return {
+                ...prev,
+                trackPoints: [...prev.trackPoints, point].slice(-MAX_TRACK_POINTS),
+              };
+            });
+          }
 
-            const isUserReady =
-              currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
-            const isOpRunning = currentOperation && currentOperation.status === 'active';
-            let nextHistory = cleanHistory;
+          // Broadcast GPS for active responders on main operation map when NOT running a tracking test
+          if (currentUser && currentUser.role !== 'observer' && !isTestRunning) {
+            setUserLocations((prev) => {
+              const userLoc = prev[currentUser.id] || {
+                userId: currentUser.id,
+                isLive: true,
+                lastUpdated: new Date().toISOString(),
+                currentPosition: point,
+                trackHistory: [],
+              };
 
-            if (isUserReady && isOpRunning) {
-              const lastHistorical = cleanHistory[cleanHistory.length - 1];
-              const distMoved = lastHistorical
-                ? calculateDistanceMeters(lastHistorical.lat, lastHistorical.lng, point.lat, point.lng)
-                : 999;
-              const timeSinceLastMs = lastHistorical
-                ? Math.abs(new Date(point.timestamp).getTime() - new Date(lastHistorical.timestamp).getTime())
-                : 99999;
+              // Safely handle track history: only drop the solitary initial seed mock point if present.
+              let cleanHistory = [...(userLoc.trackHistory || [])];
+              if (cleanHistory.length === 1) {
+                const pt0 = cleanHistory[0];
+                const isNearDummy =
+                  (Math.abs(pt0.lat - 51.845) < 0.01 && Math.abs(pt0.lng - 11.635) < 0.01) ||
+                  (Math.abs(pt0.lat - VEREINSBUERO_LOCATION.lat) < 0.001 &&
+                    Math.abs(pt0.lng - VEREINSBUERO_LOCATION.lng) < 0.001);
+                if (isNearDummy) {
+                  cleanHistory = [];
+                }
+              }
 
-              // Accept points with good accuracy (<= 40m)
-              const accuracy = point.accuracy || 15;
-              const isAccurate = accuracy <= 40;
+              const isUserReady =
+                currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
+              const isOpRunning = currentOperation && currentOperation.status === 'active';
+              let nextHistory = cleanHistory;
 
-              // Maximum precision micro-movement threshold: capture movements down to 0.5m
-              const minDistRequired = accuracy > 20 && (point.speed || 0) < 1 ? 1.2 : 0.5;
+              // Ultra-precise search track recording: only when responder is ready and an operation is actively running
+              if (isUserReady && isOpRunning) {
+                const lastHistorical = cleanHistory[cleanHistory.length - 1];
+                const distMoved = lastHistorical
+                  ? calculateDistanceMeters(lastHistorical.lat, lastHistorical.lng, point.lat, point.lng)
+                  : 999;
+                const timeSinceLastMs = lastHistorical
+                  ? Math.abs(new Date(point.timestamp).getTime() - new Date(lastHistorical.timestamp).getTime())
+                  : 99999;
+                const timeDiffSec = timeSinceLastMs / 1000;
 
-              // Signal loss gap detection: if >= 45 seconds elapsed since last recorded point, annotate as gap start
-              const isGap = lastHistorical && timeSinceLastMs >= 45000;
+                // Precision accuracy requirement: search tracks require <= 25m accuracy (<= 20m if standing/slow)
+                const accuracy = point.accuracy || 15;
+                const isAccurate = (point.speed || 0) > 3 ? accuracy <= 28 : accuracy <= 22;
 
-              const shouldAdd =
-                !lastHistorical ||
-                (isAccurate && (distMoved >= minDistRequired || (timeSinceLastMs >= 10000 && distMoved >= 0.3)));
+                // Anti-Teleport / Speed Spike filter: reject impossible jumps for on-foot searchers/dogs (> 70 km/h or > 60m in < 3s)
+                const isTeleportSpike = lastHistorical && (
+                  (timeDiffSec > 0 && (distMoved / timeDiffSec) > 20) || // > 20 m/s = 72 km/h
+                  (distMoved > 60 && timeDiffSec < 3)
+                );
 
-              if (shouldAdd) {
-                const pointToStore: GpsPoint = isGap
-                  ? {
-                      ...point,
-                      isGapStart: true,
-                      gapDurationSec: Math.round(timeSinceLastMs / 1000),
-                    }
-                  : point;
-                nextHistory = [...cleanHistory, pointToStore].slice(-MAX_TRACK_POINTS);
+                // Signal loss gap detection: if >= 45 seconds elapsed since last recorded point, annotate as gap start
+                const isGap = lastHistorical && timeSinceLastMs >= 45000;
+
+                // Capture fine movements down to 0.5m (captures tight zigzag patterns of search dogs & searchers)
+                const shouldAdd =
+                  !lastHistorical ||
+                  (!isTeleportSpike && isAccurate && (
+                    distMoved >= 0.5 ||
+                    (timeSinceLastMs >= 4000 && distMoved >= 0.25) ||
+                    (timeSinceLastMs >= 10000)
+                  ));
+
+                if (shouldAdd) {
+                  const pointToStore: GpsPoint = isGap
+                    ? {
+                        ...point,
+                        isGapStart: true,
+                        gapDurationSec: Math.round(timeSinceLastMs / 1000),
+                      }
+                    : point;
+                  nextHistory = [...cleanHistory, pointToStore].slice(-MAX_TRACK_POINTS);
+                } else {
+                  nextHistory = cleanHistory;
+                }
               } else {
                 nextHistory = cleanHistory;
               }
-            } else {
-              nextHistory = [];
-            }
-            const updatedHistory = nextHistory;
-            const updatedLocState: UserLocationState = {
-              ...userLoc,
-              currentPosition: point,
-              trackHistory: updatedHistory,
-              lastUpdated: new Date().toISOString(),
-              isLive: true,
-            };
+              const updatedHistory = nextHistory;
+              const updatedLocState: UserLocationState = {
+                ...userLoc,
+                currentPosition: point,
+                trackHistory: updatedHistory,
+                lastUpdated: new Date().toISOString(),
+                isLive: true,
+              };
 
-            const updated = {
-              ...prev,
-              [currentUser.id]: updatedLocState,
-            };
+              const updated = {
+                ...prev,
+                [currentUser.id]: updatedLocState,
+              };
 
-            // High-precision Cloud sync: sync position when moved at least 2 meters or 10 seconds elapsed
-            const now = Date.now();
-            const lastSync = lastCloudGpsSyncRef.current;
-            const timeDiff = now - lastSync.timestamp;
-            const distMoved = calculateDistanceMeters(lastSync.lat, lastSync.lng, point.lat, point.lng);
+              // High-precision Cloud sync: sync position when moved at least 1.5 meters or 8 seconds elapsed
+              // Note: Live location marker is ALWAYS synced to cloud so EZ and other searchers see units approaching!
+              const now = Date.now();
+              const lastSync = lastCloudGpsSyncRef.current;
+              const timeDiff = now - lastSync.timestamp;
+              const distMoved = calculateDistanceMeters(lastSync.lat, lastSync.lng, point.lat, point.lng);
 
-            if (timeDiff >= 10000 && (distMoved >= 2.0 || lastSync.timestamp === 0)) {
-              if (isUserReady && isOpRunning) {
+              if (timeDiff >= 8000 && (distMoved >= 1.5 || lastSync.timestamp === 0)) {
                 lastCloudGpsSyncRef.current = { timestamp: now, lat: point.lat, lng: point.lng };
                 syncLocationToCloud(currentUser.id, updatedLocState);
               }
-            }
 
-            // Broadcast to local tabs instantly for fluid UI
-            broadcastChannelRef.current?.postMessage({
-              type: 'SYNC_LOCATIONS',
-              payload: updated,
+              // Broadcast to local tabs instantly for fluid UI
+              broadcastChannelRef.current?.postMessage({
+                type: 'SYNC_LOCATIONS',
+                payload: updated,
+              });
+
+              return updated;
             });
-
-            return updated;
-          });
+          }
+        },
+        (err) => {
+          console.warn('GPS Watch warning:', err);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 10000,
         }
-      },
-      (err) => {
-        console.warn('GPS Watch warning:', err);
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 10000,
-      }
-    );
+      );
+    };
 
-    // Background GPS fallback tick: when screen or tab is in background,
-    // explicitly query position to keep GPS stream alive during operations AND during tracking tests
+    startWatcher();
+
+    // Aggressive Background GPS tick & Watchdog: ensures continuous recording when screen is locked/dark in pocket
     const bgGpsInterval = setInterval(() => {
       const isTestRunning = activeTrackingTestRef.current?.isActive && !activeTrackingTestRef.current?.isCompleted;
+      const isUserSearching = currentUser && (currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready');
+      const isOpRunning = currentOperation && currentOperation.status === 'active';
+
+      // Hardware Watchdog: restart watchPosition if no coordinate update in 18 seconds on active mobile
+      const timeSinceLastFix = Date.now() - lastGpsFixTimestamp;
+      if (isRealGpsActive && (isUserSearching || isTestRunning) && timeSinceLastFix > 18000) {
+        console.log('[GPS Watchdog] Reviving stalled hardware GPS listener...');
+        startWatcher();
+      }
+
       const shouldRunBgGps =
         document.visibilityState === 'hidden' &&
         isRealGpsActive &&
@@ -1966,6 +2157,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       if (shouldRunBgGps) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
+            lastGpsFixTimestamp = Date.now();
             const headingVal =
               typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && pos.coords.heading >= 0
                 ? Math.round(pos.coords.heading)
@@ -2005,7 +2197,6 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 if (!uLoc) return prev;
                 const isReady =
                   currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
-                const isOpRunning = currentOperation && currentOperation.status === 'active';
                 let nextHistory = uLoc.trackHistory || [];
                 if (isReady && isOpRunning) {
                   const lastPt = nextHistory[nextHistory.length - 1];
@@ -2015,9 +2206,9 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                   const timeSinceLastMs = lastPt
                     ? Math.abs(new Date(bgPoint.timestamp).getTime() - new Date(lastPt.timestamp).getTime())
                     : 99999;
-                  const isAccurate = !bgPoint.accuracy || bgPoint.accuracy <= 40;
+                  const isAccurate = !bgPoint.accuracy || bgPoint.accuracy <= 25;
                   const isGap = lastPt && timeSinceLastMs >= 45000;
-                  const shouldAdd = !lastPt || (isAccurate && distMoved >= 0.5);
+                  const shouldAdd = !lastPt || (isAccurate && (distMoved >= 0.5 || timeSinceLastMs >= 5000));
 
                   if (shouldAdd) {
                     const pointToStore: GpsPoint = isGap
@@ -2033,18 +2224,16 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                   lastUpdated: new Date().toISOString(),
                   isLive: true,
                 };
-                if (isReady && isOpRunning) {
-                  syncLocationToCloud(currentUser.id, updatedState);
-                }
+                syncLocationToCloud(currentUser.id, updatedState);
                 return { ...prev, [currentUser.id]: updatedState };
               });
             }
           },
           (err) => console.warn('Background GPS tick error:', err),
-          { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
         );
       }
-    }, 12000);
+    }, 4000);
 
     return () => {
       if (watchPositionIdRef.current !== null) {
@@ -2459,6 +2648,45 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       }
       setCurrentUserId(user.id);
       setUserActiveStatus(user.id, true, targetOperationId);
+
+      // Trigger immediate GPS fix upon login so other responders & EZ see the true position instantly
+      if ('geolocation' in navigator && user.role !== 'observer') {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const acc = Math.round(pos.coords.accuracy || 10);
+            if (acc <= 150) {
+              const freshPoint: GpsPoint = {
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+                timestamp: new Date().toISOString(),
+                accuracy: acc,
+                speed: pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0,
+                altitude: pos.coords.altitude ? Math.round(pos.coords.altitude) : undefined,
+                heading: typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && pos.coords.heading >= 0 ? Math.round(pos.coords.heading) : undefined,
+              };
+              setMyLocation(freshPoint);
+              setUserLocations((prev) => {
+                const existing = prev[user.id] || {
+                  userId: user.id,
+                  trackHistory: [],
+                };
+                const updatedLoc: UserLocationState = {
+                  ...existing,
+                  userId: user.id,
+                  currentPosition: freshPoint,
+                  lastUpdated: new Date().toISOString(),
+                  isLive: true,
+                };
+                syncLocationToCloud(user.id, updatedLoc);
+                return { ...prev, [user.id]: updatedLoc };
+              });
+            }
+          },
+          (err) => console.log('Immediate GPS fix on login notice:', err),
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      }
+
       playAlertSound('notification');
       setAuthNotification({
         type: 'login',
@@ -2482,6 +2710,45 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     if (user) {
       setCurrentUserId(userId);
       setUserActiveStatus(userId, true);
+
+      // Trigger immediate GPS fix upon user switch
+      if ('geolocation' in navigator && user.role !== 'observer') {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const acc = Math.round(pos.coords.accuracy || 10);
+            if (acc <= 150) {
+              const freshPoint: GpsPoint = {
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+                timestamp: new Date().toISOString(),
+                accuracy: acc,
+                speed: pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0,
+                altitude: pos.coords.altitude ? Math.round(pos.coords.altitude) : undefined,
+                heading: typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading) && pos.coords.heading >= 0 ? Math.round(pos.coords.heading) : undefined,
+              };
+              setMyLocation(freshPoint);
+              setUserLocations((prev) => {
+                const existing = prev[user.id] || {
+                  userId: user.id,
+                  trackHistory: [],
+                };
+                const updatedLoc: UserLocationState = {
+                  ...existing,
+                  userId: user.id,
+                  currentPosition: freshPoint,
+                  lastUpdated: new Date().toISOString(),
+                  isLive: true,
+                };
+                syncLocationToCloud(user.id, updatedLoc);
+                return { ...prev, [user.id]: updatedLoc };
+              });
+            }
+          },
+          (err) => console.log('Immediate GPS fix on user switch notice:', err),
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      }
+
       playAlertSound('notification');
       setAuthNotification({
         type: 'login',
@@ -4680,6 +4947,8 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         isCloudSynced: cloudSyncStatus === 'connected',
         cloudSyncStatus,
         isQuotaExceeded,
+        isRefreshing,
+        refreshData,
 
         playAlertSound,
         activeAlertNotification,

@@ -84,23 +84,44 @@ const MainApp: React.FC = () => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [pwaBannerDismissed, setPwaBannerDismissed] = useState(false);
   
-  // Prevent accidental page leave during active session/operation (Native Browser Warning Modal)
+  // Prevent accidental page leave or browser closing during active session/operation (Native Browser Confirmation & Mobile Back-Swipe Trap)
   useEffect(() => {
     if (!currentUser) return;
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      // Standard browser confirmation prompt when closing/reloading tab or navigating away
       event.preventDefault();
+      // Standard confirmation prompt when closing/reloading tab or navigating away
       event.returnValue = 'WARNUNG: Einsatz-App aktiv! Beim Schließen dieser Seite wird das GPS-Tracking und die Verbindung zur Einsatzzentrale beendet. Möchtest du wirklich fortfahren?'; 
       return event.returnValue;
     };
 
+    // Mobile Back-Swipe / History Trap: prevent browser from closing or navigating away on gesture
+    const pushDummyHistoryState = () => {
+      try {
+        window.history.pushState({ isRescueSession: true }, '', window.location.href);
+      } catch {}
+    };
+
+    pushDummyHistoryState();
+
+    const handlePopState = (event: PopStateEvent) => {
+      // Re-push state so page doesn't exit on back button/gesture in pocket
+      pushDummyHistoryState();
+      setActiveAlertNotification({
+        title: '🛡️ Einsatz aktiv – App geschützt',
+        message: 'Ein Schließen oder Verlassen der App durch Wischgesten oder Zurück-Tasten wurde verhindert, um dein GPS-Tracking nicht zu unterbrechen.',
+        timestamp: new Date().toLocaleTimeString(),
+      });
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload, { capture: true });
+    window.addEventListener('popstate', handlePopState);
     
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload, { capture: true });
+      window.removeEventListener('popstate', handlePopState);
     };
-  }, [currentUser]);
+  }, [currentUser, setActiveAlertNotification]);
 
   // Activate Wake Lock & Background GPS Heartbeat whenever user is logged in
   const isTrackingActive = Boolean(currentUser || isOperationActive || activeTrackingTest);

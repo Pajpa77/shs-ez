@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { OperationType, MissingPerson, SearchOperation, EquipmentType } from '../types';
+import { OperationType, MissingPerson, SearchOperation, EquipmentType, OperationLogEntry } from '../types';
 import { compressImageFile } from '../lib/imageUtils';
 import {
   AlertTriangle,
@@ -59,13 +59,22 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
   operationToEdit,
   onStartDrawingSector,
 }) => {
-  const { createOperation, updateOperation, deleteOperation, currentOperation, currentUser, allUsers, getUserArrivalStatus } = useRescue();
+  const { createOperation, updateOperation, deleteOperation, currentOperation, currentUser, allUsers, getUserArrivalStatus, playAlertSound } = useRescue();
 
   const [ezAdminIds, setEzAdminIds] = useState<string[]>([]);
 
   const targetOp = operationToEdit || (mode === 'edit' ? currentOperation : null);
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'einsatzleitung';
+  const canManage = Boolean(
+    currentUser && (
+      currentUser.role === 'admin' ||
+      currentUser.isAdmin ||
+      currentUser.role === 'einsatzleitung' ||
+      currentUser.canLeadOperations
+    )
+  );
+  const isAdmin = canManage;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [hqSaveSuccess, setHqSaveSuccess] = useState('');
 
   const [type, setType] = useState<OperationType>('live_search');
   const [title, setTitle] = useState('Vermisstensuche Salzlandkreis');
@@ -343,11 +352,58 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
     }
   };
 
+  const handleSaveHqOnly = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setFormError('');
+    if (!canManage) {
+      setFormError('Aktion verweigert: Nur Einsatzleiter und Administratoren dürfen den EZ-Standort bearbeiten.');
+      return;
+    }
+
+    const hqLatVal = typeof hqLat === 'number' && !isNaN(hqLat) ? hqLat : VEREINSBUERO_LOCATION.lat;
+    const hqLngVal = typeof hqLng === 'number' && !isNaN(hqLng) ? hqLng : VEREINSBUERO_LOCATION.lng;
+
+    const newHq = {
+      lat: hqLatVal,
+      lng: hqLngVal,
+      address: hqAddress.trim() || VEREINSBUERO_LOCATION.address,
+      description: hqDescription.trim() || undefined,
+    };
+
+    if (mode === 'edit' && targetOp) {
+      const now = new Date().toISOString();
+      const logEntry: OperationLogEntry = {
+        id: `log-${Date.now()}`,
+        operationId: targetOp.id,
+        timestamp: now,
+        authorName: currentUser?.name || 'Einsatzleitung',
+        authorRole: currentUser?.role || 'admin',
+        category: 'info',
+        text: `EZ-Standort aktualisiert: ${newHq.address} (GPS: ${newHq.lat.toFixed(5)}, ${newHq.lng.toFixed(5)})`,
+      };
+
+      updateOperation(targetOp.id, (prevOp) => ({
+        headquartersLocation: newHq,
+        logs: [logEntry, ...(prevOp.logs || [])],
+      }));
+
+      playAlertSound('success');
+      setHqSaveSuccess('✅ EZ-Standort erfolgreich gespeichert & auf Lagekarte übernommen!');
+      setTimeout(() => setHqSaveSuccess(''), 4000);
+    } else {
+      setHqSaveSuccess('✅ EZ-Standort für Neuanlage übernommen.');
+      setTimeout(() => setHqSaveSuccess(''), 4000);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
-    if (currentUser?.role !== 'admin') {
-      setFormError('Aktion verweigert: Nur Administratoren dürfen Einsätze anlegen oder bearbeiten.');
+    if (!canManage) {
+      setFormError('Aktion verweigert: Nur Einsatzleiter und Administratoren dürfen Einsätze anlegen oder bearbeiten.');
       return;
     }
     if (!title.trim() || !personName.trim()) {
@@ -875,9 +931,22 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                   Standort der EZ (EZ / Führung)
                 </span>
               </div>
-              <span className="text-[10px] font-mono text-indigo-300 bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-800/60">
-                Ortsfest auf Lagekarte
-              </span>
+              <div className="flex items-center gap-2">
+                {mode === 'edit' && targetOp && (
+                  <button
+                    type="button"
+                    onClick={handleSaveHqOnly}
+                    className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-[11px] font-mono font-bold flex items-center gap-1.5 transition cursor-pointer shadow-md"
+                    title="EZ-Standort sofort für diesen Einsatz speichern"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>EZ-Standort speichern</span>
+                  </button>
+                )}
+                <span className="text-[10px] font-mono text-indigo-300 bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-800/60">
+                  Ortsfest auf Lagekarte
+                </span>
+              </div>
             </div>
 
             <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">
@@ -1033,6 +1102,31 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 />
               </div>
             </div>
+
+            {/* Direkter Speichern-Button für EZ-Standort */}
+            {mode === 'edit' && targetOp && (
+              <div className="pt-2.5 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-[11px] min-w-0">
+                  {hqSaveSuccess ? (
+                    <span className="text-emerald-400 font-bold flex items-center gap-1.5 animate-in fade-in">
+                      <Check className="w-3.5 h-3.5" /> {hqSaveSuccess}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400 font-mono text-[10px]">
+                      Standort-Änderungen werden sofort auf die Lagekarte und für alle Kräfte übertragen.
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSaveHqOnly}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-mono font-bold flex items-center gap-1.5 transition cursor-pointer shadow-md uppercase tracking-wider shrink-0"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>EZ-Standort speichern</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Einsatzkräfte, Teilnehmer & Externe Helfer */}

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react';
 
 /**
- * Hook to manage the Screen Wake Lock API and Background Keep-Alive.
- * Prevents the device screen from dimming or locking and keeps GPS active in background.
+ * Hook to manage the Screen Wake Lock API and Background Audio Keep-Alive.
+ * Prevents device screen from dimming/locking while visible AND keeps GPS active
+ * in background when screen is turned off or smartphone is placed in searcher's pocket.
  */
 export function useWakeLock(enabled: boolean) {
   const wakeLockRef = useRef<any>(null);
@@ -36,7 +37,8 @@ export function useWakeLock(enabled: boolean) {
     }
   }, []);
 
-  // Silent audio keep-alive to prevent OS power management from suspending background GPS on dark/locked screens
+  // Silent audio keep-alive to prevent OS power management (iOS & Android)
+  // from suspending background GPS threads on dark/locked screens
   const startSilentHeartbeat = useCallback(() => {
     try {
       if (!audioCtxRef.current) {
@@ -51,19 +53,28 @@ export function useWakeLock(enabled: boolean) {
       }
 
       if (!intervalRef.current) {
+        // High-frequency 4-second pulse keeps media execution context hot
         intervalRef.current = setInterval(() => {
-          if (audioCtxRef.current && audioCtxRef.current.state === 'running') {
-            try {
-              const osc = audioCtxRef.current.createOscillator();
-              const gain = audioCtxRef.current.createGain();
-              gain.gain.value = 0.00001; // Essentially silent
-              osc.connect(gain);
-              gain.connect(audioCtxRef.current.destination);
-              osc.start();
-              osc.stop(audioCtxRef.current.currentTime + 0.05);
-            } catch {}
+          if (audioCtxRef.current) {
+            if (audioCtxRef.current.state === 'suspended') {
+              audioCtxRef.current.resume().catch(() => {});
+            }
+            if (audioCtxRef.current.state === 'running') {
+              try {
+                const osc = audioCtxRef.current.createOscillator();
+                const gain = audioCtxRef.current.createGain();
+                // 20Hz infrasound wave at micro-gain (completely inaudible, zero battery impact)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(20, audioCtxRef.current.currentTime);
+                gain.gain.setValueAtTime(0.00001, audioCtxRef.current.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtxRef.current.destination);
+                osc.start();
+                osc.stop(audioCtxRef.current.currentTime + 0.1);
+              } catch {}
+            }
           }
-        }, 12000);
+        }, 4000);
       }
     } catch {}
   }, []);
@@ -85,28 +96,37 @@ export function useWakeLock(enabled: boolean) {
     if (enabled) {
       requestWakeLock();
       startSilentHeartbeat();
-    } else {
-      releaseWakeLock();
-      stopSilentHeartbeat();
-    }
 
-    const handleVisibilityChange = async () => {
-      if (enabled) {
+      // Ensure AudioContext is actively resumed on any user interaction
+      const resumeOnInteraction = () => {
+        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+          audioCtxRef.current.resume().catch(() => {});
+        }
+      };
+      window.addEventListener('touchstart', resumeOnInteraction, { passive: true });
+      window.addEventListener('click', resumeOnInteraction, { passive: true });
+
+      const handleVisibilityChange = async () => {
         if (document.visibilityState === 'visible') {
           if (wakeLockRef.current === null) {
             await requestWakeLock();
           }
         }
         startSilentHeartbeat();
-      }
-    };
+      };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      return () => {
+        window.removeEventListener('touchstart', resumeOnInteraction);
+        window.removeEventListener('click', resumeOnInteraction);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        releaseWakeLock();
+        stopSilentHeartbeat();
+      };
+    } else {
       releaseWakeLock();
       stopSilentHeartbeat();
-    };
+    }
   }, [enabled, requestWakeLock, releaseWakeLock, startSilentHeartbeat, stopSilentHeartbeat]);
 }

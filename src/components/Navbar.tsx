@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { User, isFirstAdmin } from '../types';
+import { VEREINSBUERO_LOCATION } from '../mockData';
 import {
   Shield,
   Radio,
@@ -35,6 +36,7 @@ import {
   RotateCcw,
   Share2,
   QrCode,
+  RefreshCw,
 } from 'lucide-react';
 
 export interface OpStatusTheme {
@@ -239,6 +241,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     getUserArrivalStatus,
     calculateDistanceToEzMeters,
     confirmUserReady,
+    isRefreshing,
+    refreshData,
   } = useRescue();
 
   const [showSarAdminMenu, setShowSarAdminMenu] = useState(false);
@@ -246,6 +250,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [showOpDropdown, setShowOpDropdown] = useState(false);
   const [showResponderListDropdown, setShowResponderListDropdown] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [justRefreshed, setJustRefreshed] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -276,6 +281,19 @@ export const Navbar: React.FC<NavbarProps> = ({
   useEffect(() => {
     closeAllDropdowns();
   }, [activeTab]);
+
+  useEffect(() => {
+    const handleOrientationOrResize = () => {
+      closeAllDropdowns();
+    };
+
+    window.addEventListener('orientationchange', handleOrientationOrResize);
+    window.addEventListener('resize', handleOrientationOrResize);
+    return () => {
+      window.removeEventListener('orientationchange', handleOrientationOrResize);
+      window.removeEventListener('resize', handleOrientationOrResize);
+    };
+  }, []);
 
   const isExercise = currentOperation?.type === 'exercise';
   const isRealAdmin = currentUser?.role === 'admin' || Boolean(currentUser?.isAdmin);
@@ -957,19 +975,34 @@ export const Navbar: React.FC<NavbarProps> = ({
                           {(currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && currentOperation.headquartersLocation?.address) ? currentOperation.headquartersLocation.address : 'Hohe Straße 15, Aschersleben'}
                         </div>
                       </div>
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${
-                          (currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && currentOperation.headquartersLocation?.lat)
-                            ? `${currentOperation.headquartersLocation.lat},${currentOperation.headquartersLocation.lng}`
-                            : '51.7587,11.4589'
-                        }`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold text-[10px] shrink-0 no-underline flex items-center gap-1"
-                        title="Route zur EZ in Google Maps / Navi starten"
-                      >
-                        🧭 Navi
-                      </a>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && onOpenEditOperationModal && currentUser?.role !== 'observer' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowResponderListDropdown(false);
+                              onOpenEditOperationModal();
+                            }}
+                            className="p-1.5 rounded-lg bg-indigo-800/80 hover:bg-indigo-700 text-indigo-200 hover:text-white transition cursor-pointer border border-indigo-600/50"
+                            title="EZ-Standort oder Einsatzdaten bearbeiten"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${
+                            (currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && currentOperation.headquartersLocation?.lat)
+                              ? `${currentOperation.headquartersLocation.lat},${currentOperation.headquartersLocation.lng}`
+                              : `${VEREINSBUERO_LOCATION.lat},${VEREINSBUERO_LOCATION.lng}`
+                          }`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold text-[10px] shrink-0 no-underline flex items-center gap-1 shadow-sm"
+                          title="Route zur EZ in Google Maps / Navi starten"
+                        >
+                          🧭 Navi
+                        </a>
+                      </div>
                     </div>
 
                     <div className="space-y-1.5 pr-1">
@@ -1173,6 +1206,36 @@ export const Navbar: React.FC<NavbarProps> = ({
             </>
           )}
         </div>
+
+        {/* Manual Cloud/Data Refresh Button */}
+        <button
+          onClick={async () => {
+            if (isRefreshing) return;
+            await refreshData();
+            setJustRefreshed(true);
+            setTimeout(() => setJustRefreshed(false), 2500);
+          }}
+          disabled={isRefreshing}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-mono font-bold transition cursor-pointer shadow-sm ${
+            justRefreshed
+              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500'
+              : 'bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border-blue-700/60'
+          }`}
+          title="Manuelle Synchronisation: Daten, Kräfte & Einsätze aus der Cloud ohne Seiten-Reload neu einlesen"
+        >
+          <RefreshCw
+            className={`w-3.5 h-3.5 shrink-0 ${
+              isRefreshing
+                ? 'animate-spin text-amber-400'
+                : justRefreshed
+                ? 'text-emerald-400'
+                : 'text-blue-400'
+            }`}
+          />
+          <span className="hidden sm:inline whitespace-nowrap">
+            {isRefreshing ? 'SYNCHRONISIERE...' : justRefreshed ? 'AKTUALISIERT ✓' : 'SYNC'}
+          </span>
+        </button>
 
         {/* GPS Mode toggle */}
         <button

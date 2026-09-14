@@ -26,7 +26,9 @@ import {
   Wrench,
   Package,
   Image as ImageIcon,
+  Building2,
 } from 'lucide-react';
+import { VEREINSBUERO_LOCATION } from '../mockData';
 
 const EQUIPMENT_LABELS: Record<EquipmentType, { label: string; icon: string }> = {
   drone: { label: 'Drohne / UAS', icon: '🚁' },
@@ -414,6 +416,63 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
                       )}
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Einsatzzentrale (EZ / Führung) */}
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900/90 border border-indigo-500/40 space-y-2 relative shadow-md">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-indigo-400">
+                    <span className="p-1 rounded-lg bg-indigo-950 border border-indigo-800 text-indigo-300">
+                      🏢 EZ
+                    </span>
+                    <span>Einsatzzentrale / Führung</span>
+                  </div>
+                  {isAdmin && onOpenEditOperation && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenEditOperation();
+                      }}
+                      className="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-0.5 cursor-pointer"
+                      title="EZ-Standort bearbeiten"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                      <span>Edit</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-1 text-xs">
+                  <div className="font-semibold text-slate-900 dark:text-slate-200">
+                    {op.headquartersLocation?.address || VEREINSBUERO_LOCATION.address}
+                  </div>
+                  {op.headquartersLocation?.description && (
+                    <div className="text-slate-500 dark:text-slate-400 italic text-[11px] bg-slate-100 dark:bg-slate-950/50 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                      {op.headquartersLocation.description}
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-200 dark:border-slate-800/80 text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                    <span>
+                      GPS: {(op.headquartersLocation?.lat || VEREINSBUERO_LOCATION.lat).toFixed(5)},{' '}
+                      {(op.headquartersLocation?.lng || VEREINSBUERO_LOCATION.lng).toFixed(5)}
+                    </span>
+                    {onNavigateToMapPoint && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCenterOnCoordinates(
+                            op.headquartersLocation?.lat || VEREINSBUERO_LOCATION.lat,
+                            op.headquartersLocation?.lng || VEREINSBUERO_LOCATION.lng
+                          )
+                        }
+                        className="text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Navigation className="w-3 h-3" /> Auf Karte
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

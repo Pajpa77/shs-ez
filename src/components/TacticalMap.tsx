@@ -14,6 +14,7 @@ import {
   TACTICAL_TRACK_COLORS,
   getUserConnectionStatus,
   getSignalFreshnessText,
+  OperationLogEntry,
 } from '../types';
 import { VEREINSBUERO_LOCATION } from '../mockData';
 import { TacticalWeatherOverlay } from './TacticalWeatherOverlay';
@@ -49,6 +50,9 @@ import {
   FileText,
   GripVertical,
   Move,
+  Save,
+  Building2,
+  Search,
 } from 'lucide-react';
 import { useDraggable } from '../hooks/useDraggable';
 
@@ -188,6 +192,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     selectedUser,
     setSelectedUser,
     activeTrackingTest,
+    updateOperation,
+    playAlertSound,
   } = useRescue();
 
   const currentOperation = propOperation !== undefined ? propOperation : globalOperation;
@@ -218,8 +224,47 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const [showWeatherOverlay, setShowWeatherOverlay] = useState(true);
   const [isWeatherModalOpenMobile, setIsWeatherModalOpenMobile] = useState(false);
   const [isLayersOpenMobile, setIsLayersOpenMobile] = useState(false);
-  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false);
+  const [isMobileScreen, setIsMobileScreen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768 || window.innerHeight <= 500;
+  });
+  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 768 || window.innerHeight <= 500;
+  });
   const [desktopSidebarTab, setDesktopSidebarTab] = useState<'layers' | 'tracks' | 'actions'>('layers');
+
+  // Handle device orientation changes and responsive resizing for smartphone view (hoch <-> quer)
+  useEffect(() => {
+    const handleViewportChange = () => {
+      const mobile = window.innerWidth < 768 || window.innerHeight <= 500;
+      setIsMobileScreen(mobile);
+      if (mobile) {
+        setIsDesktopSidebarCollapsed(true);
+      }
+      setIsLayersOpenMobile(false);
+      setIsWeatherModalOpenMobile(false);
+      setShowWeatherOverlay(false);
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    };
+
+    const handleOrientation = () => {
+      handleViewportChange();
+      setTimeout(handleViewportChange, 80);
+      setTimeout(handleViewportChange, 200);
+      setTimeout(handleViewportChange, 350);
+    };
+
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('orientationchange', handleOrientation);
+
+    return () => {
+      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('orientationchange', handleOrientation);
+    };
+  }, []);
 
   // Draggable Hooks for Floating Map Panels & Cards
   const {
@@ -252,7 +297,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const [selectedSector, setSelectedSector] = useState<SearchSector | null>(null);
   const [isCapturingSnapshot, setIsCapturingSnapshot] = useState(false);
   const [snapshotSavedNotice, setSnapshotSavedNotice] = useState(false);
-  const isAdminOrEL = currentUser?.role === 'admin' || currentUser?.role === 'einsatzleitung';
+  const isAdminOrEL = Boolean(
+    currentUser && (
+      currentUser.role === 'admin' ||
+      currentUser.role === 'einsatzleitung' ||
+      currentUser.isAdmin ||
+      currentUser.canLeadOperations
+    )
+  );
 
   // EZ Navigation Modal state for interactive coordination transfer to GPS/Navi apps
   const [ezNavData, setEzNavData] = useState<{
@@ -265,6 +317,92 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     commander?: string;
   } | null>(null);
   const [copiedCoords, setCopiedCoords] = useState(false);
+
+  // EZ Inline Editing on Tactical Map
+  const [isEditingEz, setIsEditingEz] = useState(false);
+  const [editEzAddress, setEditEzAddress] = useState('');
+  const [editEzLat, setEditEzLat] = useState<number | ''>('');
+  const [editEzLng, setEditEzLng] = useState<number | ''>('');
+  const [isGeocodingEz, setIsGeocodingEz] = useState(false);
+  const [ezGeocodeStatus, setEzGeocodeStatus] = useState<'idle' | 'success' | 'not_found'>('idle');
+  const [ezModalSuccess, setEzModalSuccess] = useState('');
+
+  const geocodeEzAddress = async (query: string) => {
+    if (!query.trim()) return;
+    setIsGeocodingEz(true);
+    setEzGeocodeStatus('idle');
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
+        { headers: { 'Accept-Language': 'de' } }
+      );
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        const item = data[0];
+        setEditEzLat(Number(Number(item.lat).toFixed(6)));
+        setEditEzLng(Number(Number(item.lon).toFixed(6)));
+        setEzGeocodeStatus('success');
+      } else {
+        setEzGeocodeStatus('not_found');
+      }
+    } catch {
+      setEzGeocodeStatus('not_found');
+    } finally {
+      setIsGeocodingEz(false);
+    }
+  };
+
+  const handleSaveEzFromMapModal = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!currentOperation?.id) return;
+    const lat = typeof editEzLat === 'number' && !isNaN(editEzLat) ? editEzLat : VEREINSBUERO_LOCATION.lat;
+    const lng = typeof editEzLng === 'number' && !isNaN(editEzLng) ? editEzLng : VEREINSBUERO_LOCATION.lng;
+    const address = editEzAddress.trim() || VEREINSBUERO_LOCATION.address;
+
+    const newHq = {
+      lat,
+      lng,
+      address,
+      description: currentOperation.headquartersLocation?.description || 'EZ vor Ort',
+    };
+
+    const now = new Date().toISOString();
+    const logEntry: OperationLogEntry = {
+      id: `log-${Date.now()}`,
+      operationId: currentOperation.id,
+      timestamp: now,
+      authorName: currentUser?.name || 'Einsatzleitung',
+      authorRole: currentUser?.role || 'admin',
+      category: 'info',
+      text: `EZ-Standort auf Lagekarte verschoben: ${address} (GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)})`,
+    };
+
+    updateOperation(currentOperation.id, (prevOp) => ({
+      headquartersLocation: newHq,
+      logs: [logEntry, ...(prevOp.logs || [])],
+    }));
+
+    playAlertSound('success');
+    setEzNavData((prev) =>
+      prev
+        ? {
+            ...prev,
+            lat,
+            lng,
+            address,
+            isStandbyOffice: false,
+          }
+        : null
+    );
+
+    setEzModalSuccess('✅ EZ-Standort erfolgreich gespeichert & übernommen!');
+    setIsEditingEz(false);
+    setTimeout(() => setEzModalSuccess(''), 4000);
+
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setView([lat, lng], 16);
+    }
+  };
 
   // Target coordinates for weather monitoring (Prioritizes PLS / Last Seen -> EZ -> first Sector -> Vereinsbüro)
   const weatherTarget = useMemo(() => {
@@ -598,7 +736,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
   // Fit bounds to operation area (sectors, findings, tracks, PLS) especially in archive or when operation changes
   useEffect(() => {
-    if (!mapInstanceRef.current || !currentOperation) return;
+    if (!mapInstanceRef.current) return;
+    if (!currentOperation || currentOperation.status === 'completed') {
+      // Nach Einsatzende oder in Bereitschaft: Immer automatisch Standardansicht Vereinsbüro Aschersleben (Hohe Str. 15)
+      mapInstanceRef.current.setView([VEREINSBUERO_LOCATION.lat, VEREINSBUERO_LOCATION.lng], 13);
+      return;
+    }
 
     const allPoints: [number, number][] = [];
 
@@ -641,7 +784,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     } else {
       mapInstanceRef.current.setView([VEREINSBUERO_LOCATION.lat, VEREINSBUERO_LOCATION.lng], 13);
     }
-  }, [currentOperation?.id, isArchiveMode]);
+  }, [currentOperation?.id, currentOperation?.status, isArchiveMode]);
 
   // Update base tile layer on switcher change
   useEffect(() => {
@@ -1270,31 +1413,29 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       tracksLayerRef.current.addLayer(polyline);
 
-      // Start & End markers for the active test
+      // Start & End markers for the active test (start=green, end=black, small, no label)
       const startPt = activeTrackingTest.trackPoints[0];
       const latestPt = activeTrackingTest.trackPoints[activeTrackingTest.trackPoints.length - 1];
 
       if (startPt) {
         const startMarker = L.circleMarker([startPt.lat, startPt.lng], {
-          radius: 7,
-          color: '#16a34a',
-          fillColor: '#4ade80',
+          radius: 4,
+          color: '#ffffff',
+          fillColor: '#16a34a',
           fillOpacity: 1,
-          weight: 2,
+          weight: 1.5,
         });
-        startMarker.bindTooltip('🚀 Test Startpunkt', { permanent: false });
         tracksLayerRef.current.addLayer(startMarker);
       }
 
       if (latestPt && activeTrackingTest.trackPoints.length > 1) {
         const latestMarker = L.circleMarker([latestPt.lat, latestPt.lng], {
-          radius: 8,
-          color: '#2563eb',
-          fillColor: '#60a5fa',
+          radius: 4,
+          color: '#ffffff',
+          fillColor: '#000000',
           fillOpacity: 1,
-          weight: 3,
+          weight: 1.5,
         });
-        latestMarker.bindTooltip('📍 Aktueller Test-Standort', { permanent: false });
         tracksLayerRef.current.addLayer(latestMarker);
       }
     }
@@ -2053,78 +2194,80 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         </div>
       )}
 
-      {/* MOBILE FLOATING ACTION BAR (Top, compact, unobstructed view for smartphone searchers) */}
-      <div className="md:hidden absolute top-2 left-2 z-[900] flex items-center gap-1.5 pointer-events-none">
-        <div className="flex items-center gap-1.5 pointer-events-auto bg-[#1E293B]/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-xl">
-          <button
-            onClick={handleCenterOnMe}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white rounded-lg text-xs font-bold transition cursor-pointer border border-blue-500/40 font-mono"
-            title="Auf mein GPS zentrieren"
-          >
-            <Navigation className="w-3.5 h-3.5" />
-            <span>GPS</span>
-          </button>
+      {/* MOBILE FLOATING ACTION BAR (Top, compact, unobstructed view for smartphone searchers in portrait and landscape) */}
+      {isMobileScreen && (
+        <div className="absolute top-2 left-2 z-[900] flex items-center gap-1.5 pointer-events-none">
+          <div className="flex items-center gap-1.5 pointer-events-auto bg-[#1E293B]/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-xl">
+            <button
+              onClick={handleCenterOnMe}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white rounded-lg text-xs font-bold transition cursor-pointer border border-blue-500/40 font-mono"
+              title="Auf mein GPS zentrieren"
+            >
+              <Navigation className="w-3.5 h-3.5" />
+              <span>GPS</span>
+            </button>
 
-          <button
-            onClick={() => {
-              const isOpActive = currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused');
-              const hq = isOpActive && currentOperation.headquartersLocation?.lat && currentOperation.headquartersLocation?.lng
-                ? currentOperation.headquartersLocation
-                : VEREINSBUERO_LOCATION;
-              setEzNavData({
-                lat: hq.lat,
-                lng: hq.lng,
-                address: hq.address || (isOpActive ? 'EZ vor Ort' : VEREINSBUERO_LOCATION.address),
-                title: '📡 EZ',
-                isStandbyOffice: !isOpActive,
-                operationTitle: currentOperation?.title,
-                commander: currentOperation?.commander,
-              });
-            }}
-            className="flex items-center gap-1 px-2 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white rounded-lg text-xs font-bold transition cursor-pointer border border-indigo-500/40 font-mono"
-            title="Navigation zur Einsatzzentrale öffnen"
-          >
-            <Compass className="w-3.5 h-3.5 text-indigo-400" />
-            <span>EZ</span>
-          </button>
+            <button
+              onClick={() => {
+                const isOpActive = currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused');
+                const hq = isOpActive && currentOperation.headquartersLocation?.lat && currentOperation.headquartersLocation?.lng
+                  ? currentOperation.headquartersLocation
+                  : VEREINSBUERO_LOCATION;
+                setEzNavData({
+                  lat: hq.lat,
+                  lng: hq.lng,
+                  address: hq.address || (isOpActive ? 'EZ vor Ort' : VEREINSBUERO_LOCATION.address),
+                  title: '📡 EZ',
+                  isStandbyOffice: !isOpActive,
+                  operationTitle: currentOperation?.title,
+                  commander: currentOperation?.commander,
+                });
+              }}
+              className="flex items-center gap-1 px-2 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white rounded-lg text-xs font-bold transition cursor-pointer border border-indigo-500/40 font-mono"
+              title="Navigation zur Einsatzzentrale öffnen"
+            >
+              <Compass className="w-3.5 h-3.5 text-indigo-400" />
+              <span>EZ</span>
+            </button>
 
-          <button
-            onClick={() => setIsWeatherModalOpenMobile(true)}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer font-mono ${
-              isWeatherModalOpenMobile
-                ? 'bg-amber-600 text-white'
-                : 'bg-amber-600/30 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/40'
-            }`}
-            title="Lokale Einsatz-Wetterdaten anzeigen"
-          >
-            <CloudSun className="w-3.5 h-3.5 text-amber-400" />
-            <span>Wetter</span>
-          </button>
+            <button
+              onClick={() => setIsWeatherModalOpenMobile(true)}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer font-mono ${
+                isWeatherModalOpenMobile
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-amber-600/30 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/40'
+              }`}
+              title="Lokale Einsatz-Wetterdaten anzeigen"
+            >
+              <CloudSun className="w-3.5 h-3.5 text-amber-400" />
+              <span>Wetter</span>
+            </button>
 
-          <button
-            onClick={() => setIsLayersOpenMobile(true)}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer font-mono ${
-              isLayersOpenMobile
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
-            }`}
-            title="Kartenebenen konfigurieren"
-          >
-            <Layers className="w-3.5 h-3.5 text-blue-400" />
-            <span>Ebenen</span>
-          </button>
+            <button
+              onClick={() => setIsLayersOpenMobile(true)}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer font-mono ${
+                isLayersOpenMobile
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+              }`}
+              title="Kartenebenen konfigurieren"
+            >
+              <Layers className="w-3.5 h-3.5 text-blue-400" />
+              <span>Ebenen</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* MOBILE LAYERS MODAL SHEET (Clean drawer that doesn't permanently block map) */}
       {isLayersOpenMobile && (
         <div
-          className="md:hidden fixed inset-0 z-[2000] bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-2"
+          className="fixed inset-0 z-[2000] bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-2"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsLayersOpenMobile(false);
           }}
         >
-          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl p-4 w-full max-w-sm shadow-2xl space-y-3.5 text-slate-200 animate-in slide-in-from-bottom duration-200">
+          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl p-4 w-full max-w-sm max-h-[85vh] overflow-y-auto shadow-2xl space-y-3.5 text-slate-200 animate-in slide-in-from-bottom duration-200">
             <div className="flex items-center justify-between pb-2 border-b border-slate-700">
               <span className="flex items-center gap-2 font-bold text-white text-xs uppercase tracking-wider font-mono">
                 <Layers className="w-4 h-4 text-blue-400" />
@@ -2325,7 +2468,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       )}
 
       {/* DESKTOP / TABLET COLLAPSED TOGGLE */}
-      {isDesktopSidebarCollapsed && (
+      {!isMobileScreen && isDesktopSidebarCollapsed && (
         <div className="hidden md:flex absolute top-4 left-4 z-[900]">
           <button
             onClick={() => setIsDesktopSidebarCollapsed(false)}
@@ -2340,7 +2483,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       )}
 
       {/* DESKTOP / TABLET FLOATING TACTICAL SIDEBAR */}
-      {!isDesktopSidebarCollapsed && (
+      {!isMobileScreen && !isDesktopSidebarCollapsed && (
         <div
           ref={sidebarDragRef}
           style={sidebarPos ? { position: 'fixed', left: `${sidebarPos.x}px`, top: `${sidebarPos.y}px`, zIndex: 950 } : undefined}
@@ -3047,29 +3190,215 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             {/* Modal Body */}
             <div className="p-4 sm:p-5 space-y-4 text-xs overflow-y-auto max-h-[75vh]">
               {/* Target Location Card */}
-              <div className="bg-slate-900/90 border border-indigo-500/30 rounded-xl p-3.5 space-y-2">
+              <div className="bg-slate-900/90 border border-indigo-500/30 rounded-xl p-3.5 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-slate-400">
-                    Zielort & Adresse
+                  <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-slate-400 flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Zielort & Adresse</span>
                   </span>
-                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
-                    ezNavData.isStandbyOffice
-                      ? 'bg-emerald-950/70 text-emerald-300 border-emerald-600/50'
-                      : 'bg-indigo-950/70 text-indigo-300 border-indigo-500/50'
-                  }`}>
-                    {ezNavData.isStandbyOffice ? 'Standard-Büro' : 'Einsatz-Standort'}
-                  </span>
-                </div>
-
-                <div className="font-bold text-sm sm:text-base text-white leading-snug">
-                  {ezNavData.address}
-                </div>
-
-                {ezNavData.operationTitle && !ezNavData.isStandbyOffice && (
-                  <div className="text-[11px] text-slate-300 bg-slate-800/60 p-2 rounded-lg border border-slate-700/60">
-                    Einsatz: <strong className="text-white">{ezNavData.operationTitle}</strong>
-                    {ezNavData.commander && <> • Leitung: <strong className="text-white">{ezNavData.commander}</strong></>}
+                  <div className="flex items-center gap-1.5">
+                    {isAdminOrEL && currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && !isEditingEz && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditEzAddress(ezNavData.address);
+                          setEditEzLat(ezNavData.lat);
+                          setEditEzLng(ezNavData.lng);
+                          setIsEditingEz(true);
+                          setEzGeocodeStatus('idle');
+                        }}
+                        className="px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-[10px] font-bold flex items-center gap-1 transition cursor-pointer shadow"
+                        title="EZ-Standort auf Lagekarte anpassen oder verlegen"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>Standort anpassen</span>
+                      </button>
+                    )}
+                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                      ezNavData.isStandbyOffice
+                        ? 'bg-emerald-950/70 text-emerald-300 border-emerald-600/50'
+                        : 'bg-indigo-950/70 text-indigo-300 border-indigo-500/50'
+                    }`}>
+                      {ezNavData.isStandbyOffice ? 'Standard-Büro' : 'Einsatz-Standort'}
+                    </span>
                   </div>
+                </div>
+
+                {ezModalSuccess && (
+                  <div className="p-2 rounded-lg bg-emerald-950/80 border border-emerald-700 text-emerald-300 text-xs font-mono font-bold flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{ezModalSuccess}</span>
+                  </div>
+                )}
+
+                {isEditingEz ? (
+                  <div className="space-y-3 pt-1 border-t border-slate-800">
+                    <div className="text-[11px] text-indigo-300 font-mono font-bold">
+                      Standort der EZ für diesen Einsatz neu festlegen:
+                    </div>
+
+                    {/* Schnellauswahl Vorlagen */}
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditEzAddress(VEREINSBUERO_LOCATION.address);
+                          setEditEzLat(VEREINSBUERO_LOCATION.lat);
+                          setEditEzLng(VEREINSBUERO_LOCATION.lng);
+                        }}
+                        className="px-2 py-1 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-700 text-[10px] font-mono transition cursor-pointer"
+                      >
+                        🏢 Vereinsbüro Aschersleben
+                      </button>
+                      {currentOperation?.missingPerson?.lastSeenLocation && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (currentOperation.missingPerson?.lastSeenLocation?.address) {
+                              setEditEzAddress(currentOperation.missingPerson.lastSeenLocation.address);
+                            }
+                            if (currentOperation.missingPerson?.lastSeenLocation?.lat) {
+                              setEditEzLat(currentOperation.missingPerson.lastSeenLocation.lat);
+                            }
+                            if (currentOperation.missingPerson?.lastSeenLocation?.lng) {
+                              setEditEzLng(currentOperation.missingPerson.lastSeenLocation.lng);
+                            }
+                          }}
+                          className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-mono transition cursor-pointer"
+                        >
+                          📍 Wie Sichtort (PLS)
+                        </button>
+                      )}
+                      {currentOperation?.missingPerson?.homeAddress && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (currentOperation.missingPerson?.homeAddress?.address) {
+                              setEditEzAddress(currentOperation.missingPerson.homeAddress.address);
+                            }
+                            if (currentOperation.missingPerson?.homeAddress?.lat) {
+                              setEditEzLat(currentOperation.missingPerson.homeAddress.lat);
+                            }
+                            if (currentOperation.missingPerson?.homeAddress?.lng) {
+                              setEditEzLng(currentOperation.missingPerson.homeAddress.lng);
+                            }
+                          }}
+                          className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-mono transition cursor-pointer"
+                        >
+                          🏠 Wie Wohnanschrift
+                        </button>
+                      )}
+                      {myLocation && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditEzLat(Number(myLocation.lat.toFixed(6)));
+                            setEditEzLng(Number(myLocation.lng.toFixed(6)));
+                            setEditEzAddress('EZ vor Ort (Aktuelles GPS)');
+                          }}
+                          className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-mono transition cursor-pointer"
+                        >
+                          🧭 Mein GPS
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Adresse & Geocoding */}
+                    <div>
+                      <label className="block text-slate-400 font-mono text-[10px] uppercase mb-1">
+                        Adresse / Bereitstellungsraum:
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={editEzAddress}
+                          onChange={(e) => {
+                            setEditEzAddress(e.target.value);
+                            setEzGeocodeStatus('idle');
+                          }}
+                          placeholder="z.B. Hohe Straße 15, Aschersleben oder Parkplatz"
+                          className="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs font-sans"
+                        />
+                        <button
+                          type="button"
+                          disabled={isGeocodingEz || !editEzAddress.trim()}
+                          onClick={() => geocodeEzAddress(editEzAddress)}
+                          className="px-2.5 py-1.5 rounded-lg bg-indigo-700 hover:bg-indigo-600 disabled:bg-slate-800 text-white text-[11px] font-mono font-bold flex items-center gap-1 transition cursor-pointer shrink-0"
+                        >
+                          {isGeocodingEz ? <Sparkles className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
+                          <span>Suchen</span>
+                        </button>
+                      </div>
+                      {ezGeocodeStatus === 'success' && (
+                        <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1 mt-0.5">
+                          <Check className="w-3 h-3" /> Koordinaten gefunden.
+                        </span>
+                      )}
+                      {ezGeocodeStatus === 'not_found' && (
+                        <span className="text-[10px] text-amber-400 font-mono mt-0.5 block">
+                          Adresse nicht gefunden. Bitte GPS manuell anpassen.
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Koordinaten Inputs */}
+                    <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                      <div>
+                        <label className="block text-slate-400 text-[9px] uppercase">Breite (Lat):</label>
+                        <input
+                          type="number"
+                          step="0.000001"
+                          value={editEzLat}
+                          onChange={(e) => setEditEzLat(Number(e.target.value))}
+                          placeholder={String(VEREINSBUERO_LOCATION.lat)}
+                          className="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-white text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 text-[9px] uppercase">Länge (Lng):</label>
+                        <input
+                          type="number"
+                          step="0.000001"
+                          value={editEzLng}
+                          onChange={(e) => setEditEzLng(Number(e.target.value))}
+                          placeholder={String(VEREINSBUERO_LOCATION.lng)}
+                          className="w-full px-2 py-1 rounded bg-slate-950 border border-slate-700 text-white text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Speichern Button */}
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingEz(false)}
+                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono transition cursor-pointer"
+                      >
+                        Abbrechen
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveEzFromMapModal}
+                        className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-mono font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-md uppercase tracking-wider"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>EZ-Standort speichern</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="font-bold text-sm sm:text-base text-white leading-snug">
+                      {ezNavData.address}
+                    </div>
+
+                    {ezNavData.operationTitle && !ezNavData.isStandbyOffice && (
+                      <div className="text-[11px] text-slate-300 bg-slate-800/60 p-2 rounded-lg border border-slate-700/60">
+                        Einsatz: <strong className="text-white">{ezNavData.operationTitle}</strong>
+                        {ezNavData.commander && <> • Leitung: <strong className="text-white">{ezNavData.commander}</strong></>}
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* GPS Coordinates & Live Distance */}
@@ -3224,7 +3553,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       )}
 
       {/* DESKTOP / TABLET FLOATING WEATHER OVERLAY (Top-Right of Map, Draggable) */}
-      {showWeatherOverlay && (
+      {!isMobileScreen && showWeatherOverlay && (
         <div
           ref={weatherDragRef}
           {...weatherDragProps}
@@ -3251,12 +3580,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       {/* MOBILE WEATHER MODAL SHEET (On-demand view on smartphones) */}
       {isWeatherModalOpenMobile && (
         <div
-          className="md:hidden fixed inset-0 z-[2000] bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-2"
+          className="fixed inset-0 z-[2000] bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-2"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsWeatherModalOpenMobile(false);
           }}
         >
-          <div className="w-full max-w-sm animate-in slide-in-from-bottom duration-200">
+          <div className="w-full max-w-sm max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
             <TacticalWeatherOverlay
               lat={weatherTarget.lat}
               lng={weatherTarget.lng}

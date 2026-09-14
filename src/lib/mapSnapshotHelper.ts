@@ -567,34 +567,25 @@ export async function generateTrackingTestSnapshotWithMap(session: TrackingTestS
     }
   }
 
-  // ── Start Marker ──────────────────────────────────────────────────────────
+  // ── Start Marker (green, small, no label) ─────────────────────────────────
   if (points.length >= 1) {
     const [sx, sy] = toCanvas(points[0].lat, points[0].lng);
-    ctx.shadowColor = '#10b981'; ctx.shadowBlur = 12;
+    ctx.shadowColor = '#10b981'; ctx.shadowBlur = 8;
     ctx.fillStyle = '#10b981';
-    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.arc(sx, sy, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.shadowBlur = 0;
-    // Label background
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(sx + 14, sy - 10, 44, 18);
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 11px monospace';
-    ctx.fillText('START', sx + 17, sy + 3);
   }
 
-  // ── End Marker ────────────────────────────────────────────────────────────
+  // ── End Marker (black, small, no label) ───────────────────────────────────
   if (points.length >= 2) {
     const last = points[points.length - 1];
     const [ex, ey] = toCanvas(last.lat, last.lng);
-    ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 12;
-    ctx.fillStyle = '#ef4444';
-    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.arc(ex, ey, 10, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 8;
+    ctx.fillStyle = '#000000';
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(ex, ey, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(ex + 14, ey - 10, 38, 18);
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 11px monospace';
-    ctx.fillText('ZIEL', ex + 17, ey + 3);
   }
 
   // ── OSM Attribution (legally required) ───────────────────────────────────
@@ -646,9 +637,9 @@ export async function generateTrackingTestSnapshotWithMap(session: TrackingTestS
   ctx.fillStyle = '#94a3b8'; ctx.font = '11px monospace';
   ctx.fillText('GPS-Spur', CANVAS_W - 140, footerY + 26);
   ctx.fillStyle = '#10b981';
-  ctx.beginPath(); ctx.arc(CANVAS_W - 165, footerY + 46, 5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#ef4444';
-  ctx.beginPath(); ctx.arc(CANVAS_W - 145, footerY + 46, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(CANVAS_W - 165, footerY + 46, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#000000';
+  ctx.beginPath(); ctx.arc(CANVAS_W - 145, footerY + 46, 4, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#94a3b8';
   ctx.fillText('Start / Ende', CANVAS_W - 133, footerY + 50);
 
@@ -802,35 +793,29 @@ export function generateTrackingTestSnapshot(session: TrackingTestSession): stri
     }
   }
 
-  // ── Start Marker (green) ──────────────────────────────────────────────────
+  // ── Start Marker (green, small, no label) ─────────────────────────────────
   if (points.length >= 1) {
     const [sx, sy] = toScreen(points[0].lat, points[0].lng);
     ctx.fillStyle = '#10b981';
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.shadowColor = '#10b981';
-    ctx.shadowBlur = 10;
-    ctx.beginPath(); ctx.arc(sx, sy, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 6;
+    ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 10px monospace';
-    ctx.fillText('START', sx + 13, sy + 4);
   }
 
-  // ── End Marker (red) ──────────────────────────────────────────────────────
+  // ── End Marker (black, small, no label) ───────────────────────────────────
   if (points.length >= 2) {
     const last = points[points.length - 1];
     const [ex, ey] = toScreen(last.lat, last.lng);
-    ctx.fillStyle = '#ef4444';
+    ctx.fillStyle = '#000000';
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.shadowColor = '#ef4444';
-    ctx.shadowBlur = 10;
-    ctx.beginPath(); ctx.arc(ex, ey, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 6;
+    ctx.beginPath(); ctx.arc(ex, ey, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 10px monospace';
-    ctx.fillText('ZIEL', ex + 13, ey + 4);
   }
 
   // ── No-data placeholder ───────────────────────────────────────────────────
@@ -889,9 +874,9 @@ export function generateTrackingTestSnapshot(session: TrackingTestSession): stri
   ctx.font = '11px monospace';
   ctx.fillText('GPS-Spur', width - 140, height - 40);
   ctx.fillStyle = '#10b981';
-  ctx.beginPath(); ctx.arc(width - 165, height - 24, 5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#ef4444';
-  ctx.beginPath(); ctx.arc(width - 145, height - 24, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(width - 165, height - 24, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#000000';
+  ctx.beginPath(); ctx.arc(width - 145, height - 24, 4, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#94a3b8';
   ctx.fillText('Start / Ende', width - 133, height - 20);
 
