@@ -3948,6 +3948,26 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       preserveHistoricalTracks?: boolean;
     }
   ): SearchOperation | null => {
+    // SECURITY GUARD: Ensure only Admin or Einsatzleitung can reactivate operations
+    const isAuthToManageOp = Boolean(
+      currentUser && (
+        currentUser.role === 'admin' ||
+        currentUser.isAdmin ||
+        currentUser.role === 'einsatzleitung' ||
+        currentUser.canLeadOperations ||
+        isFirstAdmin(currentUser)
+      )
+    );
+    if (!isAuthToManageOp) {
+      console.warn('[Security Guard] reactivateOperation denied: User lacks Admin or Einsatzleitung permissions');
+      setActiveAlertNotification({
+        title: '⚠️ Zugriffsverweigerung',
+        message: 'Nur Einsatzleiter und Administratoren sind autorisiert, Einsätze zu reaktivieren.',
+        timestamp: new Date().toLocaleTimeString(),
+      });
+      return null;
+    }
+
     console.log(`[RescueContext] Reactivating operation: ${id}`, options);
     
     const op = allOperations.find(o => o.id === id);

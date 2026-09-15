@@ -11,31 +11,27 @@ import {
   Users,
   Search,
   Mic,
-  MicOff,
-  Square,
-  Play,
-  Pause,
   Volume2,
   VolumeX,
-  Compass,
-  Filter,
-  Paperclip,
   X,
-  Check,
-  Clock,
   Maximize2,
   Minimize2,
-  PanelLeftClose,
-  PanelLeftOpen,
   MessageSquare,
-  Menu,
-  ChevronDown,
+  FileText,
+  Clock,
+  Layers,
+  ChevronRight,
+  ExternalLink,
+  Phone,
+  Car,
+  Award,
 } from 'lucide-react';
 
 interface ChatPanelProps {
   initialDirectUser?: User | null;
 }
 
+// Audio player component for CB Voice Messages
 const VoiceMessagePlayer: React.FC<{ audioUrl: string; duration?: number; isMe?: boolean }> = ({
   audioUrl,
   duration = 0,
@@ -102,8 +98,8 @@ const VoiceMessagePlayer: React.FC<{ audioUrl: string; duration?: number; isMe?:
     <div
       className={`mt-2 p-2.5 rounded-xl border flex flex-col gap-2 select-none ${
         isMe
-          ? 'bg-blue-700/60 border-blue-400/40 text-white'
-          : 'bg-white dark:bg-slate-900/90 border-amber-500/30 text-black dark:text-slate-100'
+          ? 'bg-blue-700/80 border-blue-400/40 text-white'
+          : 'bg-slate-900/90 border-amber-500/40 text-slate-100'
       }`}
     >
       <audio
@@ -124,13 +120,13 @@ const VoiceMessagePlayer: React.FC<{ audioUrl: string; duration?: number; isMe?:
               : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow'
           }`}
         >
-          {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+          {isPlaying ? '⏸' : '▶'}
         </button>
 
         <div className="flex-1 flex flex-col gap-1.5">
           <div className="flex items-center justify-between text-[10px] font-mono opacity-80">
             <span className="flex items-center gap-1 font-bold">
-              <Radio className="w-3 h-3 text-amber-400" />
+              <Radio className="w-3 h-3 text-amber-400 animate-pulse" />
               CB-Funk Audio
             </span>
             <span>
@@ -138,7 +134,6 @@ const VoiceMessagePlayer: React.FC<{ audioUrl: string; duration?: number; isMe?:
             </span>
           </div>
 
-          {/* Interactive Waveform / Scrubber */}
           <div
             onClick={handleSeek}
             title="Klicken zum Vor- oder Zurückspulen"
@@ -153,11 +148,11 @@ const VoiceMessagePlayer: React.FC<{ audioUrl: string; duration?: number; isMe?:
                   className={`flex-1 rounded-full transition-all duration-150 ${
                     isPast
                       ? isMe
-                        ? 'bg-white shadow-sm'
-                        : 'bg-amber-400 dark:bg-amber-400 shadow-sm'
+                        ? 'bg-white'
+                        : 'bg-amber-400'
                       : isMe
-                      ? 'bg-blue-300/40 group-hover:bg-blue-200/60'
-                      : 'bg-slate-300 dark:bg-slate-700 group-hover:bg-slate-400'
+                      ? 'bg-blue-300/40'
+                      : 'bg-slate-700'
                   } ${isPlaying && isPast ? 'animate-pulse' : ''}`}
                   style={{
                     height: isPlaying
@@ -173,7 +168,7 @@ const VoiceMessagePlayer: React.FC<{ audioUrl: string; duration?: number; isMe?:
         <button
           type="button"
           onClick={handleSpeedChange}
-          className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/30 hover:bg-black/50 border border-white/10 shrink-0 text-slate-900 dark:text-slate-200"
+          className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 border border-white/20 shrink-0 text-slate-200"
         >
           {playbackSpeed}x
         </button>
@@ -193,33 +188,37 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     sendChatMessage,
     markChatAsRead,
     lastReadChatTimestamp,
-    sendEmergencyAlert,
     userLocations,
     playAlertSound,
+    findings,
   } = useRescue();
 
-  const [activeScope, setActiveScope] = useState<'operation' | 'general'>(() => {
-    return currentOperation ? 'operation' : 'general';
-  });
-  const [selectedOpId, setSelectedOpId] = useState<string>(() => {
-    return currentOperation?.id || allOperations.find(o => o.status === 'active')?.id || allOperations[0]?.id || '';
-  });
+  // Primary navigation tab: 'channels' (Kanäle & Gruppen) vs 'responders' (Einsatzkräfte & Direktchat)
+  const [mainTab, setMainTab] = useState<'channels' | 'responders'>('channels');
 
-  const [activeChannel, setActiveChannel] = useState<string>('all'); // 'all', 'admins', 'general', sectorId, or userId
+  // Active channel/user ID
+  const [activeChannel, setActiveChannel] = useState<string>('all'); // 'all', 'admins', sectorId, or userId
+  const [activeScope, setActiveScope] = useState<'operation' | 'general'>(() =>
+    currentOperation ? 'operation' : 'general'
+  );
+  const [selectedOpId, setSelectedOpId] = useState<string>(
+    currentOperation?.id || allOperations.find((o) => o.status === 'active')?.id || allOperations[0]?.id || ''
+  );
+
+  // Modals for popover views requested by user (Chatverlauf, Logbuch, Alarme & Funde)
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showLogbookModal, setShowLogbookModal] = useState(false);
+  const [showAlertsModal, setShowAlertsModal] = useState(false);
+
+  // Input & state controls
   const [inputText, setInputText] = useState('');
-  const [isEmergencyAlert, setIsEmergencyAlert] = useState(false);
   const [includeLocation, setIncludeLocation] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [messageSearchQuery, setMessageSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'voice' | 'alert' | 'location'>('all');
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
   const [autoPlayAudio, setAutoPlayAudio] = useState(true);
-
-  // Responsive & View Size States
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [mobileViewMode, setMobileViewMode] = useState<'chat' | 'channels'>('chat');
   const [isMaximized, setIsMaximized] = useState(false);
 
-  // CB-Funk Push-to-Talk Voice Recording State
+  // Push-To-Talk Voice Recording State
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -234,7 +233,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef<number>(chatMessages.length);
 
-  // Sync selectedOpId when currentOperation changes
   useEffect(() => {
     if (currentOperation) {
       setSelectedOpId(currentOperation.id);
@@ -243,21 +241,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
   useEffect(() => {
     if (initialDirectUser) {
+      setMainTab('responders');
       setActiveChannel(initialDirectUser.id);
     } else if (currentUser?.role === 'observer') {
       setActiveChannel('admins');
     }
   }, [initialDirectUser, currentUser]);
 
-  // Auto-scroll on new message and mark as read
+  // Auto scroll and mark as read
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
-    // Mark as read if new messages arrive and we are in the chat view
     if (chatMessages.length > prevMessagesLengthRef.current) {
       markChatAsRead();
-      
-      // Auto play CB voice message if autoPlayAudio is active and new message arrives
+
       if (autoPlayAudio) {
         const newestMsg = chatMessages[chatMessages.length - 1];
         if (
@@ -279,7 +276,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
   if (!currentUser) {
     return (
-      <div className="p-8 text-center text-slate-500 dark:text-slate-400 font-mono">
+      <div className="p-8 text-center text-slate-400 font-mono">
         Bitte melden Sie sich an, um den Funkchat zu nutzen.
       </div>
     );
@@ -307,9 +304,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           options.mimeType = chosenMimeType;
         } else if (MediaRecorder.isTypeSupported('audio/webm')) {
           chosenMimeType = 'audio/webm';
-          options.mimeType = chosenMimeType;
-        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
-          chosenMimeType = 'audio/ogg;codecs=opus';
           options.mimeType = chosenMimeType;
         }
       }
@@ -423,7 +417,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     isHoldModeRef.current = false;
   };
 
-  // Push-To-Talk Pointer Handlers (Hold-to-Talk and Tap-to-Toggle)
   const handlePttPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     pttPressStartTimeRef.current = Date.now();
@@ -437,11 +430,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     const pressDuration = Date.now() - pttPressStartTimeRef.current;
     if (isRecording && isHoldModeRef.current) {
       if (pressDuration > 400) {
-        // Held down -> release to send
         stopAndSendRecording();
         suppressNextClickRef.current = true;
       } else {
-        // Quick tap -> leave recording in hands-free / toggle mode
         isHoldModeRef.current = false;
       }
     }
@@ -466,53 +457,71 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     }
   };
 
-  // Resolved effective operation for operation chat
   const effectiveOperation = allOperations.find((o) => o.id === selectedOpId) || currentOperation || null;
 
-  // --- Filter messages based on active channel and search query ---
-  const filteredMessages = chatMessages.filter((msg) => {
-    if (activeScope === 'general') {
-      if (msg.operationId !== 'general') return false;
-    } else {
-      if (!effectiveOperation || msg.operationId !== effectiveOperation.id) return false;
-    }
+  // Split messages by type according to user requirements:
+  // 1. Logbuch messages: Login / Logout logs
+  const logbookMessages = useMemo(() => {
+    return chatMessages.filter(
+      (m) =>
+        m.channel === 'system' ||
+        m.channel === 'logs' ||
+        m.text.includes('hat sich soeben eingeloggt') ||
+        m.text.includes('hat das System verlassen')
+    );
+  }, [chatMessages]);
 
-    // Filter by channel type
-    let matchesChannel = false;
-    if (activeChannel === 'all' || activeChannel === 'general') {
-      matchesChannel = msg.channel === 'all' || msg.channel === 'general';
-    } else if (activeChannel === 'admins') {
-      matchesChannel = msg.channel === 'admins';
-    } else if (activeChannel === 'system') {
-      matchesChannel = msg.channel === 'system' || msg.channel === 'logs';
-    } else if (activeChannel.startsWith('sec-')) {
-      matchesChannel = msg.channel === activeChannel;
-    } else {
-      // Direct 1-on-1 chat with specific user
-      matchesChannel =
-        (msg.senderId === currentUser.id && msg.recipientId === activeChannel) ||
-        (msg.senderId === activeChannel && msg.recipientId === currentUser.id) ||
-        msg.channel === activeChannel;
-    }
+  // 2. Alert & Finding messages: Status changes (activation/pause/end/reactivation) & Findings
+  const alertAndFindingMessages = useMemo(() => {
+    return chatMessages.filter(
+      (m) =>
+        m.isAlert ||
+        m.text.includes('EINSATZ REAKTIVIERT') ||
+        m.text.includes('EINSATZ BEENDET') ||
+        m.text.includes('EINSATZ PAUSIERT') ||
+        m.text.includes('EINSATZ WIEDERAUFGENOMMEN') ||
+        m.text.includes('REALEINSATZ') ||
+        m.text.includes('Fund')
+    );
+  }, [chatMessages]);
 
-    if (!matchesChannel) return false;
+  // 3. Radio & Chat Feed for the active channel (clean radio talk only, excluding system logouts/logins)
+  const activeChannelMessages = useMemo(() => {
+    return chatMessages.filter((msg) => {
+      // Filter out pure system login/logout messages from channel feed (user requested them in logbook)
+      if (
+        msg.channel === 'system' ||
+        msg.channel === 'logs' ||
+        msg.text.includes('hat sich soeben eingeloggt') ||
+        msg.text.includes('hat das System verlassen')
+      ) {
+        return false;
+      }
 
-    // Filter by quick filter tab
-    if (activeFilter === 'voice' && !msg.isVoiceMessage) return false;
-    if (activeFilter === 'alert' && !msg.isAlert) return false;
-    if (activeFilter === 'location' && !msg.location) return false;
+      // Filter by operation scope
+      if (activeScope === 'general') {
+        if (msg.operationId !== 'general') return false;
+      } else {
+        if (!effectiveOperation || msg.operationId !== effectiveOperation.id) return false;
+      }
 
-    // Filter by search query inside feed
-    if (messageSearchQuery.trim()) {
-      const q = messageSearchQuery.toLowerCase();
-      const textMatch = msg.text.toLowerCase().includes(q);
-      const senderMatch =
-        msg.senderName.toLowerCase().includes(q) || msg.senderCallSign.toLowerCase().includes(q);
-      if (!textMatch && !senderMatch) return false;
-    }
-
-    return true;
-  });
+      // Filter by active channel / direct user
+      if (activeChannel === 'all' || activeChannel === 'general') {
+        return msg.channel === 'all' || msg.channel === 'general';
+      } else if (activeChannel === 'admins') {
+        return msg.channel === 'admins';
+      } else if (activeChannel.startsWith('sec-')) {
+        return msg.channel === activeChannel;
+      } else {
+        // Direct 1:1 chat
+        return (
+          (msg.senderId === currentUser.id && msg.recipientId === activeChannel) ||
+          (msg.senderId === activeChannel && msg.recipientId === currentUser.id) ||
+          msg.channel === activeChannel
+        );
+      }
+    });
+  }, [chatMessages, activeScope, effectiveOperation, activeChannel, currentUser.id]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -524,7 +533,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       activeChannel !== 'general' &&
       !activeChannel.startsWith('sec-');
 
-    const targetOpId = activeScope === 'general' ? 'general' : (effectiveOperation?.id || 'general');
+    const targetOpId = activeScope === 'general' ? 'general' : effectiveOperation?.id || 'general';
 
     sendChatMessage({
       text: inputText.trim() || (includeLocation ? '📍 GPS-Standort übermittelt' : ''),
@@ -532,16 +541,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       operationId: targetOpId,
       isDirect,
       recipientId: isDirect ? activeChannel : undefined,
-      isAlert: isEmergencyAlert,
       includeLocation,
     });
 
     setInputText('');
-    setIsEmergencyAlert(false);
     setIncludeLocation(false);
   };
 
-  // Filter users based on scope
+  // Scoped responders
   const scopedUsers = useMemo(() => {
     if (activeScope === 'operation' && effectiveOperation && (effectiveOperation.status === 'active' || effectiveOperation.status === 'paused')) {
       const participantIds = effectiveOperation.participantIds || [];
@@ -550,23 +557,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     return allUsers;
   }, [allUsers, activeScope, effectiveOperation]);
 
-  // Target data objects
   const activeTargetUser = allUsers.find((u) => u.id === activeChannel);
   const activeSector = effectiveOperation?.sectors?.find((s) => s.id === activeChannel);
-  const admins = scopedUsers.filter((u) => u.role === 'admin' && u.isActive);
-  const responders = scopedUsers.filter((u) => u.id !== currentUser.id && u.role !== 'admin' && u.isActive);
   const activeUsersCount = scopedUsers.filter((u) => u.isActive).length;
 
-  // Filter and sort responders in sidebar by search query and online status
-  const filteredResponders = responders
+  const filteredResponders = scopedUsers
+    .filter((u) => u.id !== currentUser.id)
     .filter((u) => {
       if (!userSearchQuery.trim()) return true;
       const q = userSearchQuery.toLowerCase();
       return (
         u.name.toLowerCase().includes(q) ||
         u.callSign.toLowerCase().includes(q) ||
-        (u.licensePlate && u.licensePlate.toLowerCase().includes(q)) ||
-        (u.organization && u.organization.toLowerCase().includes(q))
+        (u.licensePlate && u.licensePlate.toLowerCase().includes(q))
       );
     })
     .sort((a, b) => {
@@ -575,413 +578,329 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       return a.name.localeCompare(b.name);
     });
 
-  // Calculate unread counts per channel
-  const getUnreadForChannel = (channelId: string) => {
-    const targetOpId = activeScope === 'general' ? 'general' : effectiveOperation?.id;
-    if (!targetOpId) return 0;
-    return chatMessages.filter((m) => {
-      if (m.operationId !== targetOpId) return false;
-      if (m.senderId === currentUser.id) return false;
-      
-      const msgTime = new Date(m.timestamp).getTime();
-      if (msgTime <= lastReadChatTimestamp) return false;
-
-      if (channelId === 'all' || channelId === 'general') return m.channel === 'all' || m.channel === 'general';
-      if (channelId === 'admins') return m.channel === 'admins';
-      if (channelId === 'system') return m.channel === 'system' || m.channel === 'logs';
-      if (channelId.startsWith('sec-')) return m.channel === channelId;
-      return (
-        (m.senderId === channelId && m.recipientId === currentUser.id) ||
-        m.channel === channelId
-      );
-    }).length;
-  };
-
-  const handleSelectChannel = (channelId: string) => {
-    setActiveChannel(channelId);
-    setMobileViewMode('chat');
-  };
-
   return (
     <div
-      className={`w-full text-black dark:text-slate-100 font-sans flex flex-col ${
+      className={`w-full text-slate-100 font-sans flex flex-col ${
         isMaximized
           ? 'fixed inset-0 z-[9999] bg-[#0F172A] p-2 sm:p-4 h-full w-full overflow-hidden'
           : 'max-w-7xl mx-auto p-1.5 sm:p-3 flex-1 h-full min-h-0 overflow-hidden'
       }`}
     >
-      {/* Mobile Tab Switcher: Chatverlauf vs Kanäle & Kräfte */}
-      <div className="md:hidden flex items-center justify-between p-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700/80 rounded-xl mb-2 shrink-0 font-mono">
+      {/* Top Action & Navigation Header Bar */}
+      <div className="bg-[#1E293B] border border-slate-700/80 rounded-2xl p-2.5 sm:p-3 mb-3 flex flex-wrap items-center justify-between gap-2 shadow-xl shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
+            <Radio className="w-4 h-4 animate-pulse" />
+          </div>
+          <div>
+            <h2 className="font-extrabold text-xs sm:text-sm uppercase tracking-wider text-white flex items-center gap-1.5">
+              <span>Einsatzfunk & Communication Hub</span>
+            </h2>
+            <p className="text-[10px] text-slate-400 font-mono">
+              {activeScope === 'operation' && effectiveOperation
+                ? `Einsatz: #${effectiveOperation.id.slice(-4).toUpperCase()} ${effectiveOperation.title}`
+                : 'Allgemeiner Vereinsfunk'}
+            </p>
+          </div>
+        </div>
+
+        {/* Action Buttons to open Modals (Chatverlauf, Logbuch, Alarme & Funde) as requested by user */}
+        <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
+          {/* Button: 📜 Chatverlauf */}
+          <button
+            type="button"
+            onClick={() => setShowHistoryModal(true)}
+            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-blue-300 font-bold flex items-center gap-1.5 transition cursor-pointer"
+            title="Vollständigen Chatverlauf durchsuchen & einsehen"
+          >
+            <MessageSquare className="w-3.5 h-3.5 text-blue-400" />
+            <span>📜 Chatverlauf</span>
+          </button>
+
+          {/* Button: 📋 Logbuch */}
+          <button
+            type="button"
+            onClick={() => setShowLogbookModal(true)}
+            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold flex items-center gap-1.5 transition cursor-pointer relative"
+            title="System-Logbuch (Ein- und Ausloggen der Einsatzkräfte)"
+          >
+            <FileText className="w-3.5 h-3.5 text-slate-400" />
+            <span>📋 Logbuch</span>
+            {logbookMessages.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[9px] font-bold">
+                {logbookMessages.length}
+              </span>
+            )}
+          </button>
+
+          {/* Button: 🚨 Alarme & Funde */}
+          <button
+            type="button"
+            onClick={() => setShowAlertsModal(true)}
+            className="px-2.5 py-1.5 rounded-xl bg-red-950/80 hover:bg-red-900 border border-red-700/80 text-red-200 font-bold flex items-center gap-1.5 transition cursor-pointer relative"
+            title="Alarme, Statusänderungen & Fundmeldungen mit GPS"
+          >
+            <AlertTriangle className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+            <span>🚨 Alarme & Funde</span>
+            {alertAndFindingMessages.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-red-600 text-white text-[9px] font-bold">
+                {alertAndFindingMessages.length}
+              </span>
+            )}
+          </button>
+
+          {/* Button: CB-Funk AutoPlay */}
+          <button
+            type="button"
+            onClick={() => {
+              playAlertSound('notification');
+              setAutoPlayAudio(!autoPlayAudio);
+            }}
+            title={autoPlayAudio ? 'CB-Lautsprecher aktiv (Auto-Play)' : 'CB-Lautsprecher stumm'}
+            className={`px-2.5 py-1.5 rounded-xl font-bold flex items-center gap-1 border transition cursor-pointer ${
+              autoPlayAudio
+                ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                : 'bg-slate-800 border-slate-700 text-slate-400'
+            }`}
+          >
+            {autoPlayAudio ? <Volume2 className="w-3.5 h-3.5 text-amber-400" /> : <VolumeX className="w-3.5 h-3.5" />}
+            <span>{autoPlayAudio ? '📻 CB-ON' : '🔇 OFF'}</span>
+          </button>
+
+          {/* Button: Vollbild / Großansicht */}
+          <button
+            type="button"
+            onClick={() => setIsMaximized(!isMaximized)}
+            className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-amber-400 transition cursor-pointer"
+            title={isMaximized ? 'Normalfenster' : 'Großansicht / Vollbild'}
+          >
+            {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Main 2-Tab Navigation Bar requested by user */}
+      <div className="grid grid-cols-2 gap-2 p-1 bg-[#1E293B] border border-slate-700/80 rounded-xl mb-3 shrink-0 font-mono text-xs">
         <button
           type="button"
-          onClick={() => setMobileViewMode('chat')}
-          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
-            mobileViewMode === 'chat'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
+          onClick={() => {
+            setMainTab('channels');
+            if (activeChannel !== 'all' && activeChannel !== 'admins' && !activeChannel.startsWith('sec-')) {
+              setActiveChannel('all');
+            }
+          }}
+          className={`py-2 px-3 rounded-lg font-extrabold transition flex items-center justify-center gap-2 cursor-pointer ${
+            mainTab === 'channels'
+              ? 'bg-blue-600 text-white shadow-lg ring-1 ring-blue-400/50'
+              : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <MessageSquare className="w-3.5 h-3.5" />
-          <span>Chatverlauf ({filteredMessages.length})</span>
+          <Radio className="w-4 h-4" />
+          <span>📻 Funkkanäle & Gruppen</span>
         </button>
+
         <button
           type="button"
-          onClick={() => setMobileViewMode('channels')}
-          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
-            mobileViewMode === 'channels'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
+          onClick={() => setMainTab('responders')}
+          className={`py-2 px-3 rounded-lg font-extrabold transition flex items-center justify-center gap-2 cursor-pointer ${
+            mainTab === 'responders'
+              ? 'bg-blue-600 text-white shadow-lg ring-1 ring-blue-400/50'
+              : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Radio className="w-3.5 h-3.5" />
-          <span>Kanäle & Kräfte ({activeUsersCount} online)</span>
+          <Users className="w-4 h-4" />
+          <span>👥 Einsatzkräfte & Direktchat ({activeUsersCount} Online)</span>
         </button>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-3 h-full overflow-hidden">
-        {/* Sidebar: Channels & Personnel List */}
-        <div
-          className={`w-full md:w-80 bg-[#1E293B] border border-slate-300 dark:border-slate-700/80 rounded-2xl p-3 flex-col justify-between shadow-xl shrink-0 overflow-hidden h-full min-h-0 ${
-            mobileViewMode === 'channels' ? 'flex flex-1' : 'hidden'
-          } ${isSidebarCollapsed ? 'md:hidden' : 'md:flex'}`}
-        >
-          <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-0">
-            {/* Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-300 dark:border-slate-700">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
-                  <Radio className="w-4 h-4 animate-pulse" />
+      {/* Body Area */}
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 h-full overflow-hidden">
+        {/* Left Selector Drawer based on active tab */}
+        <div className="w-full lg:w-80 bg-[#1E293B] border border-slate-700/80 rounded-2xl p-3 flex flex-col justify-between shadow-xl shrink-0 overflow-hidden min-h-0">
+          <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-0 font-mono text-xs">
+            {mainTab === 'channels' ? (
+              // TAB 1: Funkkanäle & Gruppen
+              <div className="space-y-3">
+                {/* Scope Switcher: Einsatzfunk vs Vereinsfunk */}
+                <div className="grid grid-cols-2 gap-1 p-1 bg-slate-900 border border-slate-700 rounded-xl text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveScope('operation');
+                      setActiveChannel('all');
+                    }}
+                    className={`py-1.5 px-2 rounded-lg font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                      activeScope === 'operation' ? 'bg-blue-600 text-white' : 'text-slate-400'
+                    }`}
+                  >
+                    <span>🚨 Einsatzfunk</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveScope('general');
+                      setActiveChannel('all');
+                    }}
+                    className={`py-1.5 px-2 rounded-lg font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                      activeScope === 'general' ? 'bg-emerald-600 text-white' : 'text-slate-400'
+                    }`}
+                  >
+                    <span>🌐 Vereinsfunk</span>
+                  </button>
                 </div>
-                <h2 className="font-extrabold text-xs uppercase tracking-wider text-white">Einsatzfunk & Chat</h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  playAlertSound('notification');
-                  setAutoPlayAudio(!autoPlayAudio);
-                }}
-                title={autoPlayAudio ? 'CB-Lautsprecher aktiv (Auto-Play)' : 'CB-Lautsprecher stumm'}
-                className={`px-2 py-1 rounded-lg text-[10px] font-mono flex items-center gap-1 border transition cursor-pointer ${
-                  autoPlayAudio
-                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 font-bold'
-                    : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400'
-                }`}
-              >
-                {autoPlayAudio ? <Volume2 className="w-3 h-3 text-amber-400" /> : <VolumeX className="w-3 h-3" />}
-                <span>{autoPlayAudio ? '📻 CB-ON' : '🔇 OFF'}</span>
-              </button>
-            </div>
 
-            {/* Scope Switcher: Einsatzfunk vs Vereinsfunk (Allgemein) */}
-            <div className="grid grid-cols-2 gap-1.5 p-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700/80 rounded-xl font-mono text-[10px]">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveScope('operation');
-                  setActiveChannel('all');
-                }}
-                className={`py-1.5 px-2 rounded-lg font-bold transition cursor-pointer flex items-center justify-center gap-1 ${
-                  activeScope === 'operation'
-                    ? 'bg-blue-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <span>🚨 Einsatzfunk</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveScope('general');
-                  setActiveChannel('all');
-                }}
-                className={`py-1.5 px-2 rounded-lg font-bold transition cursor-pointer flex items-center justify-center gap-1 ${
-                  activeScope === 'general'
-                    ? 'bg-emerald-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <span>🌐 Vereinsfunk</span>
-              </button>
-            </div>
-
-            {/* Operation Selector (when in Einsatzfunk and operations exist) */}
-            {activeScope === 'operation' && (
-              <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-2 space-y-1 font-mono text-xs">
-                <div className="flex items-center justify-between text-[10px] text-slate-400">
-                  <span className="uppercase font-bold">Einsatz wählen:</span>
-                  {effectiveOperation && (
-                    <span className="text-emerald-400 font-bold">
-                      {effectiveOperation.status === 'active' ? '● Aktiv' : '⏸ Pausiert'}
-                    </span>
-                  )}
-                </div>
-                <select
-                  value={selectedOpId}
-                  onChange={(e) => {
-                    const newOpId = e.target.value;
-                    setSelectedOpId(newOpId);
-                    setCurrentOperationId(newOpId);
-                    setActiveChannel('all');
-                  }}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-2 py-1 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
-                >
-                  {allOperations
-                    .filter((o) => o.status === 'active' || o.status === 'paused')
-                    .map((op) => (
-                      <option key={op.id} value={op.id}>
-                        #{op.id.slice(-4).toUpperCase()} {op.title}
-                      </option>
-                    ))}
-                  {allOperations.filter((o) => o.status === 'active' || o.status === 'paused').length === 0 && (
-                    <option value="">Kein laufender Einsatz</option>
-                  )}
-                </select>
-              </div>
-            )}
-
-            {/* Global Group Channels */}
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-1 block font-mono">
-                {activeScope === 'general' ? 'VEREINSFUNK-KANÄLE:' : 'EINSATZFUNK-KANÄLE:'}
-              </span>
-
-              {currentUser?.role !== 'observer' && (
-                <button
-                  type="button"
-                  onClick={() => handleSelectChannel('all')}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
-                    activeChannel === 'all'
-                      ? 'bg-blue-600 text-white font-bold shadow-md ring-1 ring-blue-400/50'
-                      : 'hover:bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 truncate">
-                    <div className="h-8 w-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-sm shrink-0">
-                      📢
-                    </div>
-                    <div className="truncate">
-                      <div className="text-xs font-bold leading-tight uppercase tracking-tight">Gesamter Funkverkehr</div>
-                      <div className="text-[10px] opacity-80 font-mono">{activeUsersCount} Online • {allUsers.length} Registriert</div>
-                    </div>
-                  </div>
-                  {getUnreadForChannel('all') > 0 && (
-                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[9px] font-bold">
-                      {getUnreadForChannel('all')}
-                    </span>
-                  )}
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() => handleSelectChannel('admins')}
-                className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
-                  activeChannel === 'admins'
-                    ? 'bg-blue-600 text-white font-bold shadow-md ring-1 ring-blue-400/50'
-                    : 'hover:bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-2.5 truncate">
-                  <div className="h-8 w-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-sm shrink-0">
-                    🛡️
-                  </div>
-                  <div className="truncate">
-                    <div className="text-xs font-bold leading-tight uppercase tracking-tight">Einsatzleitung (EL)</div>
-                    <div className="text-[10px] opacity-80 font-mono">Führungskanal (Geschützt)</div>
-                  </div>
-                </div>
-                {getUnreadForChannel('admins') > 0 && (
-                  <span className="ml-2 px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold">
-                    {getUnreadForChannel('admins')}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
+                    FUNKKANÄLE:
                   </span>
-                )}
-              </button>
 
-              {currentUser?.role !== 'observer' && (
-                <button
-                  type="button"
-                  onClick={() => handleSelectChannel('system')}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
-                    activeChannel === 'system'
-                      ? 'bg-blue-600 text-white font-bold shadow-md ring-1 ring-blue-400/50'
-                      : 'hover:bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 truncate">
-                    <div className="h-8 w-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-sm shrink-0">
-                      📋
+                  {/* Channel: Gesamter Einsatzfunk */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveChannel('all')}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
+                      activeChannel === 'all'
+                        ? 'bg-blue-600 text-white font-bold shadow ring-1 ring-blue-400'
+                        : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="text-base">📢</span>
+                      <div className="truncate">
+                        <div className="font-bold leading-tight uppercase">
+                          {activeScope === 'general' ? 'Allgemeiner Vereinsfunk' : 'Gesamter Einsatzfunk'}
+                        </div>
+                        <div className="text-[10px] opacity-75">{activeUsersCount} Einheiten online</div>
+                      </div>
                     </div>
-                    <div className="truncate">
-                      <div className="text-xs font-bold leading-tight uppercase tracking-tight">System & Logbuch</div>
-                      <div className="text-[10px] opacity-80 font-mono">Logins, Logouts & Meldungen</div>
+                  </button>
+
+                  {/* Channel: Führungskanal EL */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveChannel('admins')}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
+                      activeChannel === 'admins'
+                        ? 'bg-red-700 text-white font-bold shadow ring-1 ring-red-400'
+                        : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="text-base">🛡️</span>
+                      <div className="truncate">
+                        <div className="font-bold leading-tight uppercase">Führungskanal EL</div>
+                        <div className="text-[10px] opacity-75">Geschützter Chat Einsatzleitung</div>
+                      </div>
                     </div>
-                  </div>
-                  {getUnreadForChannel('system') > 0 && (
-                    <span className="ml-2 px-1.5 py-0.5 rounded-full bg-blue-500 text-white text-[9px] font-bold">
-                      {getUnreadForChannel('system')}
+                  </button>
+                </div>
+
+                {/* Sektor Funkkanäle */}
+                {activeScope === 'operation' && effectiveOperation?.sectors && effectiveOperation.sectors.length > 0 && (
+                  <div className="space-y-1 pt-2 border-t border-slate-700">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
+                      SEKTOR-FUNKKANÄLE:
                     </span>
-                  )}
-                </button>
-              )}
-            </div>
 
-            {/* Sector Channels (if in operation scope and sectors exist) */}
-            {activeScope === 'operation' && currentUser?.role !== 'observer' && effectiveOperation?.sectors && effectiveOperation.sectors.length > 0 && (
-              <div className="space-y-1 pt-2 border-t border-slate-300 dark:border-slate-700">
-                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-1 block font-mono">
-                  SEKTOR-FUNKKANÄLE:
-                </span>
-
-                {effectiveOperation.sectors.map((sec) => (
-                  <button
-                    type="button"
-                    key={sec.id}
-                    onClick={() => handleSelectChannel(sec.id)}
-                    className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer text-left ${
-                      activeChannel === sec.id
-                        ? 'bg-amber-500/20 border border-amber-500 text-amber-900 dark:text-amber-100 font-bold'
-                        : 'hover:bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <div
-                        className="w-3 h-3 rounded-full shrink-0 border border-white/20"
-                        style={{
-                          backgroundColor:
-                            sec.status === 'searched'
-                              ? '#22c55e'
-                              : sec.status === 'in_progress'
-                              ? '#f59e0b'
-                              : sec.status === 'suspicious'
-                              ? '#ef4444'
-                              : '#3b82f6',
-                        }}
-                      />
-                      <div className="truncate">
-                        <div className="text-xs font-bold leading-tight truncate">{sec.name}</div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                          {allUsers.filter((u) => sec.assignedUserIds?.includes(u.id) && u.isActive).length} online ({sec.assignedUserIds?.length || 0} zugeteilt)
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Direct 1-on-1 Chats with Personnel */}
-            {currentUser?.role !== 'observer' && (
-            <div className="space-y-1 pt-2 border-t border-slate-300 dark:border-slate-700">
-              <div className="flex items-center justify-between px-1 mb-1">
-                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider font-mono">
-                  DIREKTCHAT & KRÄFTE ({activeUsersCount} ONLINE):
-                </span>
-              </div>
-
-              {/* Personnel search bar */}
-              <div className="relative mb-2">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" />
-                <input
-                  type="text"
-                  value={userSearchQuery}
-                  onChange={(e) => setUserSearchQuery(e.target.value)}
-                  placeholder="Sucher / Funkname suchen..."
-                  className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono placeholder-slate-500"
-                />
-              </div>
-
-              {/* Admins list */}
-              {admins
-                .filter((a) => a.id !== currentUser.id)
-                .map((admin) => (
-                  <button
-                    type="button"
-                    key={admin.id}
-                    onClick={() => handleSelectChannel(admin.id)}
-                    className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer text-left ${
-                      activeChannel === admin.id
-                        ? 'bg-red-500/20 border border-red-500 text-red-100 font-bold'
-                        : 'hover:bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <div className="relative h-7 w-7 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-800 shrink-0 border border-slate-300 dark:border-slate-700">
-                        {admin.photoUrl ? (
-                          <img src={admin.photoUrl} alt={admin.name} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center font-bold text-white text-xs bg-red-950">
-                            {admin.name.charAt(0)}
+                    {effectiveOperation.sectors.map((sec) => (
+                      <button
+                        type="button"
+                        key={sec.id}
+                        onClick={() => setActiveChannel(sec.id)}
+                        className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer text-left ${
+                          activeChannel === sec.id
+                            ? 'bg-amber-500/20 border border-amber-500 text-amber-200 font-bold'
+                            : 'bg-slate-800/60 hover:bg-slate-700/60 text-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+                          <div className="truncate">
+                            <div className="font-bold truncate">{sec.name}</div>
+                            <div className="text-[10px] text-slate-400">
+                              {sec.assignedUserIds?.length || 0} Kräfte zugeteilt
+                            </div>
                           </div>
-                        )}
-                        <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border border-slate-900" />
-                      </div>
-                      <div className="truncate">
-                        <div className="text-xs font-bold leading-tight flex items-center gap-1">
-                          <span className="truncate">{admin.name}</span>
-                          <span className="text-[8px] px-1 rounded bg-red-900 text-red-200 font-mono shrink-0">EL</span>
                         </div>
-                        <div className="text-[10px] text-blue-400 font-mono">{admin.callSign}</div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              // TAB 2: Einsatzkräfte & Direktchat
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    placeholder="Sucher / Funkname suchen..."
+                    className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                  />
+                </div>
 
-              {/* Responders list */}
-              {filteredResponders.map((user) => {
-                const userLoc = userLocations[user.id];
-                const isLive = userLoc?.isLive ?? user.isActive;
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
+                    DIREKTCHAT MIT EINSATZKRAFT ({filteredResponders.length}):
+                  </span>
 
-                return (
-                  <button
-                    type="button"
-                    key={user.id}
-                    onClick={() => handleSelectChannel(user.id)}
-                    className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer text-left ${
-                      activeChannel === user.id
-                        ? 'bg-blue-500/20 border border-blue-500 text-blue-100 font-bold'
-                        : 'hover:bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <div className="relative h-7 w-7 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-800 shrink-0 border border-slate-300 dark:border-slate-700">
-                        {user.photoUrl ? (
-                          <img src={user.photoUrl} alt={user.name} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center font-bold text-white text-xs">
-                            {user.name.charAt(0)}
+                  {filteredResponders.map((user) => {
+                    const isLive = userLocations[user.id]?.isLive ?? user.isActive;
+                    const isSelected = activeChannel === user.id;
+
+                    return (
+                      <button
+                        type="button"
+                        key={user.id}
+                        onClick={() => setActiveChannel(user.id)}
+                        className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer text-left ${
+                          isSelected
+                            ? 'bg-blue-600 text-white font-bold shadow'
+                            : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <div className="relative h-7 w-7 rounded-lg overflow-hidden bg-slate-900 shrink-0 border border-slate-700 flex items-center justify-center font-bold text-white text-xs">
+                            {user.photoUrl ? (
+                              <img src={user.photoUrl} alt={user.name} className="h-full w-full object-cover" />
+                            ) : (
+                              user.name.charAt(0)
+                            )}
+                            <span
+                              className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-slate-900 ${
+                                isLive ? 'bg-emerald-500' : 'bg-slate-500'
+                              }`}
+                            />
                           </div>
-                        )}
-                        <span
-                          className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-slate-900 ${
-                            isLive ? 'bg-emerald-500' : 'bg-slate-500'
-                          }`}
-                        />
-                      </div>
-                      <div className="truncate">
-                        <div className="text-xs font-bold leading-tight truncate">{user.name}</div>
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
-                          {user.callSign} {user.licensePlate ? `• ${user.licensePlate}` : ''}
+                          <div className="truncate">
+                            <div className="font-bold truncate leading-tight flex items-center gap-1">
+                              <span className="truncate">{user.name}</span>
+                              {user.role === 'admin' && (
+                                <span className="text-[8px] px-1 rounded bg-red-950 text-red-300 font-mono">EL</span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-blue-300 font-mono truncate">
+                              {user.callSign} {user.licensePlate ? `• ${user.licensePlate}` : ''}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Main Active Chat Area */}
-        <div
-          className={`flex-1 bg-[#1E293B] border border-slate-300 dark:border-slate-700/80 rounded-2xl flex-col justify-between shadow-xl overflow-hidden h-full min-h-0 ${
-            mobileViewMode === 'chat' ? 'flex' : 'hidden md:flex'
-          }`}
-        >
-          {/* Active Channel Top Header */}
-          <div className="bg-white dark:bg-slate-900/90 p-2.5 sm:p-4 border-b border-slate-300 dark:border-slate-700 flex items-center justify-between gap-2 shrink-0">
-            <div className="flex items-center gap-2 sm:gap-3 truncate">
-              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-blue-400 flex items-center justify-center font-bold text-base sm:text-lg shrink-0 shadow-inner">
+        {/* Main Active Radio & Chat Area */}
+        <div className="flex-1 bg-[#1E293B] border border-slate-700/80 rounded-2xl flex flex-col justify-between shadow-xl overflow-hidden min-h-0">
+          {/* Active Target Header */}
+          <div className="bg-slate-900/90 p-3 border-b border-slate-700 flex items-center justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-2.5 truncate">
+              <div className="h-8 w-8 rounded-xl bg-slate-800 border border-slate-700 text-blue-400 flex items-center justify-center font-bold text-base shrink-0">
                 {activeChannel === 'all'
                   ? '📢'
                   : activeChannel === 'admins'
@@ -991,7 +910,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                   : '💬'}
               </div>
               <div className="truncate">
-                <h3 className="font-extrabold text-xs sm:text-sm text-white flex items-center gap-1.5 uppercase tracking-wide truncate">
+                <h3 className="font-extrabold text-xs sm:text-sm text-white uppercase tracking-wide truncate flex items-center gap-1.5">
                   <span className="truncate">
                     {activeChannel === 'all'
                       ? activeScope === 'general'
@@ -1001,7 +920,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                       ? 'Führungskanal EL'
                       : activeSector
                       ? `Funk Sektor: ${activeSector.name}`
-                      : `Direktfunk mit: ${activeTargetUser?.name || 'Sucher'}`}
+                      : `Direktfunk mit: ${activeTargetUser?.name || 'Suchkraft'}`}
                   </span>
                   {activeTargetUser && (
                     <span className="text-xs text-blue-400 font-mono font-semibold shrink-0">
@@ -1009,303 +928,380 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                     </span>
                   )}
                 </h3>
-                <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                <p className="text-[10px] text-slate-400 font-mono truncate">
                   {activeChannel === 'all'
-                    ? activeScope === 'general'
-                      ? `Offener Kanal für alle Vereinsmitglieder • ${activeUsersCount} online`
-                      : `Offener Funkkanal • ${activeUsersCount} Einsatzkräfte online`
+                    ? `${activeUsersCount} Einsatzkräfte online`
                     : activeChannel === 'admins'
-                    ? 'Sicherer Führungskanal'
+                    ? 'Geschützter Führungskanal der Einsatzleitung'
                     : activeSector
-                    ? `Sektor-Funk (${allUsers.filter((u) => activeSector.assignedUserIds?.includes(u.id) && u.isActive).length} online)`
+                    ? `Sektor-Funk (${secAssignedCount(activeSector, allUsers)} online)`
                     : `Direkte 1:1 Verbindung • KFZ: ${activeTargetUser?.licensePlate || 'k.A.'}`}
                 </p>
               </div>
             </div>
-
-            {/* Header Right Tools: Search, Sidebar Toggle & Maximize */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              {/* Search inside active chat */}
-              <div className="relative hidden lg:block w-36 xl:w-44">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" />
-                <input
-                  type="text"
-                  value={messageSearchQuery}
-                  onChange={(e) => setMessageSearchQuery(e.target.value)}
-                  placeholder="Suchen..."
-                  className="w-full pl-8 pr-2 py-1 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono placeholder-slate-500"
-                />
-              </div>
-
-              {/* Desktop Sidebar Collapse Toggle */}
-              <button
-                type="button"
-                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                title={isSidebarCollapsed ? 'Kanäle & Kräfte einblenden' : 'Kanäle & Kräfte ausblenden'}
-                className="hidden md:flex p-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-white transition cursor-pointer"
-              >
-                {isSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4 text-blue-400" /> : <PanelLeftClose className="w-4 h-4 text-slate-500 dark:text-slate-400" />}
-              </button>
-
-              {/* Maximize / Fullscreen Toggle Button */}
-              <button
-                type="button"
-                onClick={() => setIsMaximized(!isMaximized)}
-                title={isMaximized ? 'Normale Ansicht' : 'Großansicht / Vollbild aktivieren'}
-                className={`p-2 rounded-xl border transition cursor-pointer flex items-center gap-1.5 font-mono text-xs font-bold ${
-                  isMaximized
-                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
-                    : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-white'
-                }`}
-              >
-                {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4 text-amber-400" />}
-                <span className="hidden sm:inline">{isMaximized ? 'Verkleinern' : 'Großansicht'}</span>
-              </button>
-            </div>
           </div>
 
-        {/* Quick Filter Bar */}
-        <div className="bg-white dark:bg-slate-900/40 px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto text-[11px] font-mono">
-          <span className="text-slate-500 mr-1 flex items-center gap-1 shrink-0">
-            <Filter className="w-3 h-3" /> Filter:
-          </span>
-          <button
-            onClick={() => setActiveFilter('all')}
-            className={`px-2.5 py-1 rounded-lg transition cursor-pointer shrink-0 ${
-              activeFilter === 'all'
-                ? 'bg-blue-600 text-white font-bold'
-                : 'bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
-            }`}
-          >
-            Alle ({filteredMessages.length})
-          </button>
-          <button
-            onClick={() => setActiveFilter('voice')}
-            className={`px-2.5 py-1 rounded-lg transition cursor-pointer shrink-0 flex items-center gap-1 ${
-              activeFilter === 'voice'
-                ? 'bg-amber-500 text-slate-950 font-bold'
-                : 'bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
-            }`}
-          >
-            🎙️ CB-Funk ({chatMessages.filter((m) => m.isVoiceMessage && (activeScope === 'general' ? m.operationId === 'general' : m.operationId === (effectiveOperation?.id || currentOperation?.id))).length})
-          </button>
-          <button
-            onClick={() => setActiveFilter('alert')}
-            className={`px-2.5 py-1 rounded-lg transition cursor-pointer shrink-0 flex items-center gap-1 ${
-              activeFilter === 'alert'
-                ? 'bg-red-600 text-white font-bold'
-                : 'bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
-            }`}
-          >
-            🚨 Alarme
-          </button>
-          <button
-            onClick={() => setActiveFilter('location')}
-            className={`px-2.5 py-1 rounded-lg transition cursor-pointer shrink-0 flex items-center gap-1 ${
-              activeFilter === 'location'
-                ? 'bg-emerald-600 text-white font-bold'
-                : 'bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:text-slate-200'
-            }`}
-          >
-            📍 Standorte
-          </button>
-        </div>
+          {/* Active Radio Feed Messages */}
+          <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-3 bg-[#0F172A]/50">
+            {activeChannelMessages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-slate-500 text-xs space-y-2 font-mono">
+                <Radio className="w-8 h-8 opacity-30 text-blue-400 animate-pulse" />
+                <span>Keine Funksprüche im aktiven Kanal vorhanden.</span>
+              </div>
+            ) : (
+              activeChannelMessages.map((msg, index) => {
+                const isMe = msg.senderId === currentUser.id;
+                const prevMsg = activeChannelMessages[index - 1];
+                const isSameSender = prevMsg && prevMsg.senderId === msg.senderId;
 
-        {/* Messages Feed */}
-        <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-3 bg-[#0F172A]/40">
-          {filteredMessages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-500 text-xs space-y-2 font-mono">
-              <Radio className="w-10 h-10 opacity-30 text-blue-400 animate-pulse" />
-              <span>Keine Funksprüche im aktuellen Filter/Kanal vorhanden.</span>
-            </div>
-          ) : (
-            filteredMessages.map((msg, index) => {
-              const isMe = msg.senderId === currentUser.id;
-              const isAlert = msg.isAlert;
-
-              // Check if previous message was from same sender to group messages cleanly
-              const prevMsg = filteredMessages[index - 1];
-              const isSameSender = prevMsg && prevMsg.senderId === msg.senderId;
-
-              return (
-                <div
-                  key={msg.id}
-                  className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} ${
-                    isSameSender ? 'mt-1' : 'mt-3'
-                  }`}
-                >
-                  {/* Sender Header (Only if first in stack) */}
-                  {!isSameSender && (
-                    <div className="flex items-center gap-1.5 px-2 mb-1 text-[11px] text-slate-500 dark:text-slate-400">
-                      <span className="font-bold text-slate-900 dark:text-slate-200">{isMe ? 'Du' : msg.senderName}</span>
-                      <span className="text-[10px] text-blue-400 font-mono">({msg.senderCallSign})</span>
-                      {msg.senderRole === 'admin' && (
-                        <span className="text-[9px] px-1 py-0.2 rounded bg-red-950 text-red-300 font-mono font-bold">
-                          EL
-                        </span>
-                      )}
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        • {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Message Bubble */}
+                return (
                   <div
-                    className={`max-w-[88%] sm:max-w-[75%] p-3 rounded-2xl text-xs space-y-1 shadow-md transition ${
-                      isAlert
-                        ? 'bg-red-950/90 border border-red-500 text-red-100 ring-2 ring-red-500/40 animate-pulse font-semibold'
-                        : isMe
-                        ? 'bg-blue-600 text-white rounded-br-none'
-                        : 'bg-slate-50 dark:bg-slate-800 text-black dark:text-slate-100 rounded-bl-none border border-slate-300 dark:border-slate-700/80'
+                    key={msg.id}
+                    className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} ${
+                      isSameSender ? 'mt-1' : 'mt-3'
                     }`}
                   >
-                    {/* Text content */}
-                    {msg.text && <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
-
-                    {/* CB-Funk Voice Message Audio Player */}
-                    {msg.isVoiceMessage && msg.audioUrl && (
-                      <VoiceMessagePlayer
-                        audioUrl={msg.audioUrl}
-                        duration={msg.audioDuration}
-                        isMe={isMe}
-                      />
-                    )}
-
-                    {/* Location attachment card */}
-                    {msg.location && (
-                      <div className="mt-2 pt-2 border-t border-white/20 flex items-center justify-between text-[11px]">
-                        <span className="flex items-center gap-1 font-mono font-medium">
-                          <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                          GPS: {msg.location.lat.toFixed(5)}, {msg.location.lng.toFixed(5)}
+                    {!isSameSender && (
+                      <div className="flex items-center gap-1.5 px-2 mb-1 text-[11px] text-slate-400">
+                        <span className="font-bold text-slate-200">{isMe ? 'Du' : msg.senderName}</span>
+                        <span className="text-[10px] text-blue-400 font-mono">({msg.senderCallSign})</span>
+                        {msg.senderRole === 'admin' && (
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-red-950 text-red-300 font-mono font-bold">
+                            EL
+                          </span>
+                        )}
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          • {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        <a
-                          href={`https://www.google.com/maps?q=${msg.location.lat},${msg.location.lng}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-2 py-0.5 rounded bg-black/30 hover:bg-black/50 text-white font-mono text-[10px] underline"
-                        >
-                          In Google Maps
-                        </a>
                       </div>
                     )}
+
+                    <div
+                      className={`max-w-[88%] sm:max-w-[75%] p-3 rounded-2xl text-xs space-y-1 shadow-md transition ${
+                        isMe
+                          ? 'bg-blue-600 text-white rounded-br-none'
+                          : 'bg-slate-800 text-slate-100 rounded-bl-none border border-slate-700'
+                      }`}
+                    >
+                      {msg.text && <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
+
+                      {msg.isVoiceMessage && msg.audioUrl && (
+                        <VoiceMessagePlayer audioUrl={msg.audioUrl} duration={msg.audioDuration} isMe={isMe} />
+                      )}
+
+                      {msg.location && (
+                        <div className="mt-2 pt-2 border-t border-white/20 flex items-center justify-between text-[11px]">
+                          <span className="flex items-center gap-1 font-mono font-medium">
+                            <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                            GPS: {msg.location.lat.toFixed(5)}, {msg.location.lng.toFixed(5)}
+                          </span>
+                          <a
+                            href={`https://www.google.com/maps?q=${msg.location.lat},${msg.location.lng}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2 py-0.5 rounded bg-black/30 text-white font-mono text-[10px] underline"
+                          >
+                            Google Maps
+                          </a>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Recording Overlay / Live Push-to-Talk Indicator */}
-        {isRecording && (
-          <div className="bg-amber-950/90 border-t border-amber-500/50 p-3 flex items-center justify-between animate-pulse text-amber-200 text-xs font-mono">
-            <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded-full bg-red-600 animate-ping" />
-              <span className="font-bold uppercase tracking-wider">🎙️ CB-Funk Übertragung läuft...</span>
-              <span className="px-2 py-0.5 rounded bg-amber-900 border border-amber-600 text-amber-100 font-mono font-bold">
-                0:{recordingTime < 10 ? `0${recordingTime}` : recordingTime} / 0:30s
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={cancelRecording}
-                className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs cursor-pointer flex items-center gap-1"
-              >
-                <X className="w-3.5 h-3.5" /> Abbrechen
-              </button>
-              <button
-                type="button"
-                onClick={stopAndSendRecording}
-                className="px-4 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg cursor-pointer flex items-center gap-1"
-              >
-                <Send className="w-3.5 h-3.5" /> Senden (Roger!)
-              </button>
-            </div>
+                );
+              })
+            )}
+            <div ref={messagesEndRef} />
           </div>
-        )}
 
-        {/* Input Bar */}
-        <form onSubmit={handleSend} className="bg-white dark:bg-slate-900/95 p-2.5 sm:p-3 border-t border-slate-300 dark:border-slate-700/80 space-y-2">
-          {/* Quick options toggles */}
-          <div className="flex items-center justify-between text-xs px-1">
-            <div className="flex items-center gap-2">
+          {/* Recording Overlay / Indicator */}
+          {isRecording && (
+            <div className="bg-amber-950/90 border-t border-amber-500/50 p-3 flex items-center justify-between animate-pulse text-amber-200 text-xs font-mono">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full bg-red-600 animate-ping" />
+                <span className="font-bold uppercase tracking-wider">🎙️ CB-Funk Übertragung läuft...</span>
+                <span className="px-2 py-0.5 rounded bg-amber-900 border border-amber-600 font-bold">
+                  0:{recordingTime < 10 ? `0${recordingTime}` : recordingTime} / 0:30s
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={cancelRecording}
+                  className="px-3 py-1 rounded-lg bg-slate-800 text-slate-300 font-bold text-xs cursor-pointer"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={stopAndSendRecording}
+                  className="px-4 py-1 rounded-lg bg-emerald-600 text-white font-bold text-xs shadow-lg cursor-pointer"
+                >
+                  Senden (Roger!)
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Input Bar */}
+          <form onSubmit={handleSend} className="bg-slate-900/95 p-2.5 sm:p-3 border-t border-slate-700/80 space-y-2">
+            <div className="flex items-center justify-between text-xs px-1">
               <button
                 type="button"
                 onClick={() => setIncludeLocation(!includeLocation)}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer font-mono ${
                   includeLocation
                     ? 'bg-blue-500/20 text-blue-300 border-blue-500'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:text-slate-900 dark:text-slate-200'
+                    : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
                 }`}
               >
                 <MapPin className="w-3.5 h-3.5" />
-                <span>GPS-Standort</span>
+                <span>GPS-Standort anhängen</span>
+              </button>
+              <div className="text-[10px] text-slate-400 font-mono hidden sm:block">
+                Sprechtaste halten zum Senden (oder tippen)
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onPointerDown={handlePttPointerDown}
+                onPointerUp={handlePttPointerUp}
+                onPointerCancel={handlePttPointerCancel}
+                onClick={handlePttButtonClick}
+                onContextMenu={(e) => e.preventDefault()}
+                title={isRecording ? 'Klicken zum Beenden und Senden' : 'Gedrückt halten zum Sprechen'}
+                className={`h-10 px-3.5 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition cursor-pointer shrink-0 border select-none touch-none ${
+                  isRecording
+                    ? 'bg-red-600 text-white border-red-400 animate-pulse shadow-lg'
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-400 shadow active:scale-95'
+                }`}
+              >
+                <Mic className="w-4 h-4" />
+                <span className="hidden sm:inline font-mono uppercase tracking-tight">
+                  {isRecording ? 'Senden' : 'CB-Funk'}
+                </span>
               </button>
 
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder={`Funkspruch senden an ${
+                  activeChannel === 'all'
+                    ? activeScope === 'general'
+                      ? 'alle Vereinsmitglieder'
+                      : 'alle Einheiten'
+                    : activeChannel === 'admins'
+                    ? 'Einsatzleitung'
+                    : activeSector
+                    ? `Sektor ${activeSector.name}`
+                    : activeTargetUser?.callSign || 'Kanal'
+                }...`}
+                className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 placeholder-slate-500 font-mono"
+              />
+
+              <button
+                type="submit"
+                disabled={!inputText.trim() && !includeLocation}
+                className="h-10 px-4 sm:px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg disabled:opacity-40 transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+              >
+                <Send className="w-4 h-4" />
+                <span className="hidden sm:inline">Senden</span>
+              </button>
             </div>
-
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono hidden sm:block">
-              {isRecording ? '🔴 Übertragung läuft (Loslassen oder Senden drücken)' : '📻 Sprechtaste halten zum Senden (oder tippen)'}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* CB Funk Push-to-Talk Microphone Button */}
-            <button
-              type="button"
-              onPointerDown={handlePttPointerDown}
-              onPointerUp={handlePttPointerUp}
-              onPointerCancel={handlePttPointerCancel}
-              onClick={handlePttButtonClick}
-              onContextMenu={(e) => e.preventDefault()}
-              title={isRecording ? "Klicken zum Beenden und Senden" : "Gedrückt halten zum Sprechen (oder einmal tippen)"}
-              className={`h-10 px-3.5 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition cursor-pointer shrink-0 border select-none touch-none ${
-                isRecording
-                  ? 'bg-red-600 text-white border-red-400 animate-pulse shadow-lg ring-2 ring-red-400/50'
-                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-400/80 shadow active:scale-95'
-              }`}
-            >
-              <Mic className="w-4 h-4" />
-              <span className="hidden sm:inline font-mono uppercase tracking-tight">
-                {isRecording ? 'Senden' : 'CB-Funk'}
-              </span>
-            </button>
-
-            {/* Text Input */}
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder={`Funkspruch an ${
-                activeChannel === 'all'
-                  ? activeScope === 'general'
-                    ? 'alle Vereinsmitglieder'
-                    : 'alle Einheiten'
-                  : activeChannel === 'admins'
-                  ? 'Einsatzleitung'
-                  : activeSector
-                  ? `Sektor ${activeSector.name}`
-                  : activeTargetUser?.callSign || 'Kanal'
-              }...`}
-              className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 placeholder-slate-500 font-mono"
-            />
-
-            {/* Send Button */}
-            <button
-              type="submit"
-              disabled={!inputText.trim() && !includeLocation}
-              className="h-10 px-4 sm:px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg disabled:opacity-40 transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
-            >
-              <Send className="w-4 h-4" />
-              <span className="hidden sm:inline">Senden</span>
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
+
+      {/* --- MODAL 1: 📜 Chatverlauf --- */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 z-[6000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-4xl text-slate-100 flex flex-col h-[85vh] overflow-hidden">
+            <div className="bg-slate-900 p-4 border-b border-slate-700 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-blue-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                    Vollständiger Chatverlauf & Nachrichten-Historie
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono">
+                    Archivierte Funksprüche und Textnachrichten durchsuchen
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-slate-900/50 border-b border-slate-700 shrink-0">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <input
+                  type="text"
+                  value={historySearchQuery}
+                  onChange={(e) => setHistorySearchQuery(e.target.value)}
+                  placeholder="Chatverlauf nach Wort, Sender oder Funkrufname durchsuchen..."
+                  className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#0F172A]/40 font-mono">
+              {chatMessages
+                .filter((m) => {
+                  if (!historySearchQuery.trim()) return true;
+                  const q = historySearchQuery.toLowerCase();
+                  return (
+                    m.text.toLowerCase().includes(q) ||
+                    m.senderName.toLowerCase().includes(q) ||
+                    m.senderCallSign.toLowerCase().includes(q)
+                  );
+                })
+                .map((msg) => (
+                  <div key={msg.id} className="p-3 rounded-xl bg-slate-800/90 border border-slate-700 space-y-1 text-xs">
+                    <div className="flex items-center justify-between text-slate-400 text-[11px]">
+                      <span className="font-bold text-blue-300">
+                        {msg.senderName} ({msg.senderCallSign}) • Kanal: {msg.channel}
+                      </span>
+                      <span>{new Date(msg.timestamp).toLocaleString('de-DE')}</span>
+                    </div>
+                    <p className="text-slate-100 whitespace-pre-wrap">{msg.text}</p>
+                    {msg.isVoiceMessage && msg.audioUrl && (
+                      <VoiceMessagePlayer audioUrl={msg.audioUrl} duration={msg.audioDuration} />
+                    )}
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL 2: 📋 Logbuch (Ein- und Ausloggen) --- */}
+      {showLogbookModal && (
+        <div className="fixed inset-0 z-[6000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-3xl text-slate-100 flex flex-col h-[80vh] overflow-hidden">
+            <div className="bg-slate-900 p-4 border-b border-slate-700 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-slate-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                    System-Logbuch (Ein- & Ausloggen)
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono">
+                    Chronologische Erfassung aller Systemzugriffe und Anmeldungen
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowLogbookModal(false)}
+                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 p-4 overflow-y-auto space-y-2 bg-[#0F172A]/40 font-mono">
+              {logbookMessages.length === 0 ? (
+                <div className="text-center py-12 text-slate-500 text-xs">Keine Logbuch-Einträge vorhanden.</div>
+              ) : (
+                logbookMessages.map((msg) => (
+                  <div key={msg.id} className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-start gap-3 text-xs">
+                    <span className="text-base">📋</span>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between text-[10px] text-slate-400">
+                        <span className="font-bold text-slate-300">{msg.senderName}</span>
+                        <span>{new Date(msg.timestamp).toLocaleString('de-DE')}</span>
+                      </div>
+                      <p className="text-slate-200 mt-0.5">{msg.text}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL 3: 🚨 Alarme & Funde --- */}
+      {showAlertsModal && (
+        <div className="fixed inset-0 z-[6000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className="bg-[#1E293B] border border-red-900/80 rounded-2xl shadow-2xl w-full max-w-4xl text-slate-100 flex flex-col h-[85vh] overflow-hidden">
+            <div className="bg-red-950/90 p-4 border-b border-red-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-400 animate-pulse" />
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                    Einsatz-Alarme, Statusänderungen & Fundmeldungen
+                  </h3>
+                  <p className="text-xs text-red-200 font-mono">
+                    Wichtige Ereignisse, Eilmeldungen und Fundstücke mit GPS
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAlertsModal(false)}
+                className="p-1.5 rounded-lg bg-black/30 hover:bg-black/50 text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#0F172A]/40 font-mono">
+              {/* Findings section */}
+              {findings && findings.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">
+                    DOKUMENTIERTE FUNDE ({findings.length}):
+                  </span>
+                  {findings.map((f) => (
+                    <div key={f.id} className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/50 space-y-1 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-amber-300">🚨 {f.title} ({f.category})</span>
+                        <span className="text-[10px] text-slate-400">{new Date(f.timestamp).toLocaleString('de-DE')}</span>
+                      </div>
+                      <p className="text-slate-200">{f.description}</p>
+                      {f.location && (
+                        <div className="text-[10px] text-amber-400">
+                          📍 GPS: {f.location.lat.toFixed(5)}, {f.location.lng.toFixed(5)} • Kraft: {f.userName}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Status Alert Messages */}
+              <span className="text-xs font-bold text-red-400 uppercase tracking-wider block">
+                STATUS- & EILMELDUNGEN ({alertAndFindingMessages.length}):
+              </span>
+              {alertAndFindingMessages.length === 0 ? (
+                <div className="text-center py-8 text-slate-500 text-xs">Keine besonderen Alarme vorhanden.</div>
+              ) : (
+                alertAndFindingMessages.map((msg) => (
+                  <div key={msg.id} className="p-3 rounded-xl bg-red-950/40 border border-red-700/60 space-y-1 text-xs">
+                    <div className="flex items-center justify-between text-[10px] text-red-300">
+                      <span className="font-bold">{msg.senderName} ({msg.senderCallSign})</span>
+                      <span>{new Date(msg.timestamp).toLocaleString('de-DE')}</span>
+                    </div>
+                    <p className="text-red-100 font-bold whitespace-pre-wrap">{msg.text}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
 };
+
+function secAssignedCount(sec: any, allUsers: User[]): number {
+  if (!sec || !sec.assignedUserIds) return 0;
+  return allUsers.filter((u) => sec.assignedUserIds.includes(u.id) && u.isActive).length;
+}

@@ -456,7 +456,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {selectedOp && (
+          {canManageOps && selectedOp && (
             <button
               onClick={() => handleOpenReactivate(selectedOp)}
               className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold border border-emerald-500 transition cursor-pointer font-mono uppercase tracking-wider shadow-lg shadow-emerald-950/50"
