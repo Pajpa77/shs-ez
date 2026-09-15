@@ -15,6 +15,7 @@ import {
   getUserConnectionStatus,
   getSignalFreshnessText,
   OperationLogEntry,
+  isUserAdminOrEL,
 } from '../types';
 import { VEREINSBUERO_LOCATION } from '../mockData';
 import { TacticalWeatherOverlay } from './TacticalWeatherOverlay';
@@ -297,14 +298,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const [selectedSector, setSelectedSector] = useState<SearchSector | null>(null);
   const [isCapturingSnapshot, setIsCapturingSnapshot] = useState(false);
   const [snapshotSavedNotice, setSnapshotSavedNotice] = useState(false);
-  const isAdminOrEL = Boolean(
-    currentUser && (
-      currentUser.role === 'admin' ||
-      currentUser.role === 'einsatzleitung' ||
-      currentUser.isAdmin ||
-      currentUser.canLeadOperations
-    )
-  );
+  const isAdminOrEL = Boolean(currentUser && isUserAdminOrEL(currentUser));
 
   // EZ Navigation Modal state for interactive coordination transfer to GPS/Navi apps
   const [ezNavData, setEzNavData] = useState<{
@@ -315,6 +309,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     isStandbyOffice: boolean;
     operationTitle?: string;
     commander?: string;
+    ezResponders?: User[];
   } | null>(null);
   const [copiedCoords, setCopiedCoords] = useState(false);
 
@@ -373,7 +368,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       timestamp: now,
       authorName: currentUser?.name || 'Einsatzleitung',
       authorRole: currentUser?.role || 'admin',
-      category: 'info',
+      category: 'general',
       text: `EZ-Standort auf Lagekarte verschoben: ${address} (GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)})`,
     };
 
@@ -1198,24 +1193,37 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       hqTitle = '📡 EZ';
     }
 
+    // Kräfte in der EZ ermitteln (Leitstand, Admin-EZ oder Helfer in EZ)
+    const ezResponders = allUsers.filter((u) => {
+      if (!u.isActive) return false;
+      const isEzRole = u.operationalRole === 'ez_command';
+      const isEzLoc = userLocations[u.id]?.operationalRole === 'ez_command';
+      const isEzAdmin = currentOperation?.ezAdminIds?.includes(u.id) && u.operationalRole !== 'searcher';
+      return isEzRole || isEzLoc || isEzAdmin;
+    });
+
+    const responderCountBadge = ezResponders.length > 0
+      ? `<span class="ml-1 px-1.5 py-0.2 bg-emerald-500 text-slate-950 font-black rounded-full text-[10px] shadow">${ezResponders.length}</span>`
+      : '';
+
     const hqIcon = L.divIcon({
       className: 'custom-hq-marker',
       html: isStandbyOffice
         ? `
           <div class="flex items-center justify-center px-2 py-1 rounded-lg bg-indigo-950 text-indigo-200 border border-indigo-400 font-bold text-xs shadow-xl ring-2 ring-indigo-500/50 whitespace-nowrap">
-            📡 EZ
+            📡 EZ ${responderCountBadge}
           </div>
         `
         : `
           <div class="relative flex items-center justify-center">
             <span class="absolute h-10 w-10 rounded-full bg-indigo-500/40 animate-ping"></span>
             <div class="relative flex items-center justify-center px-2.5 py-1 rounded-xl bg-indigo-700 text-white shadow-xl ring-2 ring-white font-black text-xs whitespace-nowrap">
-              📡 EZ
+              📡 EZ ${responderCountBadge}
             </div>
           </div>
         `,
-      iconSize: [64, 30],
-      iconAnchor: [32, 15],
+      iconSize: [ezResponders.length > 0 ? 82 : 64, 30],
+      iconAnchor: [ezResponders.length > 0 ? 41 : 32, 15],
     });
 
     const hqMarker = L.marker([hqLat, hqLng], {
@@ -1231,12 +1239,35 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       isStandbyOffice,
       operationTitle: currentOperation?.title,
       commander: currentOperation?.commander,
+      ezResponders,
     };
 
     // Direct click/tap on EZ on the map opens the coordinate navigation transfer modal
     hqMarker.on('click', () => {
       setEzNavData(markerNavData);
     });
+
+    const ezRespondersListHtml = ezResponders.length > 0
+      ? `
+        <div class="mt-2 pt-2 border-t border-slate-700/80">
+          <div class="text-[11px] font-bold text-indigo-300 flex items-center justify-between mb-1">
+            <span>🏢 Kräfte in der EZ:</span>
+            <span class="px-1.5 py-0.2 bg-indigo-900/80 text-indigo-200 rounded font-mono text-[10px]">${ezResponders.length}</span>
+          </div>
+          <div class="space-y-1 max-h-32 overflow-y-auto pr-1">
+            ${ezResponders.map(r => `
+              <div class="flex items-center justify-between bg-slate-800/90 px-1.5 py-1 rounded text-[11px] border border-slate-700/60">
+                <div class="font-medium text-slate-200 flex items-center gap-1">
+                  <span>${r.operationalRole === 'ez_command' ? '🏢' : '👤'}</span>
+                  <span>${r.name}</span>
+                </div>
+                <span class="text-[10px] text-slate-400 font-mono">${r.callSign || 'EZ'}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `
+      : '';
 
     hqMarker.bindPopup(`
       <div class="p-2.5 text-slate-100 font-sans min-w-[220px]">
@@ -1247,6 +1278,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         <div class="text-xs text-slate-300 mt-1 font-medium">${hqAddress}</div>
         <div class="text-[10px] text-slate-400 font-mono mt-0.5">${hqLat.toFixed(5)}° N, ${hqLng.toFixed(5)}° E</div>
         ${!isStandbyOffice && currentOperation ? `<div class="text-xs text-slate-300 mt-1.5 bg-slate-800/80 border border-slate-700 p-1.5 rounded">Einsatz: <strong class="text-white">${currentOperation.title}</strong><br/>Leitung: <strong class="text-white">${currentOperation.commander}</strong></div>` : `<div class="text-[11px] text-emerald-400 font-medium mt-1">🟢 Status: Bereitschaft am Vereinsbüro</div>`}
+        ${ezRespondersListHtml}
         <div class="mt-2.5 pt-2 border-t border-slate-700">
           <a
             href="https://www.google.com/maps/dir/?api=1&destination=${hqLat},${hqLng}"
@@ -1260,7 +1292,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       </div>
     `);
     ezLayerRef.current.addLayer(hqMarker);
-  }, [currentOperation, activeTrackingTest]);
+  }, [currentOperation, activeTrackingTest, allUsers, userLocations]);
 
   // Render Search Sectors (Suchsektoren)
   useEffect(() => {
@@ -1540,6 +1572,18 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           return;
         }
 
+        const user = allUsers.find((u) => u.id === userId);
+
+        // EZ-Leitstand check: In EZ verbleibende Führungskräfte haben KEINE Trackingspur (Linie) auf der Karte
+        const isEzCommand =
+          locState.operationalRole === 'ez_command' ||
+          user?.operationalRole === 'ez_command' ||
+          (user && currentOperation?.ezAdminIds?.includes(user.id));
+
+        if (isEzCommand) {
+          return;
+        }
+
         const history = locState.trackHistory;
         if (!history || history.length < 2) return;
 
@@ -1548,7 +1592,6 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           return;
         }
 
-        const user = allUsers.find((u) => u.id === userId);
         const isDrone = user?.equipment?.includes('drone');
         const trackColor = getUserTrackColor(user || userId, allUsers);
 
@@ -1710,6 +1753,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       const user = allUsers.find((u) => u.id === userId);
       if (!user) return;
 
+      // In EZ verbleibende Kräfte (Leitstand / EZ-Personal) werden NICHT als einzelner Pin gerendert,
+      // sondern gesammelt und übersichtlich direkt auf dem EZ-Pin angezeigt
+      const isEzStaff =
+        user.operationalRole === 'ez_command' ||
+        userLocations[userId]?.operationalRole === 'ez_command' ||
+        (currentOperation?.ezAdminIds?.includes(user.id) && user.operationalRole !== 'searcher');
+      if (isEzStaff) return;
+
       // Only display active / logged-in users unless showInactiveResponders is active
       const isOnline = user.isActive;
       if (!isOnline && !showInactiveResponders) return;
@@ -1809,7 +1860,19 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           respondersLayerRef.current?.addLayer(leg);
         }
 
-        const badge = getEquipmentBadge(item.user.equipment);
+        const isEzCommand =
+          item.locState.operationalRole === 'ez_command' ||
+          item.user.operationalRole === 'ez_command' ||
+          (currentOperation?.ezAdminIds?.includes(item.user.id));
+
+        const badge = isEzCommand
+          ? { icon: '🏢', label: 'EZ-Leitstand', color: '#6366f1' }
+          : getEquipmentBadge(item.user.equipment);
+
+        const ezBadge = isEzCommand
+          ? `<span class="bg-indigo-600 text-white font-bold px-1.5 py-0.5 rounded text-[9px] shadow border border-indigo-400">🏢 EZ</span>`
+          : '';
+
         const assignedSector = currentOperation?.sectors.find(
           (s) => s.id === item.user.assignedSectorId || s.assignedUserIds?.includes(item.user.id)
         );
@@ -1882,12 +1945,13 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               }
             </div>
             <!-- Sub-badge with equipment icon -->
-            <div class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#1E293B] text-xs border border-white/50 shadow">
+            <div class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full ${isEzCommand ? 'bg-indigo-900 text-white border-indigo-400' : 'bg-[#1E293B] text-xs border border-white/50'} shadow">
               ${badge.icon}
             </div>
             <!-- Call sign banner with Sector, Cluster Position & Connection Status -->
             <div class="absolute top-11 left-1/2 transform -translate-x-1/2 px-2 py-0.5 rounded ${item.isOnline ? 'bg-[#1E293B]/95 text-white' : 'bg-slate-800/90 text-slate-300'} text-[10px] font-semibold border border-slate-700 whitespace-nowrap shadow-md flex items-center gap-1">
               <span>${item.user.callSign}</span>
+              ${ezBadge}
               ${clusterBadge}
               ${sectorTag}
               ${statusBadgeHtml}
@@ -3513,6 +3577,40 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     )}
                   </div>
                 </div>
+
+                {/* Forces stationed / present in EZ */}
+                {ezNavData.ezResponders && ezNavData.ezResponders.length > 0 && (
+                  <div className="pt-2 border-t border-slate-800 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider font-mono flex items-center gap-1.5">
+                        <span>🏢</span>
+                        <span>Eingetroffene Kräfte in der EZ:</span>
+                      </span>
+                      <span className="px-2 py-0.5 bg-indigo-950/80 text-indigo-300 border border-indigo-700/60 rounded-full font-mono text-[10px] font-bold">
+                        {ezNavData.ezResponders.length} aktiv
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-1">
+                      {ezNavData.ezResponders.map((resp) => (
+                        <div
+                          key={resp.id}
+                          className="flex items-center justify-between p-2 rounded-lg bg-slate-950/60 border border-slate-800 text-xs"
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="text-sm">{resp.operationalRole === 'ez_command' ? '🏢' : '👤'}</span>
+                            <div className="truncate">
+                              <div className="font-bold text-slate-200 truncate">{resp.name}</div>
+                              <div className="text-[10px] text-slate-400 font-mono">{resp.callSign || 'EZ-Leitstand'}</div>
+                            </div>
+                          </div>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded font-bold font-mono bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 shrink-0">
+                            {resp.operationalRole === 'ez_command' ? 'Leitung' : 'EZ da'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Primary Action Button (Universal Mobile / OS Navi Launch) */}

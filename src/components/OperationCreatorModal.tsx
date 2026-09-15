@@ -381,7 +381,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
         timestamp: now,
         authorName: currentUser?.name || 'Einsatzleitung',
         authorRole: currentUser?.role || 'admin',
-        category: 'info',
+        category: 'general',
         text: `EZ-Standort aktualisiert: ${newHq.address} (GPS: ${newHq.lat.toFixed(5)}, ${newHq.lng.toFixed(5)})`,
       };
 

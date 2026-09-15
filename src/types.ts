@@ -39,6 +39,7 @@ export interface User {
   arrivalStatus?: 'in_transit' | 'ez_reached' | 'ready';
   currentLocation?: GpsPoint;
   trackColor?: string; // Individuelle Suchspur-Farbe für die Lagekarte
+  operationalRole?: 'ez_command' | 'searcher'; // Operative Funktion im aktiven Einsatz: EZ-Leitstand (keine Spur) vs. Sucher im Feld (Spur aktiv)
   dogInfo?: { name?: string; breed?: string; qualification?: string };
   lastTrackingTest?: {
     passed: boolean;
@@ -76,12 +77,27 @@ export const isFirstAdmin = (user: User | null | undefined): boolean => {
 
 export const isOwner = isFirstAdmin;
 
+// Einsatzleitung verfügt IMMER über Admin-Rechte
 export const isUserAdmin = (user: User | null | undefined): boolean => {
-  return Boolean(user && (user.role === 'admin' || user.isAdmin === true || isFirstAdmin(user)));
+  return Boolean(
+    user && (
+      user.role === 'admin' ||
+      user.role === 'einsatzleitung' ||
+      user.isAdmin === true ||
+      isFirstAdmin(user)
+    )
+  );
 };
 
+// Nicht jeder Admin ist automatisch Einsatzleiter (nur mit canLeadOperations oder FirstAdmin)
 export const isUserEL = (user: User | null | undefined): boolean => {
-  return Boolean(user && (user.role === 'einsatzleitung' || user.role === 'admin' || user.canLeadOperations === true));
+  return Boolean(
+    user && (
+      user.role === 'einsatzleitung' ||
+      user.canLeadOperations === true ||
+      isFirstAdmin(user)
+    )
+  );
 };
 
 export const isUserAdminOrEL = (user: User | null | undefined): boolean => {
@@ -150,6 +166,7 @@ export interface UserLocationState {
   trackHistory: GpsPoint[]; // GPS Bewegungsprofil / Breadcrumbs
   isLive: boolean;
   lastUpdated: string;
+  operationalRole?: 'ez_command' | 'searcher';
 }
 
 export type OperationType = 'operation' | 'exercise' | 'live_search'; // Einsatz vs. Übung

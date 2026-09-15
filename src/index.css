@@ -215,3 +215,52 @@ body {
 .leaflet-popup-close-button:hover {
   color: #FFFFFF !important;
 }
+
+/* Universal Responsive & Orientation Enhancements (Smartphone, Tablet, Desktop - Portrait & Landscape) */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+html, body {
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+}
+
+/* Landscape Mode Adjustments for Smartphones & Small Screen Heights */
+@media (orientation: landscape) and (max-height: 540px) {
+  header {
+    height: 46px !important;
+  }
+
+  nav {
+    height: 44px !important;
+  }
+
+  nav button span {
+    font-size: 8px !important;
+  }
+
+  nav button svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+}
+
+/* Custom Tactical Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}

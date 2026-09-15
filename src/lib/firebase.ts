@@ -175,8 +175,8 @@ export function serializeUserForFirestore(user: User): Record<string, any> {
     batteryLevel: user.batteryLevel !== undefined ? user.batteryLevel : 100,
     batteryCharging: Boolean(user.batteryCharging),
     lastSeen: user.lastSeen || 'Online',
-    isAdmin: Boolean(user.isAdmin || user.role === 'admin' || user.isFirstAdmin),
-    canLeadOperations: Boolean(user.canLeadOperations || user.role === 'einsatzleitung' || user.role === 'admin' || user.isFirstAdmin),
+    isAdmin: Boolean(user.isAdmin || user.role === 'admin' || user.role === 'einsatzleitung' || user.isFirstAdmin),
+    canLeadOperations: Boolean(user.canLeadOperations || user.role === 'einsatzleitung' || user.isFirstAdmin),
     isFirstAdmin: Boolean(user.isFirstAdmin || user.id === 'user-maria' || (user.username?.toLowerCase() === 'maria' && user.id === 'user-maria')),
     isOwner: Boolean(user.isOwner || user.id === 'user-maria' || (user.username?.toLowerCase() === 'maria' && user.id === 'user-maria')),
     updatedAt: user.updatedAt || new Date().toISOString(),
@@ -195,6 +195,7 @@ export function serializeUserForFirestore(user: User): Record<string, any> {
   if (user.lastHeartbeat) data.lastHeartbeat = user.lastHeartbeat;
   if (user.arrivalStatus) data.arrivalStatus = user.arrivalStatus;
   if (user.trackColor) data.trackColor = user.trackColor;
+  if (user.operationalRole) data.operationalRole = user.operationalRole;
   if (user.lastTrackingTest) data.lastTrackingTest = user.lastTrackingTest;
 
   // Include photoUrl if set or non-empty
@@ -217,8 +218,8 @@ export function deserializeUserFromFirestore(data: any): User {
     password: data.password || 'sucher123',
     name: data.name || '',
     role: isMaria ? 'admin' : (data.role || 'responder'),
-    isAdmin: isMaria ? true : (data.isAdmin !== undefined ? Boolean(data.isAdmin) : data.role === 'admin'),
-    canLeadOperations: isMaria ? true : (data.canLeadOperations !== undefined ? Boolean(data.canLeadOperations) : (data.role === 'einsatzleitung' || data.role === 'admin')),
+    isAdmin: isMaria ? true : (data.isAdmin !== undefined ? Boolean(data.isAdmin) : (data.role === 'admin' || data.role === 'einsatzleitung')),
+    canLeadOperations: isMaria ? true : (data.canLeadOperations !== undefined ? Boolean(data.canLeadOperations) : (data.role === 'einsatzleitung')),
     isFirstAdmin: isMaria,
     isOwner: isMaria,
     callSign: data.callSign || '',
@@ -241,6 +242,7 @@ export function deserializeUserFromFirestore(data: any): User {
     lastHeartbeat: data.lastHeartbeat !== undefined ? Number(data.lastHeartbeat) : undefined,
     arrivalStatus: data.arrivalStatus || undefined,
     trackColor: data.trackColor || undefined,
+    operationalRole: data.operationalRole || undefined,
     lastTrackingTest: data.lastTrackingTest && typeof data.lastTrackingTest === 'object' ? data.lastTrackingTest : undefined,
     updatedAt: data.updatedAt || undefined,
   };
@@ -445,6 +447,7 @@ export function serializeLocationForFirestore(loc: UserLocationState): Record<st
     currentPosition: loc.currentPosition,
     trackHistoryJson: JSON.stringify(loc.trackHistory || []),
   };
+  if (loc.operationalRole) data.operationalRole = loc.operationalRole;
   return cleanUndefinedFields(data);
 }
 
@@ -470,6 +473,7 @@ export function deserializeLocationFromFirestore(data: any): UserLocationState {
       timestamp: new Date().toISOString(),
     },
     trackHistory,
+    operationalRole: data.operationalRole || undefined,
   };
 }
 

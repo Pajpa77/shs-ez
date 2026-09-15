@@ -12,6 +12,7 @@ const SectorOverview = lazy(() => import('./components/SectorOverview').then(m =
 const ChatPanel = lazy(() => import('./components/ChatPanel').then(m => ({ default: m.ChatPanel })));
 const ResponderList = lazy(() => import('./components/ResponderList').then(m => ({ default: m.ResponderList })));
 const MissionLog = lazy(() => import('./components/MissionLog').then(m => ({ default: m.MissionLog })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 
 // Lazy load modals
 const FindingModal = lazy(() => import('./components/FindingModal').then(m => ({ default: m.FindingModal })));
@@ -33,7 +34,7 @@ import { FloatingMapControlsBar } from './components/FloatingMapControlsBar';
 import { useWakeLock } from './hooks/useWakeLock';
 import { usePWAInstall } from './hooks/usePWAInstall';
 
-import { Finding, SearchSector, User } from './types';
+import { Finding, SearchSector, User, isUserAdmin, isUserEL, isUserAdminOrEL } from './types';
 import {
   AlertTriangle,
   Layers,
@@ -193,7 +194,7 @@ const MainApp: React.FC = () => {
     );
   }
 
-  const isAdmin = currentUser.role === 'admin';
+  const isAdmin = isUserAdmin(currentUser);
 
   const isAnyModalOpen =
     isFindingModalOpen ||
@@ -363,7 +364,7 @@ const MainApp: React.FC = () => {
           setIsMapLight={setIsMapLight}
           showDroneFeed={showDroneFeed}
           setShowDroneFeed={setShowDroneFeed}
-          isAdmin={currentUser?.role === 'admin'}
+          isAdmin={isAdmin}
         />
       )}
 
@@ -501,6 +502,37 @@ const MainApp: React.FC = () => {
           </div>
         )}
 
+        {activeTab === 'admin' && (
+          <div className="flex-1 overflow-y-auto pb-16 bg-[#0F172A]">
+            <AdminDashboard
+              onOpenCreateOperation={() => {
+                setOperationCreatorMode('create');
+                setIsOperationCreatorOpen(true);
+              }}
+              onOpenEditOperation={() => {
+                setOperationCreatorMode('edit');
+                setIsOperationCreatorOpen(true);
+              }}
+              onOpenEndOperation={() => setIsOperationEndModalOpen(true)}
+              onOpenPauseOperation={() => setIsOperationPauseModalOpen(true)}
+              onOpenCreateUser={() => {
+                setUserToEdit(null);
+                setIsUserManagementOpen(true);
+              }}
+              onOpenShareApp={() => setIsShareAppModalOpen(true)}
+              onOpenOperationDetail={() => setIsOperationDetailModalOpen(true)}
+              onNavigateToMap={() => setActiveTab('map')}
+              onNavigateToSectors={() => setActiveTab('sectors')}
+              onNavigateToResponders={() => setActiveTab('responders')}
+              onNavigateToLog={() => setActiveTab('log')}
+              onNavigateToArchive={() => setActiveTab('archive')}
+              onNavigateToReports={() => setActiveTab('reports')}
+              showDroneFeed={showDroneFeed}
+              setShowDroneFeed={setShowDroneFeed}
+            />
+          </div>
+        )}
+
         {activeTab === 'sectors' && (
           <div className="flex-1 overflow-y-auto pb-16 bg-[#0F172A]">
             <SectorOverview
@@ -570,9 +602,22 @@ const MainApp: React.FC = () => {
 
       {/* Permanent Bottom Navigation Bar (Visible in all orientations including Landscape) */}
       <nav className="h-14 bg-[#0F172A]/95 border-t border-[#1E293B] flex items-center justify-around px-2 sm:px-6 z-[900] shrink-0 font-mono text-[10px] select-none">
+        {isAdmin && (
+          <button
+            onClick={() => setActiveTab('admin')}
+            className={`flex flex-col items-center justify-center min-w-[45px] sm:min-w-[60px] py-1 px-1.5 rounded-xl transition cursor-pointer ${
+              activeTab === 'admin' ? 'text-amber-400 bg-[#1E293B] font-bold border border-amber-500/60 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Admin- & Leitstands-Zentrale"
+          >
+            <Shield className="w-4 h-4 text-amber-400" />
+            <span className="mt-0.5">Admin</span>
+          </button>
+        )}
+
         <button
           onClick={() => setActiveTab('map')}
-          className={`flex flex-col items-center justify-center min-w-[50px] sm:min-w-[64px] py-1 px-2 rounded-xl transition cursor-pointer ${
+          className={`flex flex-col items-center justify-center min-w-[45px] sm:min-w-[60px] py-1 px-1.5 rounded-xl transition cursor-pointer ${
             activeTab === 'map' ? 'text-blue-400 bg-[#1E293B] font-bold border border-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -731,7 +776,7 @@ const MainApp: React.FC = () => {
         isOpen={isSearchTeamsModalOpen}
         onClose={() => setIsSearchTeamsModalOpen(false)}
       />
-      {showDroneFeed && currentUser?.role === 'admin' && (
+      {showDroneFeed && isAdmin && (
         <DroneFeedWidget onClose={() => setShowDroneFeed(false)} />
       )}
       </Suspense>

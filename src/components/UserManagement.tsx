@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { User, UserRole, EquipmentType, isFirstAdmin, isOwner } from '../types';
+import { User, UserRole, EquipmentType, isFirstAdmin, isOwner, isUserAdmin, isUserEL, isUserAdminOrEL } from '../types';
 import { compressImageFile } from '../lib/imageUtils';
 import JsBarcode from 'jsbarcode';
 import {
@@ -89,6 +89,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [name, setName] = useState('');
   const [role, setRole] = useState<UserRole>('responder');
   const [isAlsoAdmin, setIsAlsoAdmin] = useState(false);
+  const [canLeadOperations, setCanLeadOperations] = useState(false);
   const [callSign, setCallSign] = useState('');
   const [licensePlate, setLicensePlate] = useState('');
   const [memberId, setMemberId] = useState('');
@@ -160,7 +161,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       setPassword(user.password || 'sucher123');
       setName(user.name);
       setRole(user.role);
-      setIsAlsoAdmin(Boolean(user.isAdmin || user.role === 'admin'));
+      setIsAlsoAdmin(Boolean(user.isAdmin || user.role === 'admin' || user.role === 'einsatzleitung'));
+      setCanLeadOperations(Boolean(user.role === 'einsatzleitung' || user.canLeadOperations));
       setCallSign(user.callSign);
       setLicensePlate(user.licensePlate || '');
       setMemberId(user.memberId || '');
@@ -176,6 +178,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       setName('');
       setRole('responder');
       setIsAlsoAdmin(false);
+      setCanLeadOperations(false);
       setCallSign('Sucher ' + Math.floor(10 + Math.random() * 90));
       setLicensePlate('SLK-' + Math.floor(100 + Math.random() * 900));
       setMemberId('SHS-' + Math.floor(100000 + Math.random() * 900000));
@@ -207,7 +210,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   if (!isOpen) return null;
 
   // Explicit admin-only guard clause
-  if (currentUser?.role !== 'admin' && currentUser?.role !== 'einsatzleitung') {
+  if (!currentUser || !isUserAdmin(currentUser)) {
     return (
       <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md font-sans">
         <div className="bg-[#1E293B] border border-red-500/50 rounded-2xl p-6 max-w-md text-center space-y-4 shadow-2xl text-black dark:text-slate-100">
@@ -216,7 +219,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           </div>
           <h3 className="text-base font-bold text-white uppercase tracking-wide">Zugriff verweigert (Admin-Bereich)</h3>
           <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-            Nur Administratoren und Einsatzleiter (Rolle: <span className="font-mono text-red-400 font-bold">admin</span> / <span className="font-mono text-blue-400 font-bold">einsatzleitung</span>) dürfen Einsatzkräfte verwalten, Accounts anlegen, Rollen zuweisen oder Profile löschen.
+            Nur Administratoren und Einsatzleiter dürfen Einsatzkräfte verwalten, Accounts anlegen, Rollen zuweisen oder Profile löschen.
           </p>
           <button
             onClick={onClose}
@@ -287,7 +290,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
   const handleDeleteUser = () => {
     setStatusMessage(null);
-    if (currentUser?.role !== 'admin' && currentUser?.role !== 'einsatzleitung') {
+    if (!currentUser || !isUserAdmin(currentUser)) {
       setStatusMessage({ type: 'error', text: 'Aktion verweigert: Nur Administratoren dürfen Accounts löschen.' });
       return;
     }
@@ -312,7 +315,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setStatusMessage(null);
-    if (currentUser?.role !== 'admin' && currentUser?.role !== 'einsatzleitung') {
+    if (!currentUser || !isUserAdmin(currentUser)) {
       setStatusMessage({ type: 'error', text: 'Aktion verweigert: Nur Administratoren dürfen Accounts anlegen oder bearbeiten.' });
       return;
     }
@@ -327,8 +330,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       return;
     }
 
-    const effectiveIsAdmin = role === 'admin' || isAlsoAdmin;
-    const effectiveCanLead = role === 'einsatzleitung' || role === 'admin';
+    const effectiveIsAdmin = role === 'admin' || role === 'einsatzleitung' || isAlsoAdmin;
+    const effectiveCanLead = role === 'einsatzleitung' || (role === 'admin' && canLeadOperations);
     const finalMemberId = memberId.trim() || `RT-2026-${Math.floor(100 + Math.random() * 900)}`;
 
     if (activeUser) {
@@ -587,6 +590,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   onClick={() => {
                     setRole('responder');
                     setIsAlsoAdmin(false);
+                    setCanLeadOperations(false);
                   }}
                   className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1 ${
                     role === 'responder'
@@ -607,6 +611,8 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   type="button"
                   onClick={() => {
                     setRole('einsatzleitung');
+                    setIsAlsoAdmin(true);
+                    setCanLeadOperations(true);
                   }}
                   className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1 ${
                     role === 'einsatzleitung'
@@ -616,10 +622,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 >
                   <div className="flex items-center justify-between font-bold text-xs text-emerald-300">
                     <span>📢 Einsatzleitung</span>
-                    {role === 'einsatzleitung' && <span className="text-[10px] text-emerald-400">✓ Aktiv</span>}
+                    {role === 'einsatzleitung' && <span className="text-[10px] text-emerald-400">✓ Aktiv (inkl. Admin)</span>}
                   </div>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
-                    Führungsrolle: Sektoren & Teamkoordinierung.
+                    Führungsrolle: Sektoren & Teams führen. Verfügt immer über Adminrechte.
                   </span>
                 </button>
 
@@ -627,7 +633,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   type="button"
                   onClick={() => {
                     setRole('admin');
-                    setIsAlsoAdmin(false);
+                    setIsAlsoAdmin(true);
                   }}
                   className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1 ${
                     role === 'admin'
@@ -640,7 +646,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     {role === 'admin' && <span className="text-[10px] text-red-400">👑 Admin</span>}
                   </div>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
-                    Volle Rechte: Accounts, Rollen, System-Logs.
+                    Volle Rechte: Accounts & System-Logs. EL-Funktion optional zuschaltbar.
                   </span>
                 </button>
 
@@ -649,6 +655,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                   onClick={() => {
                     setRole('observer');
                     setIsAlsoAdmin(false);
+                    setCanLeadOperations(false);
                   }}
                   className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1 ${
                     role === 'observer'
@@ -666,48 +673,90 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 </button>
               </div>
 
-              {/* Role Combination Feature (EL + Admin) */}
-              <div className="mt-3 p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-amber-500/10 text-amber-400 border border-amber-500/30 shrink-0 mt-0.5">
+              {/* Role-Specific Capabilities */}
+              {role === 'admin' && (
+                <div className="mt-3 p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shrink-0 mt-0.5">
+                      <Radio className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-slate-200 flex items-center gap-2 flex-wrap">
+                        <span>Einsatzleiter-Funktion (EL) für diesen Admin aktivieren</span>
+                        {canLeadOperations ? (
+                          <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full">
+                            Admin + EL aktiv
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-slate-500/20 text-slate-400 border border-slate-500/40 rounded-full">
+                            Nur System-Admin (keine EL)
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                        Erlaubt diesem Administrator aktiv Einsätze zu leiten, Sektoren zuzuteilen und Führungskommandos zu geben.
+                      </p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                    <input
+                      type="checkbox"
+                      checked={canLeadOperations}
+                      onChange={(e) => setCanLeadOperations(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+              )}
+
+              {role === 'einsatzleitung' && (
+                <div className="mt-3 p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/50 flex items-center gap-3">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
                     <Shield className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-slate-900 dark:text-slate-200 flex items-center gap-2 flex-wrap">
-                      <span>Administrator-Rechte mit Einsatzleitung kombinieren</span>
-                      {role === 'einsatzleitung' && isAlsoAdmin && (
-                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-slate-50 dark:bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full">
-                          Kombiniert: EL + Admin
-                        </span>
-                      )}
-                      {role === 'einsatzleitung' && !isAlsoAdmin && (
-                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full">
-                          Nur Einsatzleitung (kein Admin)
-                        </span>
-                      )}
-                      {role === 'admin' && (
-                        <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-red-500/20 text-red-300 border border-red-500/40 rounded-full">
-                          Voll-Administrator
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                      Erlaubt dieser Person zusätzlich Benutzerkonten anzulegen, Rollen zu verwalten und System-Logs einzusehen.
-                      Nicht jeder Einsatzleiter ist automatisch System-Administrator.
-                    </p>
+                    <span className="text-xs font-bold text-emerald-300 block">
+                      Einsatzleitung verfügt immer über volle Administratorrechte
+                    </span>
+                    <span className="text-[11px] text-emerald-200/80 leading-relaxed block mt-0.5">
+                      Einsatzleiter haben automatisch System- und Verwaltungsrechte, um Einsätze, Kräfte und Accounts uneingeschränkt steuern zu können.
+                    </span>
                   </div>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
-                  <input
-                    type="checkbox"
-                    checked={role === 'admin' || isAlsoAdmin}
-                    disabled={role === 'admin'}
-                    onChange={(e) => setIsAlsoAdmin(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-slate-50 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-50 dark:bg-amber-600 peer-disabled:opacity-60"></div>
-                </label>
-              </div>
+              )}
+
+              {role === 'responder' && (
+                <div className="mt-3 p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-amber-500/10 text-amber-400 border border-amber-500/30 shrink-0 mt-0.5">
+                      <Shield className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-slate-200 flex items-center gap-2 flex-wrap">
+                        <span>Zusätzliche Administrator-Rechte gewähren</span>
+                        {isAlsoAdmin && (
+                          <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full">
+                            Sucher mit Admin-Rechten
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                        Erlaubt dieser Suchkraft zusätzlich Benutzerkonten anzulegen, Rollen zu verwalten und System-Logs einzusehen.
+                      </p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+                    <input
+                      type="checkbox"
+                      checked={isAlsoAdmin}
+                      onChange={(e) => setIsAlsoAdmin(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 dark:bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                  </label>
+                </div>
+              )}
             </div>
           </div>
 

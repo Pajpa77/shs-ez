@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRescue } from '../context/RescueContext';
-import { SearchSector, SectorStatus, EquipmentType } from '../types';
+import { SearchSector, SectorStatus, EquipmentType, isUserAdminOrEL } from '../types';
 import {
   Layers,
   CheckCircle2,
@@ -107,7 +107,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
             <span>🐕‍🦺</span> Suchtrupps ({currentOperation.teams?.length || 0})
           </button>
 
-          {currentUser?.role === 'admin' && (
+          {isUserAdminOrEL(currentUser) && (
             <button
               onClick={() => onOpenSectorEditor()}
               className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-lg transition cursor-pointer"
@@ -306,7 +306,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
                   <Download className="w-4 h-4" />
                 </button>
 
-                {currentUser?.role === 'admin' && (
+                {isUserAdminOrEL(currentUser) && (
                   <>
                     <button
                       onClick={() => onOpenSectorEditor(sec)}

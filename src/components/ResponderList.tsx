@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { User, EquipmentType, SearchTeam, isFirstAdmin, isOwner, getUserTrackColor, getUserConnectionStatus, getSignalFreshnessText } from '../types';
+import { User, EquipmentType, SearchTeam, isFirstAdmin, isOwner, getUserTrackColor, getUserConnectionStatus, getSignalFreshnessText, isUserAdmin, isUserEL, isUserAdminOrEL } from '../types';
 import {
   Users,
   Shield,
@@ -80,6 +80,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
     removeUserFromOperation,
     updateOperation,
     getUserArrivalStatus,
+    setUserArrivalStatus,
     confirmUserReady,
     calculateDistanceToEzMeters,
     setSelectedUser,
@@ -99,8 +100,8 @@ export const ResponderList: React.FC<ResponderListProps> = ({
     return allUsers;
   }, [allUsers, currentOperation]);
 
-  const isRealAdmin = currentUser?.role === 'admin' || Boolean(currentUser?.isAdmin);
-  const canLead = currentUser?.role === 'einsatzleitung' || Boolean(currentUser?.canLeadOperations) || isRealAdmin;
+  const isRealAdmin = isUserAdmin(currentUser);
+  const canLead = isUserEL(currentUser);
   const observerUsers = currentOperationUsers.filter((u) => u.role === 'observer');
   const teams: SearchTeam[] = currentOperation?.teams || [];
   const sectors = currentOperation?.sectors || [];
@@ -111,16 +112,16 @@ export const ResponderList: React.FC<ResponderListProps> = ({
       alert('Der First-Admin Account von Maria (App-Owner) ist unantastbar und kann nicht geändert werden.');
       return;
     }
-    if (targetUser.role === 'einsatzleitung') {
-      // Toggle admin capability for einsatzleitung
-      const nextIsAdmin = !targetUser.isAdmin;
-      updateUser(targetUser.id, { isAdmin: nextIsAdmin });
-    } else if (targetUser.role === 'admin') {
-      // Change from pure Admin to Einsatzleitung without Admin
-      updateUser(targetUser.id, { role: 'einsatzleitung', isAdmin: false, canLeadOperations: true });
+    if (targetUser.role === 'admin') {
+      // Toggle operational EL function for admin
+      const nextCanLead = !targetUser.canLeadOperations;
+      updateUser(targetUser.id, { canLeadOperations: nextCanLead });
+    } else if (targetUser.role === 'einsatzleitung') {
+      // Demote einsatzleitung to responder
+      updateUser(targetUser.id, { role: 'responder', isAdmin: false, canLeadOperations: false });
     } else {
-      // Promote responder to Einsatzleitung
-      updateUser(targetUser.id, { role: 'einsatzleitung', isAdmin: false, canLeadOperations: true });
+      // Promote responder to Einsatzleitung (immer mit Admin-Rechten)
+      updateUser(targetUser.id, { role: 'einsatzleitung', isAdmin: true, canLeadOperations: true });
     }
   };
 
@@ -309,19 +310,62 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                     )}
                   </div>
 
-                  {(canLead || currentUser?.id === user.id) && status !== 'ready' && (
+                  {/* Manual status switcher for Einsatzleitung/Admin */}
+                  {canLead && (
+                    <div className="pt-2 border-t border-slate-700/60 space-y-1">
+                      <span className="text-[10px] text-slate-400 font-mono block">Status manuell setzen:</span>
+                      <div className="grid grid-cols-3 gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setUserArrivalStatus(user.id, 'in_transit')}
+                          className={`py-1 px-1.5 rounded text-[10px] font-bold font-mono transition cursor-pointer border ${
+                            status === 'in_transit'
+                              ? 'bg-blue-600 text-white border-blue-400 shadow'
+                              : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                          }`}
+                          title="Status auf 'In Anfahrt' setzen"
+                        >
+                          🚗 Anfahrt
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setUserArrivalStatus(user.id, 'ez_reached')}
+                          className={`py-1 px-1.5 rounded text-[10px] font-bold font-mono transition cursor-pointer border ${
+                            status === 'ez_reached'
+                              ? 'bg-amber-600 text-white border-amber-400 shadow'
+                              : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                          }`}
+                          title="Status auf 'EZ erreicht' setzen"
+                        >
+                          🏢 EZ da
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => confirmUserReady(user.id)}
+                          className={`py-1 px-1.5 rounded text-[10px] font-bold font-mono transition cursor-pointer border ${
+                            status === 'ready'
+                              ? 'bg-emerald-600 text-white border-emerald-400 shadow'
+                              : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                          }`}
+                          title="Status auf 'Bereit' setzen & Tracking aktivieren"
+                        >
+                          🟢 Bereit
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!canLead && currentUser?.id === user.id && status !== 'ready' && (
                     <button
                       type="button"
                       onClick={() => confirmUserReady(user.id)}
                       className="w-full py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold font-mono transition cursor-pointer flex items-center justify-center gap-1.5 shadow"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      {currentUser?.id === user.id && !canLead
-                        ? 'Ich bin bereit (Tracking starten)'
-                        : 'Als „Bereit“ bestätigen & Tracking starten'}
+                      Ich bin bereit (Tracking starten)
                     </button>
                   )}
-                  {status === 'ready' && (
+                  {status === 'ready' && !canLead && (
                     <div className="text-[10px] text-emerald-400 font-mono text-center font-bold">
                       ✅ Eintreffen bestätigt • Bewegung wird aufgezeichnet & protokolliert
                     </div>
@@ -572,19 +616,19 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                         }`}
                       >
                         {user.role === 'admin'
-                          ? '🛡️ Admin'
+                          ? user.canLeadOperations
+                            ? '🛡️ Admin & EL'
+                            : '🛡️ Admin'
                           : user.role === 'einsatzleitung'
-                          ? user.isAdmin
-                            ? '📋 EL & Admin'
-                            : '📋 EL'
+                          ? '📢 Einsatzleitung (Admin)'
                           : user.role === 'observer'
                           ? '👁️ Betrachter'
                           : '🦺 Sucher'}
                       </span>
                     )}
-                    {!isFirstAdmin(user) && user.role === 'einsatzleitung' && user.isAdmin && (
-                      <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-slate-50 dark:bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">
-                        👑 +Admin
+                    {!isFirstAdmin(user) && user.role === 'admin' && user.canLeadOperations && (
+                      <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                        📢 +EL
                       </span>
                     )}
                   </div>
@@ -711,17 +755,21 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                             onClick={() => handleToggleAdminRole(user)}
                             className={`p-2 rounded-lg border transition cursor-pointer ${
                               user.role === 'admin'
-                                ? 'bg-red-950/60 hover:bg-red-900/80 text-red-300 border-red-800/80'
-                                : user.isAdmin
-                                ? 'bg-slate-50 dark:bg-amber-950/60 hover:bg-slate-50 dark:bg-amber-900/80 text-amber-300 border-amber-800/80'
+                                ? user.canLeadOperations
+                                  ? 'bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border-emerald-800/80'
+                                  : 'bg-red-950/60 hover:bg-red-900/80 text-red-300 border-red-800/80'
+                                : user.role === 'einsatzleitung'
+                                ? 'bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border-emerald-800/80'
                                 : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-50 dark:bg-amber-950/60 text-slate-700 dark:text-slate-300 hover:text-amber-300 border-slate-300 dark:border-slate-700'
                             }`}
                             title={
                               user.role === 'admin'
-                                ? 'Admin-Rechte entfernen (zu Einsatzleitung machen)'
-                                : user.isAdmin
-                                ? 'Admin-Rechte entziehen (nur Einsatzleitung belassen)'
-                                : 'Zum Administrator / Einsatzleitung befördern'
+                                ? user.canLeadOperations
+                                  ? 'EL-Funktion für diesen Admin deaktivieren (reiner Admin)'
+                                  : 'EL-Funktion für diesen Admin aktivieren (Admin + EL)'
+                                : user.role === 'einsatzleitung'
+                                ? 'Zu Sucher herabstufen (Admin- und EL-Rechte entfernen)'
+                                : 'Zur Einsatzleitung befördern (inkl. Admin-Rechte)'
                             }
                           >
                             <Shield className="w-4 h-4" />

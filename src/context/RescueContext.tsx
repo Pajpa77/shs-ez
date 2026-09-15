@@ -70,7 +70,10 @@ interface RescueContextType {
   // Authentication & Users
   currentUser: User | null;
   allUsers: User[];
-  login: (username: string, password?: string, targetOperationId?: string) => boolean;
+  login: (username: string, password?: string, targetOperationId?: string, opRole?: 'ez_command' | 'searcher') => boolean;
+  operationalRole: 'ez_command' | 'searcher';
+  setOperationalRole: (role: 'ez_command' | 'searcher') => void;
+  toggleOperationalRole: () => void;
   logout: () => void;
   requestLogout: () => void;
   confirmLogout: () => void;
@@ -228,6 +231,7 @@ const STORAGE_KEY_CURRENT_USER = 'rescue_app_current_user_id_slk_v4';
 const STORAGE_KEY_LOCATIONS = 'rescue_app_locations_slk_v4';
 const STORAGE_KEY_CHAT = 'rescue_app_chat_slk_v4';
 const STORAGE_KEY_LAST_READ_CHAT = 'rescue_app_last_read_chat_slk_v4';
+const STORAGE_KEY_OPERATIONAL_ROLE = 'rescue_app_operational_role_slk_v1';
 
 export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Clear any legacy test data from previous versions
@@ -537,6 +541,15 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     timestamp: string;
   } | null>(null);
 
+  const [operationalRole, setOperationalRoleState] = useState<'ez_command' | 'searcher'>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_OPERATIONAL_ROLE);
+      return saved === 'ez_command' ? 'ez_command' : 'searcher';
+    } catch {
+      return 'searcher';
+    }
+  });
+
   // Global In-App Confirm Modal State
   const [confirmModalState, setConfirmModalState] = useState<ConfirmModalOptions | null>(null);
 
@@ -711,8 +724,13 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Derived active objects
   const currentUser = useMemo(() => {
     if (!currentUserId || allUsers.length === 0) return null;
-    return allUsers.find((u) => u.id === currentUserId) || null;
-  }, [currentUserId, allUsers]);
+    const baseUser = allUsers.find((u) => u.id === currentUserId);
+    if (!baseUser) return null;
+    return {
+      ...baseUser,
+      operationalRole: baseUser.operationalRole || operationalRole,
+    };
+  }, [currentUserId, allUsers, operationalRole]);
 
   // Keep mobile screen awake via Screen Wake Lock API during active GPS recording (Status Grün) or Tracking Test
   const isTrackingWakeLockActive = Boolean(
@@ -2036,10 +2054,11 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               const isUserReady =
                 currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
               const isOpRunning = currentOperation && currentOperation.status === 'active';
-              let nextHistory = cleanHistory;
+              const isEzCommand = (currentUser.operationalRole || operationalRole) === 'ez_command';
+              let nextHistory = isEzCommand ? [] : cleanHistory;
 
-              // Ultra-precise search track recording: only when responder is ready and an operation is actively running
-              if (isUserReady && isOpRunning) {
+              // Ultra-precise search track recording: only when responder is ready, an operation is actively running, AND NOT in EZ command center
+              if (isUserReady && isOpRunning && !isEzCommand) {
                 const lastHistorical = cleanHistory[cleanHistory.length - 1];
                 const distMoved = lastHistorical
                   ? calculateDistanceMeters(lastHistorical.lat, lastHistorical.lng, point.lat, point.lng)
@@ -2084,13 +2103,14 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                   nextHistory = cleanHistory;
                 }
               } else {
-                nextHistory = cleanHistory;
+                nextHistory = isEzCommand ? [] : cleanHistory;
               }
-              const updatedHistory = nextHistory;
+              const updatedHistory = isEzCommand ? [] : nextHistory;
               const updatedLocState: UserLocationState = {
                 ...userLoc,
                 currentPosition: point,
                 trackHistory: updatedHistory,
+                operationalRole: isEzCommand ? 'ez_command' : 'searcher',
                 lastUpdated: new Date().toISOString(),
                 isLive: true,
               };
@@ -2197,8 +2217,9 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 if (!uLoc) return prev;
                 const isReady =
                   currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
-                let nextHistory = uLoc.trackHistory || [];
-                if (isReady && isOpRunning) {
+                const isEzCommand = (currentUser.operationalRole || operationalRole) === 'ez_command';
+                let nextHistory = isEzCommand ? [] : (uLoc.trackHistory || []);
+                if (isReady && isOpRunning && !isEzCommand) {
                   const lastPt = nextHistory[nextHistory.length - 1];
                   const distMoved = lastPt
                     ? calculateDistanceMeters(lastPt.lat, lastPt.lng, bgPoint.lat, bgPoint.lng)
@@ -2220,7 +2241,8 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 const updatedState: UserLocationState = {
                   ...uLoc,
                   currentPosition: bgPoint,
-                  trackHistory: nextHistory,
+                  trackHistory: isEzCommand ? [] : nextHistory,
+                  operationalRole: isEzCommand ? 'ez_command' : 'searcher',
                   lastUpdated: new Date().toISOString(),
                   isLive: true,
                 };
@@ -2617,7 +2639,12 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   };
 
   // Authentication methods
-  const login = (username: string, password?: string, targetOperationId?: string): boolean => {
+  const login = (
+    username: string,
+    password?: string,
+    targetOperationId?: string,
+    opRole?: 'ez_command' | 'searcher'
+  ): boolean => {
     const trimmedUser = username.trim().toLowerCase();
     const user = allUsers.find(
       (u) =>
@@ -2643,8 +2670,24 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
           return false;
         }
       }
+      if (opRole) {
+        setOperationalRoleState(opRole);
+        try {
+          localStorage.setItem(STORAGE_KEY_OPERATIONAL_ROLE, opRole);
+        } catch {}
+      }
+
       if (targetOperationId) {
         setCurrentOperationId(targetOperationId);
+        if (opRole === 'ez_command') {
+          updateOperation(targetOperationId, (prevOp) => {
+            const prevEz = prevOp.ezAdminIds || [];
+            if (!prevEz.includes(user.id)) {
+              return { ezAdminIds: [...prevEz, user.id] };
+            }
+            return {};
+          });
+        }
       }
       setCurrentUserId(user.id);
       setUserActiveStatus(user.id, true, targetOperationId);
@@ -2896,35 +2939,6 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     });
   };
 
-  const setUserArrivalStatus = useCallback((userId: string, status: 'in_transit' | 'ez_reached' | 'ready') => {
-    updateUser(userId, { arrivalStatus: status });
-    setUserArrivalStatuses((prev) => {
-      const next = { ...prev, [userId]: status };
-      try {
-        localStorage.setItem('rescue_app_arrival_statuses_slk_v4', JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-  }, [updateUser]);
-
-  const getUserArrivalStatus = useCallback((userId: string): 'in_transit' | 'ez_reached' | 'ready' => {
-    // 1. If an admin has confirmed the user as ready, they are ready (green)
-    if (userArrivalStatuses[userId] === 'ready') return 'ready';
-    const user = allUsers.find((u) => u.id === userId);
-    if (user?.arrivalStatus === 'ready') return 'ready';
-
-    // 2. Otherwise determine automatically by distance to EZ:
-    // Distance > 500m = 'in_transit' (rot / in Anfahrt)
-    // Distance <= 500m = 'ez_reached' (gelb / in EZ Bereich eingetroffen)
-    const loc = userLocations[userId]?.currentPosition;
-    if (!loc) return 'in_transit';
-    const dist = calculateDistanceToEzMeters(loc.lat, loc.lng);
-    if (dist !== null && dist <= 500) {
-      return 'ez_reached';
-    }
-    return 'in_transit';
-  }, [allUsers, userArrivalStatuses, userLocations, calculateDistanceToEzMeters]);
-
   const confirmUserReady = useCallback((userId: string) => {
     // 1. Set status to ready and set user active in system
     updateUser(userId, {
@@ -2965,6 +2979,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
       const existingPIds = activeOp.participantIds || [];
       const updatedParticipantIds = existingPIds.includes(userId) ? existingPIds : [...existingPIds, userId];
+      const isEz = u.operationalRole === 'ez_command' || activeOp.ezAdminIds?.includes(userId);
+      const logText = isEz
+        ? `STATUSÄNDERUNG: Einsatzkraft ${u.name} (${u.callSign || u.role}) ist einsatzbereit (in der Einsatzzentrale).`
+        : `STATUSÄNDERUNG: Einsatzkraft ${u.name} (${u.callSign || u.role}) ist einsatzbereit (im Gelände). GPS-Aufzeichnung aktiv.`;
 
       const logEntry: OperationLogEntry = {
         id: `log-${Date.now()}`,
@@ -2973,7 +2991,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         authorName: u.name,
         authorRole: u.role,
         category: 'status',
-        text: `STATUSÄNDERUNG: Einsatzkraft ${u.name} (${u.callSign || u.role}) ist einsatzbereit (bereit). GPS-Aufzeichnung aktiv.`,
+        text: logText,
       };
 
       const updatedOp: SearchOperation = {
@@ -2988,6 +3006,68 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       return prevOps.map((op) => (op.id === activeOp.id ? updatedOp : op));
     });
   }, [allUsers, syncOperationToCloud, updateUser]);
+
+  const setUserArrivalStatus = useCallback((userId: string, status: 'in_transit' | 'ez_reached' | 'ready') => {
+    if (status === 'ready') {
+      confirmUserReady(userId);
+      return;
+    }
+
+    updateUser(userId, { arrivalStatus: status });
+    setUserArrivalStatuses((prev) => {
+      const next = { ...prev, [userId]: status };
+      try {
+        localStorage.setItem('rescue_app_arrival_statuses_slk_v4', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    setAllOperations((prevOps) => {
+      const activeOp = prevOps.find((op) => op.status === 'active' || op.status === 'paused');
+      if (!activeOp) return prevOps;
+
+      const u = allUsers.find((user) => user.id === userId);
+      if (!u) return prevOps;
+
+      const statusDesc = status === 'ez_reached' ? 'hat die Einsatzzentrale erreicht (Bereitstellung)' : 'befindet sich in Anfahrt';
+      const logEntry: OperationLogEntry = {
+        id: `log-${Date.now()}`,
+        operationId: activeOp.id,
+        timestamp: new Date().toISOString(),
+        authorName: currentUser?.name || u.name,
+        authorRole: currentUser?.role || u.role,
+        category: 'status',
+        text: `STATUSÄNDERUNG: Einsatzkraft ${u.name} (${u.callSign || u.role}) ${statusDesc}.`,
+      };
+
+      const updatedOp: SearchOperation = {
+        ...activeOp,
+        logs: [logEntry, ...(activeOp.logs || [])],
+        updatedAt: new Date().toISOString(),
+      };
+
+      syncOperationToCloud(updatedOp);
+      return prevOps.map((op) => (op.id === activeOp.id ? updatedOp : op));
+    });
+  }, [allUsers, currentUser, confirmUserReady, syncOperationToCloud, updateUser]);
+
+  const getUserArrivalStatus = useCallback((userId: string): 'in_transit' | 'ez_reached' | 'ready' => {
+    // 1. If an admin or user has explicitly set a status, respect it
+    if (userArrivalStatuses[userId]) return userArrivalStatuses[userId];
+    const user = allUsers.find((u) => u.id === userId);
+    if (user?.arrivalStatus) return user.arrivalStatus;
+
+    // 2. Otherwise determine automatically by distance to EZ:
+    // Distance > 500m = 'in_transit' (rot / in Anfahrt)
+    // Distance <= 500m = 'ez_reached' (gelb / in EZ Bereich eingetroffen)
+    const loc = userLocations[userId]?.currentPosition;
+    if (!loc) return 'in_transit';
+    const dist = calculateDistanceToEzMeters(loc.lat, loc.lng);
+    if (dist !== null && dist <= 500) {
+      return 'ez_reached';
+    }
+    return 'in_transit';
+  }, [allUsers, userArrivalStatuses, userLocations, calculateDistanceToEzMeters]);
 
   const deactivateAllUsers = (includeSelf: boolean = false) => {
     if (!currentUser) return;
@@ -3355,6 +3435,52 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       return next;
     });
   };
+
+  const setOperationalRole = useCallback(
+    (role: 'ez_command' | 'searcher') => {
+      setOperationalRoleState(role);
+      try {
+        localStorage.setItem(STORAGE_KEY_OPERATIONAL_ROLE, role);
+      } catch {}
+
+      if (currentUser) {
+        updateUser(currentUser.id, { operationalRole: role });
+        setUserLocations((prev) => {
+          const loc = prev[currentUser.id];
+          if (!loc) return prev;
+          const updated: UserLocationState = {
+            ...loc,
+            operationalRole: role,
+            trackHistory: role === 'ez_command' ? [] : loc.trackHistory,
+          };
+          syncLocationToCloud(currentUser.id, updated);
+          return { ...prev, [currentUser.id]: updated };
+        });
+      }
+
+      if (currentOperation) {
+        if (role === 'ez_command') {
+          const prevEz = currentOperation.ezAdminIds || [];
+          if (currentUser && !prevEz.includes(currentUser.id)) {
+            updateOperation(currentOperation.id, { ezAdminIds: [...prevEz, currentUser.id] });
+          }
+        } else {
+          const prevEz = currentOperation.ezAdminIds || [];
+          if (currentUser && prevEz.includes(currentUser.id)) {
+            updateOperation(currentOperation.id, {
+              ezAdminIds: prevEz.filter((id) => id !== currentUser.id),
+            });
+          }
+        }
+      }
+    },
+    [currentUser, currentOperation, updateUser, updateOperation]
+  );
+
+  const toggleOperationalRole = useCallback(() => {
+    const next = operationalRole === 'ez_command' ? 'searcher' : 'ez_command';
+    setOperationalRole(next);
+  }, [operationalRole, setOperationalRole]);
 
   const pauseOperation = async (id: string, reason?: string, snapshotUrl?: string) => {
     const isAuthToManageOp = Boolean(
@@ -4887,6 +5013,9 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         currentUser,
         allUsers,
         login,
+        operationalRole,
+        setOperationalRole,
+        toggleOperationalRole,
         logout,
         switchUser,
         createUser,

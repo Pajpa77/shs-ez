@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { SearchSector, SectorPriority, SectorStatus, EquipmentType, User } from '../types';
+import { SearchSector, SectorPriority, SectorStatus, EquipmentType, User, isUserAdminOrEL } from '../types';
 import { VEREINSBUERO_LOCATION } from '../mockData';
 import {
   Layers,
@@ -110,7 +110,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
 
   if (!isOpen) return null;
 
-  if (currentUser?.role !== 'admin') {
+  if (!isUserAdminOrEL(currentUser)) {
     return (
       <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md">
         <div className="bg-[#1E293B] border border-red-500/50 rounded-2xl p-6 max-w-md text-center space-y-4">

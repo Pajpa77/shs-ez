@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { User, EquipmentType, UserRole } from '../types';
+import { User, EquipmentType, UserRole, isUserAdmin, isUserEL, isUserAdminOrEL, isFirstAdmin } from '../types';
 import { getOpTheme } from './Navbar';
 import { SniffingDogAnimation } from './SniffingDogAnimation';
 import {
@@ -193,6 +193,7 @@ export const LoginScreen: React.FC = () => {
   // 2-step flow: pendingSessionMode is set when user picks role (active/observer) but there are
   // multiple active operations → user must then pick which operation to join.
   const [pendingSessionMode, setPendingSessionMode] = useState<'active' | 'observer' | null>(null);
+  const [pendingOperationalRole, setPendingOperationalRole] = useState<'ez_command' | 'searcher' | null>(null);
 
   // Initialize selectedUser if in device unlock mode
   useEffect(() => {
@@ -206,18 +207,26 @@ export const LoginScreen: React.FC = () => {
    * Called once both role (active/observer) AND target operation are known.
    * Single canonical place for all login finalization state changes.
    */
-  const handleFinalizeLogin = (user: User, sessionMode: 'active' | 'observer', targetOpId?: string) => {
+  const handleFinalizeLogin = (
+    user: User,
+    sessionMode: 'active' | 'observer',
+    targetOpId?: string,
+    opRole: 'ez_command' | 'searcher' = 'searcher'
+  ) => {
     // Update role first
     if (sessionMode === 'observer') {
-      updateUser(user.id, { role: 'observer' });
+      updateUser(user.id, { role: 'observer', operationalRole: 'searcher' });
     } else {
       if (user.role === 'observer') {
         const isLead =
+          isUserAdminOrEL(user) ||
           user.username.toLowerCase().includes('admin') ||
           user.username.toLowerCase().includes('leitung') ||
           user.name.toLowerCase().includes('admin');
         const defaultLeadRole: UserRole = user.username.toLowerCase().includes('admin') ? 'admin' : 'einsatzleitung';
-        updateUser(user.id, { role: isLead ? defaultLeadRole : 'responder' });
+        updateUser(user.id, { role: isLead ? defaultLeadRole : 'responder', operationalRole: opRole });
+      } else {
+        updateUser(user.id, { operationalRole: opRole });
       }
     }
 
@@ -227,14 +236,29 @@ export const LoginScreen: React.FC = () => {
       allOperations.forEach((op) => {
         if (op.status === 'active' || op.status === 'paused') {
           const participantIds = op.participantIds || [];
+          const ezAdminIds = op.ezAdminIds || [];
           if (op.id === finalOpId) {
+            const updates: Partial<typeof op> = {};
             if (!participantIds.includes(user.id)) {
-              updateOperation(op.id, { participantIds: [...participantIds, user.id] });
+              updates.participantIds = [...participantIds, user.id];
+            }
+            if (opRole === 'ez_command') {
+              if (!ezAdminIds.includes(user.id)) {
+                updates.ezAdminIds = [...ezAdminIds, user.id];
+              }
+            } else {
+              if (ezAdminIds.includes(user.id)) {
+                updates.ezAdminIds = ezAdminIds.filter((id) => id !== user.id);
+              }
+            }
+            if (Object.keys(updates).length > 0) {
+              updateOperation(op.id, updates);
             }
           } else {
-            if (participantIds.includes(user.id)) {
+            if (participantIds.includes(user.id) || ezAdminIds.includes(user.id)) {
               updateOperation(op.id, {
                 participantIds: participantIds.filter((id) => id !== user.id),
+                ezAdminIds: ezAdminIds.filter((id) => id !== user.id),
               });
             }
           }
@@ -242,7 +266,7 @@ export const LoginScreen: React.FC = () => {
       });
     }
 
-    const success = login(user.username, password, finalOpId || undefined);
+    const success = login(user.username, password, finalOpId || undefined, opRole);
 
     if (success && rememberThisDevice) {
       try {
@@ -251,7 +275,21 @@ export const LoginScreen: React.FC = () => {
     }
 
     setPendingSessionMode(null);
+    setPendingOperationalRole(null);
     setVerifiedUser(null);
+  };
+
+  /**
+   * Leadership role button click: EZ vs. Sucher
+   */
+  const handleLeadershipRoleSelected = (opRole: 'ez_command' | 'searcher') => {
+    if (!verifiedUser) return;
+    if (activeOperations.length <= 1) {
+      handleFinalizeLogin(verifiedUser, 'active', activeOperations[0]?.id, opRole);
+    } else {
+      setPendingSessionMode('active');
+      setPendingOperationalRole(opRole);
+    }
   };
 
   /**
@@ -260,9 +298,10 @@ export const LoginScreen: React.FC = () => {
   const handleRoleSelected = (mode: 'active' | 'observer') => {
     if (!verifiedUser) return;
     if (activeOperations.length <= 1) {
-      handleFinalizeLogin(verifiedUser, mode, activeOperations[0]?.id);
+      handleFinalizeLogin(verifiedUser, mode, activeOperations[0]?.id, 'searcher');
     } else {
       setPendingSessionMode(mode);
+      setPendingOperationalRole('searcher');
     }
   };
 
@@ -528,7 +567,7 @@ export const LoginScreen: React.FC = () => {
 
           <div className="pt-6 mt-6 border-t border-blue-700/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-blue-200 font-mono">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-cyan-300">v3.2</span>
+              <span className="font-bold text-cyan-300">v3.3 Beta</span>
               <button
                 type="button"
                 onClick={() => {
@@ -674,7 +713,7 @@ export const LoginScreen: React.FC = () => {
                             <button
                               key={op.id}
                               type="button"
-                              onClick={() => handleFinalizeLogin(verifiedUser, pendingSessionMode, op.id)}
+                              onClick={() => handleFinalizeLogin(verifiedUser, pendingSessionMode, op.id, pendingOperationalRole || 'searcher')}
                               className={`w-full p-3 rounded-xl border-2 text-left transition cursor-pointer flex flex-col gap-1.5 group shadow ${
                                 isExercise
                                   ? 'bg-purple-950/40 border-purple-600/60 hover:border-purple-400 hover:bg-purple-950/60'
@@ -701,7 +740,11 @@ export const LoginScreen: React.FC = () => {
                                 isExercise ? 'bg-purple-700 group-hover:bg-purple-600' : 'bg-red-700 group-hover:bg-red-600'
                               }`}>
                                 <span>
-                                  {pendingSessionMode === 'observer' ? '👁️ Als Betrachter beitreten' : '🦺 Als aktive Kraft beitreten'}
+                                  {pendingSessionMode === 'observer'
+                                    ? '👁️ Als Betrachter beitreten'
+                                    : pendingOperationalRole === 'ez_command'
+                                    ? '🏢 In EZ beitreten'
+                                    : '🦺 Als Sucher beitreten'}
                                 </span>
                                 <ArrowRight className="w-3 h-3" />
                               </div>
@@ -712,7 +755,10 @@ export const LoginScreen: React.FC = () => {
 
                       <button
                         type="button"
-                        onClick={() => setPendingSessionMode(null)}
+                        onClick={() => {
+                          setPendingSessionMode(null);
+                          setPendingOperationalRole(null);
+                        }}
                         className="w-full py-2 text-[11px] text-slate-400 hover:text-slate-200 transition underline text-center cursor-pointer"
                       >
                         ← Zurück zur Funktionswahl
@@ -726,7 +772,100 @@ export const LoginScreen: React.FC = () => {
                       </p>
 
                       <div className="grid grid-cols-1 gap-3 pt-1">
-                        {/* Option 1: Aktiver User */}
+                        {/* ── BEREICH 1 (OBERHALB): FÜHRUNGSDIENST (ADMIN & EINSATZLEITUNG) ── */}
+                        {isUserAdminOrEL(verifiedUser) && (
+                          <div className="p-3.5 rounded-xl bg-[#001050] border-2 border-amber-400/90 shadow-2xl space-y-3 relative overflow-hidden">
+                            <div className="flex items-center justify-between border-b border-amber-500/30 pb-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-sm shrink-0">
+                                  🛡️
+                                </div>
+                                <div>
+                                  <div className="text-xs font-black text-amber-300 uppercase tracking-wider font-mono">
+                                    Führungsdienst: {isFirstAdmin(verifiedUser) ? 'First-Admin' : verifiedUser.role === 'einsatzleitung' ? 'Einsatzleitung' : 'Admin / EL'}
+                                  </div>
+                                  <div className="text-[10px] text-blue-200 font-sans">
+                                    Voller Zugriff auf Leitstelle, Lagekarte &amp; Einsatz-Steuerung
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="text-[9px] px-2 py-0.5 rounded font-mono bg-amber-950 text-amber-300 border border-amber-600 font-bold uppercase shrink-0">
+                                Adminrechte
+                              </span>
+                            </div>
+
+                            {hasActiveOps ? (
+                              <div className="space-y-2">
+                                <span className="block text-[10px] font-bold text-amber-200 uppercase font-mono tracking-wider">
+                                  Wie nimmst du an diesem Einsatz teil?
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {/* Sub-Wahl 1: In der EZ verbleiben */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleLeadershipRoleSelected('ez_command')}
+                                    className="p-3 rounded-xl bg-[#000840] hover:bg-[#001466] border-2 border-cyan-400/80 hover:border-cyan-300 text-left transition cursor-pointer flex flex-col justify-between gap-1.5 group shadow"
+                                  >
+                                    <div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                                          <span>🏢</span> In EZ verbleiben
+                                        </span>
+                                        <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold">
+                                          Leitstand
+                                        </span>
+                                      </div>
+                                      <p className="text-[10px] text-blue-100 font-sans leading-tight mt-1">
+                                        Koordination &amp; Leitstelle. <span className="text-cyan-300 font-bold">Keine Trackingspur (Linie)</span> auf der Karte.
+                                      </p>
+                                    </div>
+                                    <div className="w-full py-1.5 px-2 rounded-lg bg-cyan-600 group-hover:bg-cyan-500 text-white font-bold text-[10px] uppercase font-mono text-center flex items-center justify-center gap-1 mt-1">
+                                      <span>In EZ {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
+                                      <ArrowRight className="w-3 h-3" />
+                                    </div>
+                                  </button>
+
+                                  {/* Sub-Wahl 2: Als Sucher mitlaufen */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleLeadershipRoleSelected('searcher')}
+                                    className="p-3 rounded-xl bg-[#000840] hover:bg-[#001466] border-2 border-emerald-400/80 hover:border-emerald-300 text-left transition cursor-pointer flex flex-col justify-between gap-1.5 group shadow"
+                                  >
+                                    <div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                                          <span>🚶</span> Als Sucher mitlaufen
+                                        </span>
+                                        <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">
+                                          Im Feld
+                                        </span>
+                                      </div>
+                                      <p className="text-[10px] text-blue-100 font-sans leading-tight mt-1">
+                                        Führungskraft im Gelände. <span className="text-emerald-300 font-bold">Trackingspur (Linie) wird aufgezeichnet</span>.
+                                      </p>
+                                    </div>
+                                    <div className="w-full py-1.5 px-2 rounded-lg bg-emerald-600 group-hover:bg-emerald-500 text-white font-bold text-[10px] uppercase font-mono text-center flex items-center justify-center gap-1 mt-1">
+                                      <span>Im Feld {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
+                                      <ArrowRight className="w-3 h-3" />
+                                    </div>
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleLeadershipRoleSelected('ez_command')}
+                                className="w-full py-2.5 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow cursor-pointer transition"
+                              >
+                                <Shield className="w-4 h-4" />
+                                <span>Als Einsatzleitung / Admin starten (Bereitschaft)</span>
+                                <ArrowRight className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* ── BEREICH 2: REGULÄRE EINSATZKRAFT / SUCHER ── */}
                         <button
                           type="button"
                           onClick={() => handleRoleSelected('active')}
@@ -735,23 +874,25 @@ export const LoginScreen: React.FC = () => {
                           <div>
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-bold text-white uppercase flex items-center gap-2">
-                                <span>🦺</span> Als aktiver User
+                                <span>🦺</span> {isUserAdminOrEL(verifiedUser) ? 'Als regulärer Sucher starten' : 'Als aktive Einsatzkraft (Sucher)'}
                               </span>
                               <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">
-                                Einsatzteilnehmer
+                                Feldeinsatz
                               </span>
                             </div>
                             <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
-                              Nimmt aktiv am Einsatz teil. GPS-Tracking, Sektorzuweisung, Fundmeldungen &amp; Chat passend zur Rolle (<span className="text-emerald-300 font-bold">{verifiedUser.role === 'admin' || verifiedUser.role === 'einsatzleitung' ? 'Einsatzleitung' : 'Einsatzkraft'}</span>).
+                              {isUserAdminOrEL(verifiedUser)
+                                ? 'Fokus auf die Feldsucharbeit als Sucher. GPS-Trackingspur (Linie) wird live aufgezeichnet.'
+                                : 'Nimmt aktiv an der Suche im Sektor teil. GPS-Trackingspur (Linie), Fundmeldung & Funk passend zur Helfer-Rolle.'}
                             </p>
                           </div>
                           <div className="w-full py-2.5 px-3 rounded-lg bg-emerald-600 group-hover:bg-emerald-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
-                            <span>Als aktiver User {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
+                            <span>Als Sucher {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </div>
                         </button>
 
-                        {/* Option 2: Betrachter */}
+                        {/* ── BEREICH 3: GAST / BETRACHTER ── */}
                         <button
                           type="button"
                           onClick={() => handleRoleSelected('observer')}
