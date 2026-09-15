@@ -413,7 +413,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <Database className="w-4 h-4 text-emerald-400" />
             <span>Technik- &amp; Synchronisations-Status</span>
           </div>
-          <span className="text-[10px] text-slate-400 font-normal">Build v3.4</span>
+          <span className="text-[10px] text-slate-400 font-normal">Build Beta v3.5</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

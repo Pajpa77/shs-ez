@@ -875,35 +875,74 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                       </button>
                     </div>
 
-                    {/* Suchtrupps / Gruppen-Funkkanäle */}
-                    <div className="space-y-1 pt-2 border-t border-slate-700">
+                    {/* Sektor- & Suchtruppfunk (Sektorfunk übernimmt Gruppenfunk) */}
+                    <div className="space-y-1.5 pt-2 border-t border-slate-700">
                       <div className="flex items-center justify-between px-1">
-                        <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider block">
-                          👥 SUCHTRUPPS &amp; GRUPPEN ({effectiveOperation?.teams?.length || 0}):
+                        <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">
+                          🧭 SEKTOR- &amp; SUCHTRUPPFUNK ({effectiveOperation?.sectors?.length || 0} SEKTOREN):
                         </span>
                       </div>
 
-                      {effectiveOperation?.teams && effectiveOperation.teams.length > 0 ? (
-                        effectiveOperation.teams.map((team) => {
-                          const isSelected = activeChannel === team.id;
-                          const totalMembers = (team.memberUserIds?.length || 0) + (team.externalVolunteersCount || 0);
+                      {effectiveOperation?.sectors && effectiveOperation.sectors.length > 0 ? (
+                        effectiveOperation.sectors.map((sec) => {
+                          const isSelected = activeChannel === sec.id;
+                          const isSearched = sec.status === 'searched';
+                          const isInProgress = sec.status === 'in_progress';
+                          const isSuspicious = sec.status === 'suspicious';
+
+                          const statusBadge = isSearched
+                            ? '✅ abgesucht'
+                            : isInProgress
+                            ? '⏳ in Bearbeitung'
+                            : isSuspicious
+                            ? '⚠️ verdächtig'
+                            : '🎯 offen';
+
+                          const assignedUsers = allUsers.filter(
+                            (u) => sec.assignedUserIds?.includes(u.id) || u.assignedSectorId === sec.id
+                          );
+                          const assignedTeams = effectiveOperation.teams?.filter(
+                            (t) => t.sectorIds?.includes(sec.id)
+                          ) || [];
+
+                          const teamNames = assignedTeams.map((t) => t.name).join(', ');
+                          const userNames = assignedUsers.map((u) => u.callSign || u.name).join(', ');
+                          const assignedSummary = teamNames
+                            ? `👥 ${teamNames}${userNames ? ` (${userNames})` : ''}`
+                            : userNames
+                            ? `👥 ${userNames}`
+                            : 'Keine Kräfte zugeteilt';
+
+                          const totalCount = assignedUsers.length > 0 ? `${assignedUsers.length} Kräfte` : '0 Kräfte';
+
                           return (
                             <button
                               type="button"
-                              key={team.id}
-                              onClick={() => setActiveChannel(team.id)}
+                              key={sec.id}
+                              onClick={() => setActiveChannel(sec.id)}
                               className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
                                 isSelected
-                                  ? 'bg-blue-700 border border-blue-400 text-white font-bold shadow'
+                                  ? 'bg-amber-600 border border-amber-400 text-white font-bold shadow ring-1 ring-amber-300'
                                   : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
                               }`}
                             >
                               <div className="flex items-center gap-2 truncate">
-                                <span className="text-base shrink-0">👥</span>
+                                <span className="text-base shrink-0">🧭</span>
                                 <div className="truncate">
-                                  <div className="font-bold truncate leading-tight text-amber-300">{team.name}</div>
-                                  <div className="text-[10px] text-slate-400 truncate">
-                                    {totalMembers} Helfer • Sektoren: {getTeamSectorsText(team, effectiveOperation)}
+                                  <div className="font-bold truncate leading-tight text-white flex items-center gap-1.5">
+                                    <span className="truncate">{sec.name}</span>
+                                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold shrink-0 ${
+                                      isSearched
+                                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-600'
+                                        : isInProgress
+                                        ? 'bg-amber-950 text-amber-300 border border-amber-600'
+                                        : 'bg-slate-900 text-slate-400 border border-slate-700'
+                                    }`}>
+                                      {statusBadge}
+                                    </span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-300 truncate mt-0.5 font-mono">
+                                    {assignedSummary} • {totalCount}
                                   </div>
                                 </div>
                               </div>
@@ -912,42 +951,44 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                         })
                       ) : (
                         <div className="text-[10px] text-slate-500 italic px-2 py-1">
-                          Keine Suchtrupps / Gruppen gebildet.
+                          Keine Sektoren im aktuellen Einsatz angelegt.
                         </div>
                       )}
+
+                      {/* Optional Fallback für gebildete Gruppen ohne Sektor-Zuordnung */}
+                      {effectiveOperation?.teams &&
+                        effectiveOperation.teams.filter((t) => !t.sectorIds || t.sectorIds.length === 0).length > 0 && (
+                          <div className="pt-2 border-t border-slate-700/60 space-y-1">
+                            <span className="text-[9px] font-bold text-blue-400 uppercase tracking-wider px-1 block">
+                              👥 WEITERE GRUPPEN (OHNE SEKTOR):
+                            </span>
+                            {effectiveOperation.teams
+                              .filter((t) => !t.sectorIds || t.sectorIds.length === 0)
+                              .map((team) => (
+                                <button
+                                  type="button"
+                                  key={team.id}
+                                  onClick={() => setActiveChannel(team.id)}
+                                  className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer text-left ${
+                                    activeChannel === team.id
+                                      ? 'bg-blue-700 border border-blue-400 text-white font-bold'
+                                      : 'bg-slate-800/60 hover:bg-slate-700/60 text-slate-300'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2 truncate">
+                                    <span className="text-sm shrink-0">👥</span>
+                                    <div className="truncate">
+                                      <div className="font-bold truncate text-amber-300 text-xs">{team.name}</div>
+                                      <div className="text-[10px] text-slate-400 truncate">
+                                        {(team.memberUserIds?.length || 0)} Mitglieder
+                                      </div>
+                                    </div>
+                                  </div>
+                                </button>
+                              ))}
+                          </div>
+                        )}
                     </div>
-
-                    {/* Sektor Funkkanäle */}
-                    {effectiveOperation?.sectors && effectiveOperation.sectors.length > 0 && (
-                      <div className="space-y-1 pt-2 border-t border-slate-700">
-                        <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider px-1 block">
-                          🧭 SEKTOR-FUNKKANÄLE:
-                        </span>
-
-                        {effectiveOperation.sectors.map((sec) => (
-                          <button
-                            type="button"
-                            key={sec.id}
-                            onClick={() => setActiveChannel(sec.id)}
-                            className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer text-left ${
-                              activeChannel === sec.id
-                                ? 'bg-amber-500/20 border border-amber-500 text-amber-200 font-bold'
-                                : 'bg-slate-800/60 hover:bg-slate-700/60 text-slate-300'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 truncate">
-                              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
-                              <div className="truncate">
-                                <div className="font-bold truncate">{sec.name}</div>
-                                <div className="text-[10px] text-slate-400">
-                                  {sec.assignedUserIds?.length || 0} Kräfte zugeteilt
-                                </div>
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 ) : activeScope === 'responders' ? (
                   /* Einsatzkräfte & Direktchat Scope */
