@@ -505,6 +505,12 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   });
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(chatMessages));
+    } catch {}
+  }, [chatMessages]);
+
   const [lastReadChatTimestamp, setLastReadChatTimestamp] = useState<number>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_LAST_READ_CHAT);
@@ -3851,6 +3857,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             label: `Einsatzende: ${outcomeText}`,
           });
         }
+        const opChat = chatMessages.filter((m) => m.operationId === id);
 
         const updated: SearchOperation = {
           ...op,
@@ -3869,6 +3876,9 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         syncOperationToCloud(updated);
         return updated;
       });
+
+      // Clear live chat messages for this ended operation so live chat starts clean
+      setChatMessages((prev) => prev.filter((m) => m.operationId !== id));
 
       try {
         localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify(next));
@@ -4053,6 +4063,15 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
     // 4. Set as active operation
     setCurrentOperationId(id);
+
+    // Restore archived chat messages into live chat history upon operation reactivation
+    if (op.archivedChatMessages && op.archivedChatMessages.length > 0) {
+      setChatMessages((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const toAdd = op.archivedChatMessages!.filter((m) => !existingIds.has(m.id));
+        return [...prev, ...toAdd];
+      });
+    }
 
     // Restore and prepare trackHistory for responders so new GPS recordings extend the movement profile seamlessly
     if (shouldPreserve) {

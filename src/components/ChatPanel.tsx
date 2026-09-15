@@ -213,9 +213,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
   // Active channel/user ID
   const [activeChannel, setActiveChannel] = useState<string>('all'); // 'all', 'admins', sectorId, or userId
-  const [activeScope, setActiveScope] = useState<'operation' | 'responders' | 'general'>(() =>
-    currentOperation ? 'operation' : 'general'
-  );
+  const [activeScope, setActiveScope] = useState<'operation' | 'responders'>('operation');
   const [selectedOpId, setSelectedOpId] = useState<string>(
     currentOperation?.id || allOperations.find((o) => o.status === 'active')?.id || allOperations[0]?.id || ''
   );
@@ -515,15 +513,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       }
 
       // Filter by operation scope
-      if (activeScope === 'general') {
-        if (msg.operationId !== 'general') return false;
-      } else {
-        if (!effectiveOperation || msg.operationId !== effectiveOperation.id) return false;
-      }
+      if (effectiveOperation && msg.operationId !== effectiveOperation.id) return false;
 
       // Filter by active channel / direct user
-      if (activeChannel === 'all' || activeChannel === 'general') {
-        return msg.channel === 'all' || msg.channel === 'general';
+      if (activeChannel === 'all') {
+        return msg.channel === 'all';
       } else if (activeChannel === 'admins') {
         return msg.channel === 'admins';
       } else if (activeChannel.startsWith('sec-') || activeChannel.startsWith('team-')) {
@@ -550,7 +544,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       !activeChannel.startsWith('sec-') &&
       !activeChannel.startsWith('team-');
 
-    const targetOpId = activeScope === 'general' ? 'general' : effectiveOperation?.id || 'general';
+    const targetOpId = effectiveOperation?.id || 'general';
 
     sendChatMessage({
       text: inputText.trim() || (includeLocation ? '📍 GPS-Standort übermittelt' : ''),
@@ -805,45 +799,32 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           {/* Left Selector Drawer: 3-Way Scope Switcher (Einsatzfunk, Einsatzkräfte, Vereinsfunk) */}
           <div className="w-full lg:w-80 bg-[#1E293B] border border-slate-700/80 rounded-2xl p-3 flex flex-col justify-between shadow-xl shrink-0 overflow-hidden max-h-[240px] sm:max-h-[280px] lg:max-h-none min-h-0">
             <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-0 font-mono text-xs" style={{ WebkitOverflowScrolling: 'touch' }}>
-              {/* Scope Switcher: 3 Options */}
-              <div className="grid grid-cols-3 gap-1 p-1 bg-slate-900 border border-slate-700 rounded-xl text-[9px] font-bold">
+              {/* Scope Switcher: 2 Options (Einsatz & Kräfte) */}
+              <div className="grid grid-cols-2 gap-1 p-1 bg-slate-900 border border-slate-700 rounded-xl text-[10px] font-bold">
                 <button
                   type="button"
                   onClick={() => {
                     setActiveScope('operation');
                     setActiveChannel('all');
                   }}
-                  className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-0.5 cursor-pointer truncate ${
+                  className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer truncate ${
                     activeScope === 'operation' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
                   }`}
                   title="Einsatzbezogene Funkkanäle & Gruppen"
                 >
-                  <span>🚨 Einsatz</span>
+                  <span>🚨 Einsatzfunk</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setActiveScope('responders');
                   }}
-                  className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-0.5 cursor-pointer truncate ${
+                  className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer truncate ${
                     activeScope === 'responders' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
                   }`}
                   title="Liste aller Suchkräfte & 1:1 Direktchat"
                 >
-                  <span>👥 Kräfte</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveScope('general');
-                    setActiveChannel('all');
-                  }}
-                  className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-0.5 cursor-pointer truncate ${
-                    activeScope === 'general' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  title="Allgemeiner Vereinsfunk & Vorstand"
-                >
-                  <span>🌐 Verein</span>
+                  <span>👥 Einsatzkräfte</span>
                 </button>
               </div>
 
@@ -1099,9 +1080,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 <h3 className="font-extrabold text-xs sm:text-sm text-white uppercase tracking-wide truncate flex items-center gap-1.5">
                   <span className="truncate">
                     {activeChannel === 'all'
-                      ? activeScope === 'general'
-                        ? 'Allgemeiner Vereinsfunk'
-                        : 'Gesamter Einsatzfunk'
+                      ? 'Gesamter Einsatzfunk'
                       : activeChannel === 'admins'
                       ? 'Führungskanal EL'
                       : activeTeam
@@ -1283,9 +1262,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder={`Funkspruch senden an ${
                   activeChannel === 'all'
-                    ? activeScope === 'general'
-                      ? 'alle Vereinsmitglieder'
-                      : 'alle Einheiten'
+                    ? 'alle Einheiten'
                     : activeChannel === 'admins'
                     ? 'Einsatzleitung'
                     : activeSector

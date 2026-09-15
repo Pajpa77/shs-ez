@@ -1758,7 +1758,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     if (!respondersLayerRef.current) return;
     respondersLayerRef.current.clearLayers();
 
-    if (!showResponders || isArchiveMode) return;
+    if (!showResponders || mode === 'archive') return;
 
     interface RenderableResponder {
       userId: string;
