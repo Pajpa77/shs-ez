@@ -201,10 +201,10 @@ interface RescueContextType {
   dismissAlertNotification: () => void;
 
   // EZ Arrival & Readiness Monitoring
-  userArrivalStatuses: Record<string, 'in_transit' | 'ez_reached' | 'ready'>;
+  userArrivalStatuses: Record<string, 'in_transit' | 'near_ez' | 'ez_reached' | 'ready'>;
   confirmUserReady: (userId: string) => void;
-  setUserArrivalStatus: (userId: string, status: 'in_transit' | 'ez_reached' | 'ready') => void;
-  getUserArrivalStatus: (userId: string) => 'in_transit' | 'ez_reached' | 'ready';
+  setUserArrivalStatus: (userId: string, status: 'in_transit' | 'near_ez' | 'ez_reached' | 'ready') => void;
+  getUserArrivalStatus: (userId: string) => 'in_transit' | 'near_ez' | 'ez_reached' | 'ready';
   calculateDistanceToEzMeters: (lat: number, lng: number) => number | null;
 
   // Global Selected Responder State
@@ -653,7 +653,7 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setAuthNotification(null);
   };
 
-  const [userArrivalStatuses, setUserArrivalStatuses] = useState<Record<string, 'in_transit' | 'ez_reached' | 'ready'>>(() => {
+  const [userArrivalStatuses, setUserArrivalStatuses] = useState<Record<string, 'in_transit' | 'near_ez' | 'ez_reached' | 'ready'>>(() => {
     try {
       const saved = localStorage.getItem('rescue_app_arrival_statuses_slk_v4');
       return saved ? JSON.parse(saved) : {};
@@ -3007,7 +3007,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     });
   }, [allUsers, syncOperationToCloud, updateUser]);
 
-  const setUserArrivalStatus = useCallback((userId: string, status: 'in_transit' | 'ez_reached' | 'ready') => {
+  const setUserArrivalStatus = useCallback((userId: string, status: 'in_transit' | 'near_ez' | 'ez_reached' | 'ready') => {
     if (status === 'ready') {
       confirmUserReady(userId);
       return;
@@ -3029,7 +3029,11 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       const u = allUsers.find((user) => user.id === userId);
       if (!u) return prevOps;
 
-      const statusDesc = status === 'ez_reached' ? 'hat die Einsatzzentrale erreicht (Bereitstellung)' : 'befindet sich in Anfahrt';
+      const statusDesc = status === 'near_ez'
+        ? 'befindet sich im Einsatzbereich (≤500m)'
+        : status === 'ez_reached'
+        ? 'hat die Einsatzzentrale erreicht (Bereitstellung)'
+        : 'befindet sich in Anfahrt (>500m)';
       const logEntry: OperationLogEntry = {
         id: `log-${Date.now()}`,
         operationId: activeOp.id,
@@ -3051,23 +3055,19 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     });
   }, [allUsers, currentUser, confirmUserReady, syncOperationToCloud, updateUser]);
 
-  const getUserArrivalStatus = useCallback((userId: string): 'in_transit' | 'ez_reached' | 'ready' => {
-    // 1. If an admin or user has explicitly set a status, respect it
+  const getUserArrivalStatus = useCallback((userId: string): 'in_transit' | 'near_ez' | 'ez_reached' | 'ready' => {
     if (userArrivalStatuses[userId]) return userArrivalStatuses[userId];
     const user = allUsers.find((u) => u.id === userId);
     if (user?.arrivalStatus) return user.arrivalStatus;
 
-    // 2. Otherwise determine automatically by distance to EZ:
-    // Distance > 500m = 'in_transit' (rot / in Anfahrt)
-    // Distance <= 500m = 'ez_reached' (gelb / in EZ Bereich eingetroffen)
-    const loc = userLocations[userId]?.currentPosition;
+    const loc = userLocations[userId]?.currentPosition || (userId === currentUser?.id ? myLocation : null);
     if (!loc) return 'in_transit';
     const dist = calculateDistanceToEzMeters(loc.lat, loc.lng);
     if (dist !== null && dist <= 500) {
-      return 'ez_reached';
+      return 'near_ez';
     }
     return 'in_transit';
-  }, [allUsers, userArrivalStatuses, userLocations, calculateDistanceToEzMeters]);
+  }, [allUsers, userArrivalStatuses, userLocations, currentUser, myLocation, calculateDistanceToEzMeters]);
 
   const deactivateAllUsers = (includeSelf: boolean = false) => {
     if (!currentUser) return;

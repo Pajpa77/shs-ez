@@ -696,8 +696,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 space-y-1.5">
                       <div className="text-[10px] font-mono text-slate-400 uppercase font-bold flex items-center justify-between">
                         <span>Mein Status</span>
-                        <span className="text-emerald-400 font-bold">
-                          {currentUser?.arrivalStatus === 'ready' ? '🟢 Einsatzbereit' : currentUser?.arrivalStatus === 'ez_reached' ? '🟡 EZ erreicht' : '🔵 In Anfahrt'}
+                        <span className="font-bold">
+                          {currentUser?.arrivalStatus === 'ready' || currentUser?.arrivalStatus === 'ez_reached' ? (
+                            <span className="text-emerald-400">🟢 Bereit in EZ / Feld</span>
+                          ) : currentUser?.arrivalStatus === 'near_ez' ? (
+                            <span className="text-amber-300">🟡 Im Einsatzbereich (≤500m)</span>
+                          ) : (
+                            <span className="text-rose-400">🔴 In Anfahrt (&gt;500m)</span>
+                          )}
                         </span>
                       </div>
                       <div className="grid grid-cols-3 gap-1 pt-0.5">
@@ -707,25 +713,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                             if (currentUser) setUserArrivalStatus(currentUser.id, 'in_transit');
                           }}
                           className={`py-1.5 px-1 rounded-lg text-[9px] font-mono font-bold transition border cursor-pointer ${
-                            currentUser?.arrivalStatus === 'in_transit'
-                              ? 'bg-blue-600 text-white border-blue-400 shadow'
+                            currentUser?.arrivalStatus === 'in_transit' || !currentUser?.arrivalStatus
+                              ? 'bg-rose-700 text-white border-rose-400 shadow'
                               : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
                           }`}
                         >
-                          Anfahrt
+                          🔴 Anfahrt
                         </button>
                         <button
                           type="button"
                           onClick={() => {
-                            if (currentUser) setUserArrivalStatus(currentUser.id, 'ez_reached');
+                            if (currentUser) setUserArrivalStatus(currentUser.id, 'near_ez');
                           }}
                           className={`py-1.5 px-1 rounded-lg text-[9px] font-mono font-bold transition border cursor-pointer ${
-                            currentUser?.arrivalStatus === 'ez_reached'
+                            currentUser?.arrivalStatus === 'near_ez'
                               ? 'bg-amber-600 text-white border-amber-400 shadow'
                               : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
                           }`}
                         >
-                          EZ da
+                          🟡 Am Ort
                         </button>
                         <button
                           type="button"
@@ -733,12 +739,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                             if (currentUser) setUserArrivalStatus(currentUser.id, 'ready');
                           }}
                           className={`py-1.5 px-1 rounded-lg text-[9px] font-mono font-bold transition border cursor-pointer ${
-                            currentUser?.arrivalStatus === 'ready'
+                            currentUser?.arrivalStatus === 'ready' || currentUser?.arrivalStatus === 'ez_reached'
                               ? 'bg-emerald-600 text-white border-emerald-400 shadow'
                               : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
                           }`}
                         >
-                          Bereit
+                          🟢 Bereit
                         </button>
                       </div>
                     </div>

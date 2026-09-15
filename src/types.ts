@@ -36,7 +36,7 @@ export interface User {
   lastSeen?: string;
   activeSessionId?: string;
   lastHeartbeat?: number; // Timestamp des letzten Heartbeats in ms
-  arrivalStatus?: 'in_transit' | 'ez_reached' | 'ready';
+  arrivalStatus?: 'in_transit' | 'near_ez' | 'ez_reached' | 'ready';
   currentLocation?: GpsPoint;
   trackColor?: string; // Individuelle Suchspur-Farbe für die Lagekarte
   operationalRole?: 'ez_command' | 'searcher'; // Operative Funktion im aktiven Einsatz: EZ-Leitstand (keine Spur) vs. Sucher im Feld (Spur aktiv)

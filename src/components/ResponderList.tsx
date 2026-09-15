@@ -313,41 +313,41 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                   {/* Manual status switcher for Einsatzleitung/Admin */}
                   {canLead && (
                     <div className="pt-2 border-t border-slate-700/60 space-y-1">
-                      <span className="text-[10px] text-slate-400 font-mono block">Status manuell setzen:</span>
+                      <span className="text-[10px] text-slate-400 font-mono block">Status manuell schalten (Admins):</span>
                       <div className="grid grid-cols-3 gap-1">
                         <button
                           type="button"
                           onClick={() => setUserArrivalStatus(user.id, 'in_transit')}
                           className={`py-1 px-1.5 rounded text-[10px] font-bold font-mono transition cursor-pointer border ${
                             status === 'in_transit'
-                              ? 'bg-blue-600 text-white border-blue-400 shadow'
+                              ? 'bg-rose-700 text-white border-rose-400 shadow'
                               : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
                           }`}
-                          title="Status auf 'In Anfahrt' setzen"
+                          title="Status auf 'In Anfahrt' setzen (🔴 Rot)"
                         >
-                          🚗 Anfahrt
+                          🔴 Anfahrt
                         </button>
                         <button
                           type="button"
-                          onClick={() => setUserArrivalStatus(user.id, 'ez_reached')}
+                          onClick={() => setUserArrivalStatus(user.id, 'near_ez')}
                           className={`py-1 px-1.5 rounded text-[10px] font-bold font-mono transition cursor-pointer border ${
-                            status === 'ez_reached'
+                            status === 'near_ez'
                               ? 'bg-amber-600 text-white border-amber-400 shadow'
                               : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
                           }`}
-                          title="Status auf 'EZ erreicht' setzen"
+                          title="Status auf 'Im Einsatzbereich' setzen (🟡 Gelb)"
                         >
-                          🏢 EZ da
+                          🟡 Am Ort
                         </button>
                         <button
                           type="button"
                           onClick={() => confirmUserReady(user.id)}
                           className={`py-1 px-1.5 rounded text-[10px] font-bold font-mono transition cursor-pointer border ${
-                            status === 'ready'
+                            status === 'ready' || status === 'ez_reached'
                               ? 'bg-emerald-600 text-white border-emerald-400 shadow'
                               : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
                           }`}
-                          title="Status auf 'Bereit' setzen & Tracking aktivieren"
+                          title="Status auf 'Bereit / In EZ eingetroffen' schalten (🟢 Grün)"
                         >
                           🟢 Bereit
                         </button>
