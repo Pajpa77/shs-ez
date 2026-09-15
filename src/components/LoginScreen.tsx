@@ -567,7 +567,7 @@ export const LoginScreen: React.FC = () => {
 
           <div className="pt-6 mt-6 border-t border-blue-700/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-blue-200 font-mono">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-cyan-300">v3.3 Beta</span>
+              <span className="font-bold text-cyan-300">v3.4</span>
               <button
                 type="button"
                 onClick={() => {

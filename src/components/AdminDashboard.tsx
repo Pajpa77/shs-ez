@@ -47,6 +47,7 @@ interface AdminDashboardProps {
   onNavigateToLog: () => void;
   onNavigateToArchive: () => void;
   onNavigateToReports: () => void;
+  onOpenUserListPdf?: () => void;
   showDroneFeed: boolean;
   setShowDroneFeed: (show: boolean) => void;
 }
@@ -65,6 +66,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onNavigateToLog,
   onNavigateToArchive,
   onNavigateToReports,
+  onOpenUserListPdf,
   showDroneFeed,
   setShowDroneFeed,
 }) => {
@@ -104,9 +106,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const activeOps = allOperations.filter((o) => o.status === 'active' || o.status === 'paused');
   const activeResponders = allUsers.filter((u) => u.isActive);
-  const inTransitCount = activeResponders.filter((u) => u.arrivalStatus === 'in_transit').length;
-  const inEzCount = activeResponders.filter((u) => u.arrivalStatus === 'ez_reached' || u.operationalRole === 'ez_command').length;
-  const readyCount = activeResponders.filter((u) => u.arrivalStatus === 'ready').length;
+  const inTransitResponders = activeResponders.filter((u) => u.arrivalStatus === 'in_transit');
+  const ezReachedResponders = activeResponders.filter((u) => u.arrivalStatus === 'ez_reached' || u.operationalRole === 'ez_command');
+  const readyResponders = activeResponders.filter((u) => u.arrivalStatus === 'ready');
 
   const currentTheme = getOpTheme(currentOperation, allOperations);
 
@@ -325,6 +327,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="font-bold text-xs text-white">App Teilen / QR</div>
               <div className="text-[10px] text-slate-400">Helfer vor Ort einladen</div>
             </button>
+
+            {onOpenUserListPdf && (
+              <button
+                type="button"
+                onClick={onOpenUserListPdf}
+                className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/60 transition cursor-pointer text-left space-y-1 group shadow col-span-2 sm:col-span-1"
+              >
+                <div className="w-7 h-7 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-sm font-bold group-hover:scale-105 transition">
+                  🪪
+                </div>
+                <div className="font-bold text-xs text-white">Strichcode-Liste PDF</div>
+                <div className="text-[10px] text-slate-400">Mitglieder &amp; Barcodes drucken</div>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -343,27 +359,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             onClick={onNavigateToResponders}
             className="text-xs text-blue-400 hover:text-white underline transition cursor-pointer flex items-center gap-1 font-bold"
           >
-            <span>Zur vollständigen Kräfte-Liste</span>
+            <span>Kräfteliste öffnen</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-700 text-center">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">REGISTRIERT</span>
-            <span className="text-xl font-black text-white">{allUsers.length}</span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Anfahrt */}
+          <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">1. IN ANFAHRT</span>
+              <span className="text-xl font-extrabold text-amber-400">
+                {inTransitResponders.length} <span className="text-xs font-normal text-slate-400">Kräfte</span>
+              </span>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-base border border-amber-500/40">
+              🚗
+            </div>
           </div>
-          <div className="bg-slate-900/80 p-3.5 rounded-xl border border-blue-500/40 text-center">
-            <span className="text-[10px] text-blue-400 font-bold uppercase block">🚗 IN ANFAHRT</span>
-            <span className="text-xl font-black text-blue-300">{inTransitCount}</span>
+
+          {/* Am EZ Eingetroffen */}
+          <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">2. EZ EINGETROFFEN</span>
+              <span className="text-xl font-extrabold text-blue-400">
+                {ezReachedResponders.length} <span className="text-xs font-normal text-slate-400">Kräfte</span>
+              </span>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-base border border-blue-500/40">
+              🏢
+            </div>
           </div>
-          <div className="bg-slate-900/80 p-3.5 rounded-xl border border-amber-500/40 text-center">
-            <span className="text-[10px] text-amber-400 font-bold uppercase block">🏢 IN DER EZ</span>
-            <span className="text-xl font-black text-amber-300">{inEzCount}</span>
-          </div>
-          <div className="bg-slate-900/80 p-3.5 rounded-xl border border-emerald-500/40 text-center">
-            <span className="text-[10px] text-emerald-400 font-bold uppercase block">🟢 BEREIT (FELD)</span>
-            <span className="text-xl font-black text-emerald-300">{readyCount}</span>
+
+          {/* Einsatzbereit / Im Feld */}
+          <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">3. BEREIT / IM FELD</span>
+              <span className="text-xl font-extrabold text-emerald-400">
+                {readyResponders.length} <span className="text-xs font-normal text-slate-400">Kräfte</span>
+              </span>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-base border border-emerald-500/40">
+              ✅
+            </div>
           </div>
         </div>
       </div>
@@ -375,7 +413,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <Database className="w-4 h-4 text-emerald-400" />
             <span>Technik- &amp; Synchronisations-Status</span>
           </div>
-          <span className="text-[10px] text-slate-400 font-normal">Build v3.3 Beta</span>
+          <span className="text-[10px] text-slate-400 font-normal">Build v3.4</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

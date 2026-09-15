@@ -26,6 +26,7 @@ const OperationPauseModal = lazy(() => import('./components/OperationPauseModal'
 const ProfileModal = lazy(() => import('./components/ProfileModal').then(m => ({ default: m.ProfileModal })));
 const ShareAppModal = lazy(() => import('./components/ShareAppModal').then(m => ({ default: m.ShareAppModal })));
 const SearchTeamsModal = lazy(() => import('./components/SearchTeamsModal').then(m => ({ default: m.SearchTeamsModal })));
+const UserListPdfModal = lazy(() => import('./components/UserListPdfModal').then(m => ({ default: m.UserListPdfModal })));
 import { TrackingTestOverlay } from './components/TrackingTestOverlay';
 import { QuotaNotificationBanner } from './components/QuotaNotificationBanner';
 import { DroneFeedWidget } from './components/DroneFeedWidget';
@@ -183,6 +184,7 @@ const MainApp: React.FC = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isShareAppModalOpen, setIsShareAppModalOpen] = useState(false);
   const [isSearchTeamsModalOpen, setIsSearchTeamsModalOpen] = useState(false);
+  const [isUserListPdfOpen, setIsUserListPdfOpen] = useState(false);
   const [directChatTarget, setDirectChatTarget] = useState<User | null>(null);
 
   // If not authenticated, show login
@@ -207,7 +209,8 @@ const MainApp: React.FC = () => {
     isOperationPauseModalOpen ||
     isProfileOpen ||
     isShareAppModalOpen ||
-    isSearchTeamsModalOpen;
+    isSearchTeamsModalOpen ||
+    isUserListPdfOpen;
 
   return (
     <div className="fixed inset-0 w-full h-full flex flex-col bg-[#0F172A] font-sans text-slate-200 overflow-hidden select-none">
@@ -527,6 +530,7 @@ const MainApp: React.FC = () => {
               onNavigateToLog={() => setActiveTab('log')}
               onNavigateToArchive={() => setActiveTab('archive')}
               onNavigateToReports={() => setActiveTab('reports')}
+              onOpenUserListPdf={() => setIsUserListPdfOpen(true)}
               showDroneFeed={showDroneFeed}
               setShowDroneFeed={setShowDroneFeed}
             />
@@ -775,6 +779,11 @@ const MainApp: React.FC = () => {
       <SearchTeamsModal
         isOpen={isSearchTeamsModalOpen}
         onClose={() => setIsSearchTeamsModalOpen(false)}
+      />
+
+      <UserListPdfModal
+        isOpen={isUserListPdfOpen}
+        onClose={() => setIsUserListPdfOpen(false)}
       />
       {showDroneFeed && isAdmin && (
         <DroneFeedWidget onClose={() => setShowDroneFeed(false)} />
