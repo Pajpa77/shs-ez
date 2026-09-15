@@ -854,7 +854,7 @@ export const LoginScreen: React.FC = () => {
                             ) : (
                               <button
                                 type="button"
-                                onClick={() => handleLeadershipRoleSelected('ez_command')}
+                                onClick={() => handleLeadershipRoleSelected('searcher')}
                                 className="w-full py-2.5 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow cursor-pointer transition"
                               >
                                 <Shield className="w-4 h-4" />

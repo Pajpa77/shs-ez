@@ -1193,14 +1193,16 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       hqTitle = '📡 EZ';
     }
 
-    // Kräfte in der EZ ermitteln (Leitstand, Admin-EZ oder Helfer in EZ)
-    const ezResponders = allUsers.filter((u) => {
-      if (!u.isActive) return false;
-      const isEzRole = u.operationalRole === 'ez_command';
-      const isEzLoc = userLocations[u.id]?.operationalRole === 'ez_command';
-      const isEzAdmin = currentOperation?.ezAdminIds?.includes(u.id) && u.operationalRole !== 'searcher';
-      return isEzRole || isEzLoc || isEzAdmin;
-    });
+    // Kräfte in der EZ ermitteln (NUR bei einem AKTIVEN Einsatz UND nach Bestätigung auf 🟢 Bereit in der EZ)
+    const isOperationActive = Boolean(currentOperation && currentOperation.status === 'active');
+    const ezResponders = isOperationActive
+      ? allUsers.filter((u) => {
+          if (!u.isActive) return false;
+          const isEzRole = u.operationalRole === 'ez_command' || userLocations[u.id]?.operationalRole === 'ez_command';
+          const isReady = u.arrivalStatus === 'ready' || u.arrivalStatus === 'ez_reached';
+          return isEzRole && isReady;
+        })
+      : [];
 
     const responderCountBadge = ezResponders.length > 0
       ? `<span class="ml-1 px-1.5 py-0.2 bg-emerald-500 text-slate-950 font-black rounded-full text-[10px] shadow">${ezResponders.length}</span>`
@@ -1607,11 +1609,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
         const user = allUsers.find((u) => u.id === userId);
 
-        // EZ-Leitstand check: In EZ verbleibende Führungskräfte haben KEINE Trackingspur (Linie) auf der Karte
+        // EZ-Leitstand check: In EZ verbleibende Führungskräfte (NUR bei aktivem Einsatz und nach 🟢 Bereit Bestätigung)
+        const isOperationActive = Boolean(currentOperation && currentOperation.status === 'active');
         const isEzCommand =
-          locState.operationalRole === 'ez_command' ||
-          user?.operationalRole === 'ez_command' ||
-          (user && currentOperation?.ezAdminIds?.includes(user.id));
+          isOperationActive &&
+          (locState.operationalRole === 'ez_command' || user?.operationalRole === 'ez_command') &&
+          (user?.arrivalStatus === 'ready' || user?.arrivalStatus === 'ez_reached');
 
         if (isEzCommand) {
           return;
@@ -1786,12 +1789,15 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       const user = allUsers.find((u) => u.id === userId);
       if (!user) return;
 
-      // In EZ verbleibende Kräfte (Leitstand / EZ-Personal) werden NICHT als einzelner Pin gerendert,
-      // sondern gesammelt und übersichtlich direkt auf dem EZ-Pin angezeigt
+      // In EZ verbleibende Kräfte (Leitstand / EZ-Personal) werden NUR bei AKTIVEM Einsatz
+      // und ERST NACH BESTÄTIGUNG auf 🟢 BEREIT im EZ-Pin gebündelt.
+      // Außerhalb von Einsätzen oder vor 🟢 Bereit-Bestätigung wird IMMER ihr eigener User-Pin angezeigt!
+      const isOperationActive = Boolean(currentOperation && currentOperation.status === 'active');
       const isEzStaff =
-        user.operationalRole === 'ez_command' ||
-        userLocations[userId]?.operationalRole === 'ez_command' ||
-        (currentOperation?.ezAdminIds?.includes(user.id) && user.operationalRole !== 'searcher');
+        isOperationActive &&
+        (user.operationalRole === 'ez_command' || userLocations[userId]?.operationalRole === 'ez_command') &&
+        (user.arrivalStatus === 'ready' || user.arrivalStatus === 'ez_reached');
+
       if (isEzStaff) return;
 
       // Only display active / logged-in users unless showInactiveResponders is active
@@ -1893,10 +1899,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           respondersLayerRef.current?.addLayer(leg);
         }
 
+        const isOperationActive = Boolean(currentOperation && currentOperation.status === 'active');
         const isEzCommand =
-          item.locState.operationalRole === 'ez_command' ||
-          item.user.operationalRole === 'ez_command' ||
-          (currentOperation?.ezAdminIds?.includes(item.user.id));
+          isOperationActive &&
+          (item.locState.operationalRole === 'ez_command' || item.user.operationalRole === 'ez_command') &&
+          (item.user.arrivalStatus === 'ready' || item.user.arrivalStatus === 'ez_reached');
 
         const badge = isEzCommand
           ? { icon: '🏢', label: 'EZ-Leitstand', color: '#6366f1' }
