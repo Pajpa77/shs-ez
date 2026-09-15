@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import {
   User,
   SearchOperation,
+  OperationStatus,
   SearchSector,
   Finding,
   ChatMessage,
@@ -405,6 +406,72 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   };
 
+  const mergeOperations = (localOp: SearchOperation, cloudOp: SearchOperation): SearchOperation => {
+    const isCloudCompleted = cloudOp.status === 'completed' || cloudOp.status === 'archived';
+    const isLocalCompleted = localOp.status === 'completed' || localOp.status === 'archived';
+
+    const localTime = localOp.updatedAt ? new Date(localOp.updatedAt).getTime() : 0;
+    const cloudTime = cloudOp.updatedAt ? new Date(cloudOp.updatedAt).getTime() : 0;
+    
+    const completedTime = Math.max(
+      cloudOp.completedAt ? new Date(cloudOp.completedAt).getTime() : 0,
+      localOp.completedAt ? new Date(localOp.completedAt).getTime() : 0
+    );
+
+    let status: OperationStatus = cloudOp.status;
+
+    if (isCloudCompleted || isLocalCompleted) {
+      if (localOp.status === 'active' && localTime > completedTime && localTime > cloudTime) {
+        status = 'active';
+      } else if (isCloudCompleted) {
+        status = cloudOp.status;
+      } else {
+        status = localOp.status;
+      }
+    } else {
+      status = cloudTime >= localTime ? cloudOp.status : localOp.status;
+    }
+
+    const base = cloudTime >= localTime ? { ...localOp, ...cloudOp } : { ...localOp };
+
+    const combinedLogs = [...(cloudOp.logs || []), ...(localOp.logs || [])];
+    const logMap = new Map<string, OperationLogEntry>();
+    combinedLogs.forEach((log) => {
+      const key = log.id || `${log.timestamp}-${log.text}`;
+      if (!logMap.has(key)) {
+        logMap.set(key, log);
+      }
+    });
+    const mergedLogs = Array.from(logMap.values()).sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    const combinedTracks = [...(cloudOp.archivedTracks || []), ...(localOp.archivedTracks || [])];
+    const trackMap = new Map<string, ArchivedSearchTrack>();
+    combinedTracks.forEach((t) => {
+      const key = t.id || `${t.userId}-${t.recordedAt}`;
+      if (!trackMap.has(key)) {
+        trackMap.set(key, t);
+      }
+    });
+
+    const combinedArchivedChat = [...(cloudOp.archivedChatMessages || []), ...(localOp.archivedChatMessages || [])];
+    const chatMap = new Map<string, ChatMessage>();
+    combinedArchivedChat.forEach((c) => {
+      if (!chatMap.has(c.id)) {
+        chatMap.set(c.id, c);
+      }
+    });
+
+    return cleanOperation({
+      ...base,
+      status,
+      logs: mergedLogs,
+      archivedTracks: Array.from(trackMap.values()),
+      archivedChatMessages: Array.from(chatMap.values()),
+    });
+  };
+
   const [allOperations, setAllOperations] = useState<SearchOperation[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_OPERATIONS);
@@ -785,22 +852,15 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => clearInterval(interval);
   }, [currentUser?.id, currentUser?.isActive, deviceSessionId]);
 
-  // Real-time check to prevent simultaneous double logins on the same account from ANOTHER device
+  // Real-time check to prevent simultaneous double logins on the same account from ANOTHER device/tab
   useEffect(() => {
     if (!currentUser || !currentUser.isActive || !currentUser.activeSessionId) return;
 
-    const deviceId = localStorage.getItem('rescue_app_device_id_v1') || '';
-    const isSameDevice =
-      currentUser.activeSessionId === deviceSessionId ||
-      (deviceId !== '' && currentUser.activeSessionId.startsWith(deviceId));
+    // Check if the user's active session ID in Firestore matches this tab's deviceSessionId
+    const isSameSession = currentUser.activeSessionId === deviceSessionId;
 
-    const isLiveOnOtherDevice =
-      !isSameDevice &&
-      Boolean(currentUser.lastHeartbeat) &&
-      Date.now() - (currentUser.lastHeartbeat || 0) < 45000;
-
-    if (isLiveOnOtherDevice) {
-      console.log('Simultaneous double login detected from another device, logging out current device session.');
+    if (!isSameSession) {
+      console.log('Simultaneous double login detected from another device/session, logging out current device session.');
       
       // Perform local-only logout
       setCurrentUserId('');
@@ -812,12 +872,12 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       
       playAlertSound('alert');
       setActiveAlertNotification({
-        title: '⚠️ Sitzung beendet',
-        message: 'Ihre Verbindung wurde getrennt, da sich dieses Benutzerkonto auf einem anderen aktiven Gerät angemeldet hat.',
+        title: '⚠️ Sitzung beendet (Neuer Login)',
+        message: 'Ihr Benutzerkonto wurde soeben auf einem anderen Gerät oder Browserfenster angemeldet. Sie wurden hier automatisch abgemeldet.',
         timestamp: new Date().toLocaleTimeString(),
       });
     }
-  }, [currentUser?.activeSessionId, currentUser?.lastHeartbeat, currentUser?.isActive, deviceSessionId]);
+  }, [currentUser?.activeSessionId, currentUser?.isActive, deviceSessionId]);
 
   const currentOperation =
     (currentOperationId
@@ -1360,18 +1420,7 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                   if (!cloudOp) {
                     merged.push(cleanOperation(localOp));
                   } else {
-                    const localTime = localOp.updatedAt ? new Date(localOp.updatedAt).getTime() : 0;
-                    const cloudTime = cloudOp.updatedAt ? new Date(cloudOp.updatedAt).getTime() : 0;
-                    const isLocalRunning = localOp.status === 'active' || localOp.status === 'paused';
-                    const isCloudCompleted = cloudOp.status === 'completed' || cloudOp.status === 'archived';
-
-                    if (isLocalRunning && isCloudCompleted && cloudTime <= localTime) {
-                      merged.push(cleanOperation(localOp));
-                    } else if (cloudTime >= localTime) {
-                      merged.push(cleanOperation({ ...localOp, ...cloudOp }));
-                    } else {
-                      merged.push(cleanOperation(localOp));
-                    }
+                    merged.push(mergeOperations(localOp, cloudOp));
                   }
                 });
 
