@@ -974,6 +974,13 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
               Bestimmt den festen Standort des EZ / der Einsatzleitung für diese Suche/Übung. Bleibt unabhängig vom GPS-Standort der Administratoren fixiert, da die Einsatzleitung selbst an der Suche teilnehmen kann.
             </p>
 
+            <div className="p-2.5 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-[11px] font-mono flex items-start gap-2">
+              <span className="text-base">💡</span>
+              <span>
+                <strong>Feinjustierung auf der Lagekarte:</strong> Nach Eingabe eines Ortes (z.B. <em>Löderburger See</em>) können Sie den <strong>📡 EZ-Pin direkt auf der Lagekarte per Drag &amp; Drop mit der Maus verschieben</strong>, um ihn exakt an das Ufer, den Sammelpunkt oder den Parkplatz zu platzieren.
+              </span>
+            </div>
+
             {/* Schnellauswahl Vorlagen */}
             <div className="flex flex-wrap gap-1.5 pt-1">
               <button

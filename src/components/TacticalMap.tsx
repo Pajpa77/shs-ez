@@ -1226,10 +1226,38 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       iconAnchor: [ezResponders.length > 0 ? 41 : 32, 15],
     });
 
+    const canManageOps = isUserAdminOrEL(currentUser);
+    const isDraggableHq = canManageOps && mode !== 'archive' && Boolean(currentOperation);
+
     const hqMarker = L.marker([hqLat, hqLng], {
       icon: hqIcon,
+      draggable: isDraggableHq,
       zIndexOffset: 1200,
+      title: isDraggableHq ? '📡 EZ (Gedrückt halten & verschieben zum Feinjustieren)' : '📡 EZ',
     });
+
+    if (isDraggableHq) {
+      hqMarker.on('dragend', (e: L.LeafletEvent) => {
+        const marker = e.target as L.Marker;
+        const newPos = marker.getLatLng();
+        const newLat = Number(newPos.lat.toFixed(6));
+        const newLng = Number(newPos.lng.toFixed(6));
+
+        if (currentOperation) {
+          const existingHq = currentOperation.headquartersLocation;
+          const updatedHq = {
+            lat: newLat,
+            lng: newLng,
+            address: existingHq?.address || 'Einsatzzentrale',
+            description: 'Manuell auf Karte feinjustiert',
+          };
+          updateOperation(currentOperation.id, {
+            headquartersLocation: updatedHq,
+          });
+          playAlertSound('notification');
+        }
+      });
+    }
 
     const markerNavData = {
       lat: hqLat,
@@ -1269,6 +1297,10 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       `
       : '';
 
+    const dragHintHtml = isDraggableHq
+      ? `<div class="mt-2 text-[10px] text-amber-300 bg-amber-950/70 p-1.5 rounded border border-amber-700/60 text-center font-mono">📍 EZ-Pin auf der Karte verschiebbar (Gedrückt halten & ziehen zum Ufer/Parkplatz)</div>`
+      : '';
+
     hqMarker.bindPopup(`
       <div class="p-2.5 text-slate-100 font-sans min-w-[220px]">
         <div class="font-bold text-indigo-400 text-sm flex items-center gap-1.5">
@@ -1279,6 +1311,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         <div class="text-[10px] text-slate-400 font-mono mt-0.5">${hqLat.toFixed(5)}° N, ${hqLng.toFixed(5)}° E</div>
         ${!isStandbyOffice && currentOperation ? `<div class="text-xs text-slate-300 mt-1.5 bg-slate-800/80 border border-slate-700 p-1.5 rounded">Einsatz: <strong class="text-white">${currentOperation.title}</strong><br/>Leitung: <strong class="text-white">${currentOperation.commander}</strong></div>` : `<div class="text-[11px] text-emerald-400 font-medium mt-1">🟢 Status: Bereitschaft am Vereinsbüro</div>`}
         ${ezRespondersListHtml}
+        ${dragHintHtml}
         <div class="mt-2.5 pt-2 border-t border-slate-700">
           <a
             href="https://www.google.com/maps/dir/?api=1&destination=${hqLat},${hqLng}"
@@ -1292,7 +1325,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       </div>
     `);
     ezLayerRef.current.addLayer(hqMarker);
-  }, [currentOperation, activeTrackingTest, allUsers, userLocations]);
+  }, [currentOperation, activeTrackingTest, allUsers, userLocations, currentUser, updateOperation, playAlertSound]);
 
   // Render Search Sectors (Suchsektoren)
   useEffect(() => {
