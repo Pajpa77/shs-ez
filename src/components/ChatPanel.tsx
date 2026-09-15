@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { User, ChatMessage } from '../types';
+import { User, ChatMessage, SearchTeam, SearchOperation } from '../types';
 import {
   Send,
   Radio,
@@ -29,6 +29,21 @@ import {
 
 interface ChatPanelProps {
   initialDirectUser?: User | null;
+}
+
+function getTeamLeaderName(team: SearchTeam, allUsers: User[]): string {
+  if (!team || !team.leaderUserId) return 'K.A.';
+  const u = allUsers.find((user) => user.id === team.leaderUserId);
+  return u ? (u.callSign || u.name) : 'K.A.';
+}
+
+function getTeamSectorsText(team: SearchTeam, operation: SearchOperation | null): string {
+  if (!team || !team.sectorIds || team.sectorIds.length === 0) return 'Keine Sektoren';
+  if (!operation || !operation.sectors) return `${team.sectorIds.length} Sektoren`;
+  const names = operation.sectors
+    .filter((s) => team.sectorIds.includes(s.id))
+    .map((s) => s.name);
+  return names.length > 0 ? names.join(', ') : 'Keine Sektoren';
 }
 
 // Audio player component for CB Voice Messages
@@ -375,7 +390,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           activeChannel !== 'all' &&
           activeChannel !== 'admins' &&
           activeChannel !== 'general' &&
-          !activeChannel.startsWith('sec-');
+          !activeChannel.startsWith('sec-') &&
+          !activeChannel.startsWith('team-');
 
         sendChatMessage({
           text: '🎙️ CB-Funk Sprachübertragung',
@@ -510,7 +526,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         return msg.channel === 'all' || msg.channel === 'general';
       } else if (activeChannel === 'admins') {
         return msg.channel === 'admins';
-      } else if (activeChannel.startsWith('sec-')) {
+      } else if (activeChannel.startsWith('sec-') || activeChannel.startsWith('team-')) {
         return msg.channel === activeChannel;
       } else {
         // Direct 1:1 chat
@@ -531,7 +547,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       activeChannel !== 'all' &&
       activeChannel !== 'admins' &&
       activeChannel !== 'general' &&
-      !activeChannel.startsWith('sec-');
+      !activeChannel.startsWith('sec-') &&
+      !activeChannel.startsWith('team-');
 
     const targetOpId = activeScope === 'general' ? 'general' : effectiveOperation?.id || 'general';
 
@@ -559,6 +576,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
   const activeTargetUser = allUsers.find((u) => u.id === activeChannel);
   const activeSector = effectiveOperation?.sectors?.find((s) => s.id === activeChannel);
+  const activeTeam = effectiveOperation?.teams?.find((t) => t.id === activeChannel);
   const activeUsersCount = scopedUsers.filter((u) => u.isActive).length;
 
   const filteredResponders = scopedUsers
@@ -716,8 +734,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       {/* Body Area */}
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 h-full overflow-hidden">
         {/* Left Selector Drawer based on active tab */}
-        <div className="w-full lg:w-80 bg-[#1E293B] border border-slate-700/80 rounded-2xl p-3 flex flex-col justify-between shadow-xl shrink-0 overflow-hidden min-h-0">
-          <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-0 font-mono text-xs">
+        <div className="w-full lg:w-80 bg-[#1E293B] border border-slate-700/80 rounded-2xl p-3 flex flex-col justify-between shadow-xl shrink-0 overflow-hidden max-h-[220px] sm:max-h-[260px] lg:max-h-none min-h-0">
+          <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-0 font-mono text-xs" style={{ WebkitOverflowScrolling: 'touch' }}>
             {mainTab === 'channels' ? (
               // TAB 1: Funkkanäle & Gruppen
               <div className="space-y-3">
@@ -730,7 +748,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                       setActiveChannel('all');
                     }}
                     className={`py-1.5 px-2 rounded-lg font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                      activeScope === 'operation' ? 'bg-blue-600 text-white' : 'text-slate-400'
+                      activeScope === 'operation' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
                     <span>🚨 Einsatzfunk</span>
@@ -742,88 +760,176 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                       setActiveChannel('all');
                     }}
                     className={`py-1.5 px-2 rounded-lg font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                      activeScope === 'general' ? 'bg-emerald-600 text-white' : 'text-slate-400'
+                      activeScope === 'general' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
                     <span>🌐 Vereinsfunk</span>
                   </button>
                 </div>
 
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
-                    FUNKKANÄLE:
-                  </span>
+                {activeScope === 'operation' ? (
+                  <div className="space-y-3">
+                    {/* Primary Operation Channels */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
+                        HAUPTKANÄLE EINSATZ:
+                      </span>
 
-                  {/* Channel: Gesamter Einsatzfunk */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveChannel('all')}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
-                      activeChannel === 'all'
-                        ? 'bg-blue-600 text-white font-bold shadow ring-1 ring-blue-400'
-                        : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <span className="text-base">📢</span>
-                      <div className="truncate">
-                        <div className="font-bold leading-tight uppercase">
-                          {activeScope === 'general' ? 'Allgemeiner Vereinsfunk' : 'Gesamter Einsatzfunk'}
-                        </div>
-                        <div className="text-[10px] opacity-75">{activeUsersCount} Einheiten online</div>
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Channel: Führungskanal EL */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveChannel('admins')}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
-                      activeChannel === 'admins'
-                        ? 'bg-red-700 text-white font-bold shadow ring-1 ring-red-400'
-                        : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <span className="text-base">🛡️</span>
-                      <div className="truncate">
-                        <div className="font-bold leading-tight uppercase">Führungskanal EL</div>
-                        <div className="text-[10px] opacity-75">Geschützter Chat Einsatzleitung</div>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-
-                {/* Sektor Funkkanäle */}
-                {activeScope === 'operation' && effectiveOperation?.sectors && effectiveOperation.sectors.length > 0 && (
-                  <div className="space-y-1 pt-2 border-t border-slate-700">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
-                      SEKTOR-FUNKKANÄLE:
-                    </span>
-
-                    {effectiveOperation.sectors.map((sec) => (
+                      {/* Channel: Gesamter Einsatzfunk */}
                       <button
                         type="button"
-                        key={sec.id}
-                        onClick={() => setActiveChannel(sec.id)}
-                        className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer text-left ${
-                          activeChannel === sec.id
-                            ? 'bg-amber-500/20 border border-amber-500 text-amber-200 font-bold'
-                            : 'bg-slate-800/60 hover:bg-slate-700/60 text-slate-300'
+                        onClick={() => setActiveChannel('all')}
+                        className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
+                          activeChannel === 'all'
+                            ? 'bg-blue-600 text-white font-bold shadow ring-1 ring-blue-400'
+                            : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
                         }`}
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+                          <span className="text-base">📢</span>
                           <div className="truncate">
-                            <div className="font-bold truncate">{sec.name}</div>
-                            <div className="text-[10px] text-slate-400">
-                              {sec.assignedUserIds?.length || 0} Kräfte zugeteilt
-                            </div>
+                            <div className="font-bold leading-tight uppercase">Gesamter Einsatzfunk</div>
+                            <div className="text-[10px] opacity-75">{activeUsersCount} Einheiten online</div>
                           </div>
                         </div>
                       </button>
-                    ))}
+
+                      {/* Channel: Führungskanal EL */}
+                      <button
+                        type="button"
+                        onClick={() => setActiveChannel('admins')}
+                        className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
+                          activeChannel === 'admins'
+                            ? 'bg-red-700 text-white font-bold shadow ring-1 ring-red-400'
+                            : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="text-base">🛡️</span>
+                          <div className="truncate">
+                            <div className="font-bold leading-tight uppercase">Führungskanal EL</div>
+                            <div className="text-[10px] opacity-75">Geschützter Chat Einsatzleitung</div>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+
+                    {/* Suchtrupps / Gruppen-Funkkanäle */}
+                    <div className="space-y-1 pt-2 border-t border-slate-700">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider block">
+                          👥 SUCHTRUPPS &amp; GRUPPEN ({effectiveOperation?.teams?.length || 0}):
+                        </span>
+                      </div>
+
+                      {effectiveOperation?.teams && effectiveOperation.teams.length > 0 ? (
+                        effectiveOperation.teams.map((team) => {
+                          const isSelected = activeChannel === team.id;
+                          const totalMembers = (team.memberUserIds?.length || 0) + (team.externalVolunteersCount || 0);
+                          return (
+                            <button
+                              type="button"
+                              key={team.id}
+                              onClick={() => setActiveChannel(team.id)}
+                              className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
+                                isSelected
+                                  ? 'bg-blue-700 border border-blue-400 text-white font-bold shadow'
+                                  : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                <span className="text-base shrink-0">👥</span>
+                                <div className="truncate">
+                                  <div className="font-bold truncate leading-tight text-amber-300">{team.name}</div>
+                                  <div className="text-[10px] text-slate-400 truncate">
+                                    {totalMembers} Helfer • Sektoren: {getTeamSectorsText(team, effectiveOperation)}
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="text-[10px] text-slate-500 italic px-2 py-1">
+                          Keine Suchtrupps / Gruppen gebildet.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Sektor Funkkanäle */}
+                    {effectiveOperation?.sectors && effectiveOperation.sectors.length > 0 && (
+                      <div className="space-y-1 pt-2 border-t border-slate-700">
+                        <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider px-1 block">
+                          🧭 SEKTOR-FUNKKANÄLE:
+                        </span>
+
+                        {effectiveOperation.sectors.map((sec) => (
+                          <button
+                            type="button"
+                            key={sec.id}
+                            onClick={() => setActiveChannel(sec.id)}
+                            className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer text-left ${
+                              activeChannel === sec.id
+                                ? 'bg-amber-500/20 border border-amber-500 text-amber-200 font-bold'
+                                : 'bg-slate-800/60 hover:bg-slate-700/60 text-slate-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+                              <div className="truncate">
+                                <div className="font-bold truncate">{sec.name}</div>
+                                <div className="text-[10px] text-slate-400">
+                                  {sec.assignedUserIds?.length || 0} Kräfte zugeteilt
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Vereinsfunk Scope */
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider px-1 block">
+                      VEREINSFUNK (ALLGEMEIN):
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveChannel('all')}
+                      className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
+                        activeChannel === 'all'
+                          ? 'bg-emerald-600 text-white font-bold shadow ring-1 ring-emerald-400'
+                          : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="text-base">💬</span>
+                        <div className="truncate">
+                          <div className="font-bold leading-tight uppercase">Allgemeiner Vereinsfunk</div>
+                          <div className="text-[10px] opacity-75">Spürhunde-Salzlandkreis e.V. Hauptchat</div>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveChannel('admins')}
+                      className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
+                        activeChannel === 'admins'
+                          ? 'bg-red-700 text-white font-bold shadow ring-1 ring-red-400'
+                          : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="text-base">🛡️</span>
+                        <div className="truncate">
+                          <div className="font-bold leading-tight uppercase">Vorstand &amp; Admins</div>
+                          <div className="text-[10px] opacity-75">Geschützter Vereinskanal</div>
+                        </div>
+                      </div>
+                    </button>
                   </div>
                 )}
               </div>
@@ -905,7 +1011,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                   ? '📢'
                   : activeChannel === 'admins'
                   ? '🛡️'
-                  : activeChannel.startsWith('sec-')
+                  : activeTeam
+                  ? '👥'
+                  : activeSector
                   ? '🧭'
                   : '💬'}
               </div>
@@ -918,6 +1026,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                         : 'Gesamter Einsatzfunk'
                       : activeChannel === 'admins'
                       ? 'Führungskanal EL'
+                      : activeTeam
+                      ? `Gruppenfunk: ${activeTeam.name}`
                       : activeSector
                       ? `Funk Sektor: ${activeSector.name}`
                       : `Direktfunk mit: ${activeTargetUser?.name || 'Suchkraft'}`}
@@ -933,6 +1043,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                     ? `${activeUsersCount} Einsatzkräfte online`
                     : activeChannel === 'admins'
                     ? 'Geschützter Führungskanal der Einsatzleitung'
+                    : activeTeam
+                    ? `Gruppen-Funkkanal (${(activeTeam.memberUserIds?.length || 0) + (activeTeam.externalVolunteersCount || 0)} Kräfte • Sektoren: ${getTeamSectorsText(activeTeam, effectiveOperation)})`
                     : activeSector
                     ? `Sektor-Funk (${secAssignedCount(activeSector, allUsers)} online)`
                     : `Direkte 1:1 Verbindung • KFZ: ${activeTargetUser?.licensePlate || 'k.A.'}`}
@@ -942,7 +1054,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           </div>
 
           {/* Active Radio Feed Messages */}
-          <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-3 bg-[#0F172A]/50">
+          <div
+            className="flex-1 p-2 sm:p-4 pb-12 sm:pb-8 overflow-y-auto space-y-3 bg-[#0F172A]/50 touch-pan-y"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {activeChannelMessages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-500 text-xs space-y-2 font-mono">
                 <Radio className="w-8 h-8 opacity-30 text-blue-400 animate-pulse" />
