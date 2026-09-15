@@ -411,6 +411,7 @@ const MainApp: React.FC = () => {
           setIsUserManagementOpen(true);
         }}
         onOpenShareAppModal={() => setIsShareAppModalOpen(true)}
+        onOpenUserListPdfModal={() => setIsUserListPdfOpen(true)}
         isAnyModalOpen={isAnyModalOpen}
       />
 
@@ -571,6 +572,7 @@ const MainApp: React.FC = () => {
               }}
               onOpenSearchTeams={() => setIsSearchTeamsModalOpen(true)}
               onFocusUserOnMap={() => setActiveTab('map')}
+              onOpenUserListPdfModal={() => setIsUserListPdfOpen(true)}
             />
           </div>
         )}

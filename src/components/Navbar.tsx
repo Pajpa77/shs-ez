@@ -192,6 +192,7 @@ interface NavbarProps {
   onOpenEditUser?: (user: User) => void;
   onStartDrawingSector?: () => void;
   onOpenShareAppModal?: () => void;
+  onOpenUserListPdfModal?: () => void;
   isAnyModalOpen?: boolean;
   onSelectArchiveOp?: (opId: string) => void;
 }
@@ -212,6 +213,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenEditUser,
   onStartDrawingSector,
   onOpenShareAppModal,
+  onOpenUserListPdfModal,
   isAnyModalOpen = false,
   onSelectArchiveOp,
 }) => {
@@ -642,6 +644,30 @@ export const Navbar: React.FC<NavbarProps> = ({
                           </div>
                           <div className="text-[10px] text-slate-400 font-mono truncate">
                             Direktlink & QR-Code für Helfer vor Ort
+                          </div>
+                        </div>
+                      </button>
+                    )}
+
+                    {/* 7. User-Liste mit Strichcodes als PDF speichern / drucken */}
+                    {onOpenUserListPdfModal && (
+                      <button
+                        onClick={() => {
+                          setShowSarAdminMenu(false);
+                          onOpenUserListPdfModal();
+                        }}
+                        className="w-full flex items-center gap-3 p-2 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-200 hover:text-white border border-emerald-800/60 hover:border-emerald-400 transition cursor-pointer text-left group shadow-sm"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition">
+                          🪪
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-xs flex items-center justify-between">
+                            <span>Strichcode-Liste (PDF)</span>
+                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-900 text-emerald-200 border border-emerald-700">Drucken</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono truncate">
+                            Profil-Daten inkl. Strichcode aller Mitglieder
                           </div>
                         </div>
                       </button>

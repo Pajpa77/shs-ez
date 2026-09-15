@@ -34,6 +34,7 @@ interface ResponderListProps {
   onOpenDirectChat: (user: User) => void;
   onOpenSearchTeams: () => void;
   onFocusUserOnMap: () => void;
+  onOpenUserListPdfModal?: () => void;
 }
 
 function getEquipmentBadges(equipment: EquipmentType[] = []): { icon: string; label: string; color: string }[] {
@@ -68,6 +69,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
   onOpenDirectChat,
   onOpenSearchTeams,
   onFocusUserOnMap,
+  onOpenUserListPdfModal,
 }) => {
   const {
     allUsers,
@@ -192,6 +194,17 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                 <Plus className="w-4 h-4" />
                 Einsatzkraft anlegen
               </button>
+
+              {onOpenUserListPdfModal && (
+                <button
+                  onClick={onOpenUserListPdfModal}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-xl text-xs font-bold border border-slate-700 shadow-lg transition cursor-pointer font-mono"
+                  title="PDF-Liste aller Mitglieder mit Ausweis-Strichcodes drucken & speichern"
+                >
+                  <CreditCard className="w-4 h-4 text-emerald-400" />
+                  <span>🪪 Strichcode-Liste PDF</span>
+                </button>
+              )}
             </>
           )}
         </div>
