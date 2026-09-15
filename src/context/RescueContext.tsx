@@ -4089,7 +4089,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             const updatedUser: User = {
               ...u,
               isActive: true,
-              lastSeen: 'Gerade eben',
+              lastSeen: 'Aktiviert bei Reaktivierung',
               updatedAt: now,
             };
             syncUserToCloud(updatedUser);
@@ -4099,12 +4099,29 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         });
         try {
           localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(next));
-        } catch { /* ignore */ }
+        } catch {}
         return next;
       });
     }
 
-    // 6. Broadcast chat alert
+    // 6. Reload archived chat history for this operation if re-activated
+    if (op.archivedChatMessages && op.archivedChatMessages.length > 0) {
+      setChatMessages((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const missingMsgs = op.archivedChatMessages!.filter((m) => !existingIds.has(m.id));
+        if (missingMsgs.length > 0) {
+          const merged = [...prev, ...missingMsgs].sort(
+            (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          );
+          try {
+            localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(merged));
+          } catch {}
+          return merged;
+        }
+        return prev;
+      });
+    }
+
     const reactivateChatMsg: ChatMessage = {
       id: `msg-reactivate-${Date.now()}`,
       operationId: id,

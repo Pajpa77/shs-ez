@@ -208,12 +208,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     findings,
   } = useRescue();
 
-  // Primary navigation tab: 'channels' (Kanäle & Gruppen) vs 'responders' (Einsatzkräfte & Direktchat)
-  const [mainTab, setMainTab] = useState<'channels' | 'responders'>('channels');
+  // Primary navigation tab: 'channels' (Kanäle & Gruppen) vs 'findings' (Fundmeldungen mit Infos)
+  const [mainTab, setMainTab] = useState<'channels' | 'findings'>('channels');
 
   // Active channel/user ID
   const [activeChannel, setActiveChannel] = useState<string>('all'); // 'all', 'admins', sectorId, or userId
-  const [activeScope, setActiveScope] = useState<'operation' | 'general'>(() =>
+  const [activeScope, setActiveScope] = useState<'operation' | 'responders' | 'general'>(() =>
     currentOperation ? 'operation' : 'general'
   );
   const [selectedOpId, setSelectedOpId] = useState<string>(
@@ -256,7 +256,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
   useEffect(() => {
     if (initialDirectUser) {
-      setMainTab('responders');
+      setMainTab('channels');
+      setActiveScope('responders');
       setActiveChannel(initialDirectUser.id);
     } else if (currentUser?.role === 'observer') {
       setActiveChannel('admins');
@@ -487,8 +488,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     );
   }, [chatMessages]);
 
-  // 2. Alert & Finding messages: Status changes (activation/pause/end/reactivation) & Findings
-  const alertAndFindingMessages = useMemo(() => {
+  // 2. Alert messages: Status changes & emergency alerts
+  const alertMessages = useMemo(() => {
     return chatMessages.filter(
       (m) =>
         m.isAlert ||
@@ -496,8 +497,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         m.text.includes('EINSATZ BEENDET') ||
         m.text.includes('EINSATZ PAUSIERT') ||
         m.text.includes('EINSATZ WIEDERAUFGENOMMEN') ||
-        m.text.includes('REALEINSATZ') ||
-        m.text.includes('Fund')
+        m.text.includes('REALEINSATZ')
     );
   }, [chatMessages]);
 
@@ -651,18 +651,18 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
             )}
           </button>
 
-          {/* Button: 🚨 Alarme & Funde */}
+          {/* Button: 🚨 Alarme */}
           <button
             type="button"
             onClick={() => setShowAlertsModal(true)}
             className="px-2.5 py-1.5 rounded-xl bg-red-950/80 hover:bg-red-900 border border-red-700/80 text-red-200 font-bold flex items-center gap-1.5 transition cursor-pointer relative"
-            title="Alarme, Statusänderungen & Fundmeldungen mit GPS"
+            title="Alarme & Statusänderungen"
           >
             <AlertTriangle className="w-3.5 h-3.5 text-red-400 animate-pulse" />
-            <span>🚨 Alarme & Funde</span>
-            {alertAndFindingMessages.length > 0 && (
+            <span>🚨 Alarme</span>
+            {alertMessages.length > 0 && (
               <span className="px-1.5 py-0.2 rounded-full bg-red-600 text-white text-[9px] font-bold">
-                {alertAndFindingMessages.length}
+                {alertMessages.length}
               </span>
             )}
           </button>
@@ -697,15 +697,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         </div>
       </div>
 
-      {/* Main 2-Tab Navigation Bar requested by user */}
+      {/* Main 2-Tab Navigation Bar: Funkkanäle & Kommunikation vs Fundmeldungen mit Infos */}
       <div className="grid grid-cols-2 gap-2 p-1 bg-[#1E293B] border border-slate-700/80 rounded-xl mb-3 shrink-0 font-mono text-xs">
         <button
           type="button"
           onClick={() => {
             setMainTab('channels');
-            if (activeChannel !== 'all' && activeChannel !== 'admins' && !activeChannel.startsWith('sec-')) {
-              setActiveChannel('all');
-            }
           }}
           className={`py-2 px-3 rounded-lg font-extrabold transition flex items-center justify-center gap-2 cursor-pointer ${
             mainTab === 'channels'
@@ -714,58 +711,141 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           }`}
         >
           <Radio className="w-4 h-4" />
-          <span>📻 Funkkanäle & Gruppen</span>
+          <span>📻 Funkkanäle &amp; Kommunikation</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setMainTab('responders')}
-          className={`py-2 px-3 rounded-lg font-extrabold transition flex items-center justify-center gap-2 cursor-pointer ${
-            mainTab === 'responders'
-              ? 'bg-blue-600 text-white shadow-lg ring-1 ring-blue-400/50'
+          onClick={() => setMainTab('findings')}
+          className={`py-2 px-3 rounded-lg font-extrabold transition flex items-center justify-center gap-2 cursor-pointer relative ${
+            mainTab === 'findings'
+              ? 'bg-amber-600 text-white shadow-lg ring-1 ring-amber-400/50'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Users className="w-4 h-4" />
-          <span>👥 Einsatzkräfte & Direktchat ({activeUsersCount} Online)</span>
+          <AlertTriangle className="w-4 h-4 text-amber-300" />
+          <span>🔍 Fundmeldungen mit Infos</span>
+          {findings && findings.length > 0 && (
+            <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[10px] font-bold">
+              {findings.length}
+            </span>
+          )}
         </button>
       </div>
 
       {/* Body Area */}
-      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 h-full overflow-hidden">
-        {/* Left Selector Drawer based on active tab */}
-        <div className="w-full lg:w-80 bg-[#1E293B] border border-slate-700/80 rounded-2xl p-3 flex flex-col justify-between shadow-xl shrink-0 overflow-hidden max-h-[220px] sm:max-h-[260px] lg:max-h-none min-h-0">
-          <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-0 font-mono text-xs" style={{ WebkitOverflowScrolling: 'touch' }}>
-            {mainTab === 'channels' ? (
-              // TAB 1: Funkkanäle & Gruppen
-              <div className="space-y-3">
-                {/* Scope Switcher: Einsatzfunk vs Vereinsfunk */}
-                <div className="grid grid-cols-2 gap-1 p-1 bg-slate-900 border border-slate-700 rounded-xl text-[10px]">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveScope('operation');
-                      setActiveChannel('all');
-                    }}
-                    className={`py-1.5 px-2 rounded-lg font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                      activeScope === 'operation' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <span>🚨 Einsatzfunk</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveScope('general');
-                      setActiveChannel('all');
-                    }}
-                    className={`py-1.5 px-2 rounded-lg font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                      activeScope === 'general' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <span>🌐 Vereinsfunk</span>
-                  </button>
+      {mainTab === 'findings' ? (
+        /* Dedicated Fundmeldungen mit Infos View */
+        <div className="flex-1 bg-[#1E293B] border border-slate-700/80 rounded-2xl p-4 sm:p-6 shadow-xl overflow-y-auto space-y-4 font-mono text-xs">
+          <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-400 animate-pulse" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                Dokumentierte Fundmeldungen &amp; Fundstücke ({findings?.length || 0})
+              </h3>
+            </div>
+            <span className="text-[10px] text-slate-400">Chronologische Aufzeichnung mit GPS &amp; Fotos</span>
+          </div>
+
+          {(!findings || findings.length === 0) ? (
+            <div className="p-12 text-center text-slate-500 space-y-2">
+              <div className="text-3xl">🔍</div>
+              <div className="font-bold text-white">Bisher keine Fundmeldungen dokumentiert</div>
+              <p className="text-slate-400 text-[11px]">
+                Nutzen Sie die rote Schaltfläche "FUND!" auf der Lagekarte, um relevante Funde mit GPS-Koordinaten zu melden.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {findings.map((f) => (
+                <div key={f.id} className="bg-slate-900/90 border border-slate-700 p-4 rounded-xl space-y-3 shadow-lg">
+                  <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-2">
+                    <div>
+                      <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 text-[10px] font-bold uppercase border border-amber-600/50">
+                        {f.category || 'Fundstück'}
+                      </span>
+                      <h4 className="text-sm font-bold text-white mt-1">{f.title}</h4>
+                    </div>
+                    <span className="text-[10px] text-slate-400 shrink-0">
+                      {new Date(f.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+
+                  {f.mediaUrl && (
+                    <div className="h-40 rounded-lg overflow-hidden bg-slate-950 border border-slate-800">
+                      <img src={f.mediaUrl} alt={f.title} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+
+                  <p className="text-slate-200 text-xs font-sans leading-relaxed">{f.description || 'Keine nähere Beschreibung angegeben.'}</p>
+
+                  <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
+                    <div>
+                      Gemeldet von: <strong className="text-white">{f.userName}</strong>
+                    </div>
+                    {f.location && (
+                      <a
+                        href={`https://www.google.com/maps?q=${f.location.lat},${f.location.lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2.5 py-1 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 font-bold flex items-center gap-1 transition"
+                      >
+                        <MapPin className="w-3 h-3 text-amber-400" />
+                        <span>GPS Karte</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 h-full overflow-hidden">
+          {/* Left Selector Drawer: 3-Way Scope Switcher (Einsatzfunk, Einsatzkräfte, Vereinsfunk) */}
+          <div className="w-full lg:w-80 bg-[#1E293B] border border-slate-700/80 rounded-2xl p-3 flex flex-col justify-between shadow-xl shrink-0 overflow-hidden max-h-[240px] sm:max-h-[280px] lg:max-h-none min-h-0">
+            <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-0 font-mono text-xs" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {/* Scope Switcher: 3 Options */}
+              <div className="grid grid-cols-3 gap-1 p-1 bg-slate-900 border border-slate-700 rounded-xl text-[9px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveScope('operation');
+                    setActiveChannel('all');
+                  }}
+                  className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-0.5 cursor-pointer truncate ${
+                    activeScope === 'operation' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Einsatzbezogene Funkkanäle & Gruppen"
+                >
+                  <span>🚨 Einsatz</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveScope('responders');
+                  }}
+                  className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-0.5 cursor-pointer truncate ${
+                    activeScope === 'responders' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Liste aller Suchkräfte & 1:1 Direktchat"
+                >
+                  <span>👥 Kräfte</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveScope('general');
+                    setActiveChannel('all');
+                  }}
+                  className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-0.5 cursor-pointer truncate ${
+                    activeScope === 'general' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Allgemeiner Vereinsfunk & Vorstand"
+                >
+                  <span>🌐 Verein</span>
+                </button>
+              </div>
 
                 {activeScope === 'operation' ? (
                   <div className="space-y-3">
@@ -888,6 +968,70 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                       </div>
                     )}
                   </div>
+                ) : activeScope === 'responders' ? (
+                  /* Einsatzkräfte & Direktchat Scope */
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={userSearchQuery}
+                        onChange={(e) => setUserSearchQuery(e.target.value)}
+                        placeholder="Sucher / Funkname suchen..."
+                        className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider px-1 block">
+                        DIREKTCHAT MIT EINSATZKRAFT ({filteredResponders.length}):
+                      </span>
+
+                      {filteredResponders.map((user) => {
+                        const isLive = userLocations[user.id]?.isLive ?? user.isActive;
+                        const isSelected = activeChannel === user.id;
+
+                        return (
+                          <button
+                            type="button"
+                            key={user.id}
+                            onClick={() => setActiveChannel(user.id)}
+                            className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer text-left ${
+                              isSelected
+                                ? 'bg-blue-600 text-white font-bold shadow'
+                                : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <div className="relative h-7 w-7 rounded-lg overflow-hidden bg-slate-900 shrink-0 border border-slate-700 flex items-center justify-center font-bold text-white text-xs">
+                                {user.photoUrl ? (
+                                  <img src={user.photoUrl} alt={user.name} className="h-full w-full object-cover" />
+                                ) : (
+                                  user.name.charAt(0)
+                                )}
+                                <span
+                                  className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-slate-900 ${
+                                    isLive ? 'bg-emerald-500' : 'bg-slate-500'
+                                  }`}
+                                />
+                              </div>
+                              <div className="truncate">
+                                <div className="font-bold truncate leading-tight flex items-center gap-1">
+                                  <span className="truncate">{user.name}</span>
+                                  {user.role === 'admin' && (
+                                    <span className="text-[8px] px-1 rounded bg-red-950 text-red-300 font-mono">EL</span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-blue-300 font-mono truncate">
+                                  {user.callSign} {user.licensePlate ? `• ${user.licensePlate}` : ''}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ) : (
                   /* Vereinsfunk Scope */
                   <div className="space-y-1">
@@ -933,73 +1077,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                   </div>
                 )}
               </div>
-            ) : (
-              // TAB 2: Einsatzkräfte & Direktchat
-              <div className="space-y-3">
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
-                  <input
-                    type="text"
-                    value={userSearchQuery}
-                    onChange={(e) => setUserSearchQuery(e.target.value)}
-                    placeholder="Sucher / Funkname suchen..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
-                    DIREKTCHAT MIT EINSATZKRAFT ({filteredResponders.length}):
-                  </span>
-
-                  {filteredResponders.map((user) => {
-                    const isLive = userLocations[user.id]?.isLive ?? user.isActive;
-                    const isSelected = activeChannel === user.id;
-
-                    return (
-                      <button
-                        type="button"
-                        key={user.id}
-                        onClick={() => setActiveChannel(user.id)}
-                        className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer text-left ${
-                          isSelected
-                            ? 'bg-blue-600 text-white font-bold shadow'
-                            : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <div className="relative h-7 w-7 rounded-lg overflow-hidden bg-slate-900 shrink-0 border border-slate-700 flex items-center justify-center font-bold text-white text-xs">
-                            {user.photoUrl ? (
-                              <img src={user.photoUrl} alt={user.name} className="h-full w-full object-cover" />
-                            ) : (
-                              user.name.charAt(0)
-                            )}
-                            <span
-                              className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-slate-900 ${
-                                isLive ? 'bg-emerald-500' : 'bg-slate-500'
-                              }`}
-                            />
-                          </div>
-                          <div className="truncate">
-                            <div className="font-bold truncate leading-tight flex items-center gap-1">
-                              <span className="truncate">{user.name}</span>
-                              {user.role === 'admin' && (
-                                <span className="text-[8px] px-1 rounded bg-red-950 text-red-300 font-mono">EL</span>
-                              )}
-                            </div>
-                            <div className="text-[10px] text-blue-300 font-mono truncate">
-                              {user.callSign} {user.licensePlate ? `• ${user.licensePlate}` : ''}
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+            </div>
 
         {/* Main Active Radio & Chat Area */}
         <div className="flex-1 bg-[#1E293B] border border-slate-700/80 rounded-2xl flex flex-col justify-between shadow-xl overflow-hidden min-h-0">
@@ -1229,6 +1307,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           </form>
         </div>
       </div>
+      )}
 
       {/* --- MODAL 1: 📜 Chatverlauf --- */}
       {showHistoryModal && (
@@ -1393,12 +1472,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
               {/* Status Alert Messages */}
               <span className="text-xs font-bold text-red-400 uppercase tracking-wider block">
-                STATUS- & EILMELDUNGEN ({alertAndFindingMessages.length}):
+                STATUS- &amp; EILMELDUNGEN ({alertMessages.length}):
               </span>
-              {alertAndFindingMessages.length === 0 ? (
+              {alertMessages.length === 0 ? (
                 <div className="text-center py-8 text-slate-500 text-xs">Keine besonderen Alarme vorhanden.</div>
               ) : (
-                alertAndFindingMessages.map((msg) => (
+                alertMessages.map((msg) => (
                   <div key={msg.id} className="p-3 rounded-xl bg-red-950/40 border border-red-700/60 space-y-1 text-xs">
                     <div className="flex items-center justify-between text-[10px] text-red-300">
                       <span className="font-bold">{msg.senderName} ({msg.senderCallSign})</span>
