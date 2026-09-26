@@ -187,7 +187,9 @@ interface RescueContextType {
     isVoiceMessage?: boolean;
   }) => void;
   sendEmergencyAlert: (customMessage: string) => void;
-
+  clearChatHistory: () => void;
+  clearLogbook: () => void;
+  clearAlerts: () => void;
   // Cloud Sync State
   isCloudSynced: boolean;
   cloudSyncStatus: 'connected' | 'connecting' | 'offline' | 'quota_exceeded';
@@ -593,6 +595,54 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       localStorage.setItem(STORAGE_KEY_LAST_READ_CHAT, String(now));
     } catch {}
+  }, []);
+
+  const clearChatHistory = useCallback(() => {
+    setChatMessages((prev) =>
+      prev.filter(
+        (m) =>
+          m.channel === 'system' ||
+          m.channel === 'logs' ||
+          m.text.includes('hat sich soeben eingeloggt') ||
+          m.text.includes('hat das System verlassen') ||
+          m.isAlert ||
+          m.text.includes('EINSATZ REAKTIVIERT') ||
+          m.text.includes('EINSATZ BEENDET') ||
+          m.text.includes('EINSATZ PAUSIERT') ||
+          m.text.includes('EINSATZ WIEDERAUFGENOMMEN') ||
+          m.text.includes('REALEINSATZ')
+      )
+    );
+  }, []);
+
+  const clearLogbook = useCallback(() => {
+    setChatMessages((prev) =>
+      prev.filter(
+        (m) =>
+          !(
+            m.channel === 'system' ||
+            m.channel === 'logs' ||
+            m.text.includes('hat sich soeben eingeloggt') ||
+            m.text.includes('hat das System verlassen')
+          )
+      )
+    );
+  }, []);
+
+  const clearAlerts = useCallback(() => {
+    setChatMessages((prev) =>
+      prev.filter(
+        (m) =>
+          !(
+            m.isAlert ||
+            m.text.includes('EINSATZ REAKTIVIERT') ||
+            m.text.includes('EINSATZ BEENDET') ||
+            m.text.includes('EINSATZ PAUSIERT') ||
+            m.text.includes('EINSATZ WIEDERAUFGENOMMEN') ||
+            m.text.includes('REALEINSATZ')
+          )
+      )
+    );
   }, []);
 
   const [isRealGpsActive, setIsRealGpsActive] = useState<boolean>(true);
@@ -5177,6 +5227,9 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         markChatAsRead,
         sendChatMessage,
         sendEmergencyAlert,
+        clearChatHistory,
+        clearLogbook,
+        clearAlerts,
 
         isCloudSynced: cloudSyncStatus === 'connected',
         cloudSyncStatus,

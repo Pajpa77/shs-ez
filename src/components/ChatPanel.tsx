@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { User, ChatMessage, SearchTeam, SearchOperation } from '../types';
+import { User, ChatMessage, SearchTeam, SearchOperation, isFirstAdmin } from '../types';
 import {
   Send,
   Radio,
@@ -206,6 +206,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     userLocations,
     playAlertSound,
     findings,
+    clearChatHistory,
+    clearLogbook,
+    clearAlerts,
   } = useRescue();
 
   // Primary navigation tab: 'channels' (Kanäle & Gruppen) vs 'findings' (Fundmeldungen mit Infos)
@@ -1104,9 +1107,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         {/* Main Active Radio & Chat Area */}
         <div className="flex-1 bg-[#1E293B] border border-slate-700/80 rounded-2xl flex flex-col justify-between shadow-xl overflow-hidden min-h-0">
           {/* Active Target Header */}
-          <div className="bg-slate-900/90 p-3 border-b border-slate-700 flex items-center justify-between gap-2 shrink-0">
-            <div className="flex items-center gap-2.5 truncate">
-              <div className="h-8 w-8 rounded-xl bg-slate-800 border border-slate-700 text-blue-400 flex items-center justify-center font-bold text-base shrink-0">
+          <div className="bg-slate-800 p-4 border-b border-slate-600 flex items-center justify-between gap-3 shrink-0 shadow-md z-10">
+            <div className="flex items-center gap-3 truncate">
+              <div className="h-10 w-10 rounded-xl bg-slate-900 border border-slate-600 shadow-inner text-blue-400 flex items-center justify-center font-bold text-xl shrink-0">
                 {activeChannel === 'all'
                   ? '📢'
                   : activeChannel === 'admins'
@@ -1118,7 +1121,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                   : '💬'}
               </div>
               <div className="truncate">
-                <h3 className="font-extrabold text-xs sm:text-sm text-white uppercase tracking-wide truncate flex items-center gap-1.5">
+                <h3 className="font-extrabold text-sm sm:text-base text-white uppercase tracking-wide truncate flex items-center gap-2">
                   <span className="truncate">
                     {activeChannel === 'all'
                       ? 'Gesamter Einsatzfunk'
@@ -1131,12 +1134,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                       : `Direktfunk mit: ${activeTargetUser?.name || 'Suchkraft'}`}
                   </span>
                   {activeTargetUser && (
-                    <span className="text-xs text-blue-400 font-mono font-semibold shrink-0">
-                      ({activeTargetUser.callSign})
+                    <span className="text-sm text-blue-400 font-mono font-semibold shrink-0 bg-blue-900/30 px-2 py-0.5 rounded-lg border border-blue-800/50">
+                      {activeTargetUser.callSign}
                     </span>
                   )}
                 </h3>
-                <p className="text-[10px] text-slate-400 font-mono truncate">
+                <p className="text-xs text-slate-300 font-sans truncate mt-0.5">
                   {activeChannel === 'all'
                     ? `${activeUsersCount} Einsatzkräfte online`
                     : activeChannel === 'admins'
@@ -1153,12 +1156,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
           {/* Active Radio Feed Messages */}
           <div
-            className="flex-1 p-2 sm:p-4 pb-12 sm:pb-8 overflow-y-auto space-y-3 bg-[#0F172A]/50 touch-pan-y"
+            className="flex-1 p-3 sm:p-5 pb-12 sm:pb-8 overflow-y-auto space-y-4 bg-[#0B1120] touch-pan-y shadow-inner"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {activeChannelMessages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-500 text-xs space-y-2 font-mono">
-                <Radio className="w-8 h-8 opacity-30 text-blue-400 animate-pulse" />
+              <div className="h-full flex flex-col items-center justify-center text-slate-500 text-sm space-y-3 font-sans">
+                <Radio className="w-10 h-10 opacity-40 text-blue-400 animate-pulse" />
                 <span>Keine Funksprüche im aktiven Kanal vorhanden.</span>
               </div>
             ) : (
@@ -1171,15 +1174,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                   <div
                     key={msg.id}
                     className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} ${
-                      isSameSender ? 'mt-1' : 'mt-3'
+                      isSameSender ? 'mt-1' : 'mt-4'
                     }`}
                   >
                     {!isSameSender && (
-                      <div className="flex items-center gap-1.5 px-2 mb-1 text-[11px] text-slate-400">
+                      <div className="flex items-center gap-2 px-2 mb-1.5 text-xs text-slate-400">
                         <span className="font-bold text-slate-200">{isMe ? 'Du' : msg.senderName}</span>
-                        <span className="text-[10px] text-blue-400 font-mono">({msg.senderCallSign})</span>
+                        <span className="text-[10px] text-blue-300 font-mono font-semibold">({msg.senderCallSign})</span>
                         {msg.senderRole === 'admin' && (
-                          <span className="text-[9px] px-1 py-0.2 rounded bg-red-950 text-red-300 font-mono font-bold">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-600 text-white font-mono font-bold shadow-sm">
                             EL
                           </span>
                         )}
@@ -1190,13 +1193,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                     )}
 
                     <div
-                      className={`max-w-[88%] sm:max-w-[75%] p-3 rounded-2xl text-xs space-y-1 shadow-md transition ${
+                      className={`max-w-[88%] sm:max-w-[75%] px-4 py-3 rounded-2xl text-sm space-y-2 shadow-lg transition ${
                         isMe
-                          ? 'bg-blue-600 text-white rounded-br-none'
-                          : 'bg-slate-800 text-slate-100 rounded-bl-none border border-slate-700'
+                          ? 'bg-blue-600 text-white rounded-br-none shadow-blue-900/50'
+                          : 'bg-slate-700 text-slate-50 rounded-bl-none border border-slate-600 shadow-slate-900/50'
                       }`}
                     >
-                      {msg.text && <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
+                      {msg.text && <p className="leading-relaxed whitespace-pre-wrap font-medium">{msg.text}</p>}
 
                       {msg.isVoiceMessage && msg.audioUrl && (
                         <VoiceMessagePlayer audioUrl={msg.audioUrl} duration={msg.audioDuration} isMe={isMe} />
@@ -1257,26 +1260,26 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           )}
 
           {/* Input Bar */}
-          <form onSubmit={handleSend} className="bg-slate-900/95 p-2.5 sm:p-3 border-t border-slate-700/80 space-y-2">
+          <form onSubmit={handleSend} className="bg-slate-800 p-3 sm:p-4 border-t border-slate-600 space-y-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.2)]">
             <div className="flex items-center justify-between text-xs px-1">
               <button
                 type="button"
                 onClick={() => setIncludeLocation(!includeLocation)}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer font-mono ${
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer font-sans ${
                   includeLocation
                     ? 'bg-blue-500/20 text-blue-300 border-blue-500'
-                    : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                    : 'bg-slate-900 text-slate-300 border-slate-700 hover:text-slate-100 hover:bg-slate-700'
                 }`}
               >
-                <MapPin className="w-3.5 h-3.5" />
+                <MapPin className="w-4 h-4" />
                 <span>GPS-Standort anhängen</span>
               </button>
-              <div className="text-[10px] text-slate-400 font-mono hidden sm:block">
+              <div className="text-[11px] text-slate-400 font-medium hidden sm:block bg-slate-900/50 px-2 py-1 rounded">
                 Sprechtaste halten zum Senden (oder tippen)
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onPointerDown={handlePttPointerDown}
@@ -1285,14 +1288,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 onClick={handlePttButtonClick}
                 onContextMenu={(e) => e.preventDefault()}
                 title={isRecording ? 'Klicken zum Beenden und Senden' : 'Gedrückt halten zum Sprechen'}
-                className={`h-10 px-3.5 rounded-xl flex items-center justify-center gap-1.5 font-bold text-xs transition cursor-pointer shrink-0 border select-none touch-none ${
+                className={`h-11 px-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition cursor-pointer shrink-0 border select-none touch-none ${
                   isRecording
-                    ? 'bg-red-600 text-white border-red-400 animate-pulse shadow-lg'
-                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-400 shadow active:scale-95'
+                    ? 'bg-red-600 text-white border-red-500 animate-pulse shadow-lg ring-2 ring-red-500/50'
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-900 border-amber-400 shadow-md active:scale-95'
                 }`}
               >
-                <Mic className="w-4 h-4" />
-                <span className="hidden sm:inline font-mono uppercase tracking-tight">
+                <Mic className="w-5 h-5" />
+                <span className="hidden sm:inline font-sans uppercase tracking-wide">
                   {isRecording ? 'Senden' : 'CB-Funk'}
                 </span>
               </button>
@@ -1301,7 +1304,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder={`Funkspruch senden an ${
+                placeholder={`Nachricht an ${
                   activeChannel === 'all'
                     ? 'alle Einheiten'
                     : activeChannel === 'admins'
@@ -1310,15 +1313,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                     ? `Sektor ${activeSector.name}`
                     : activeTargetUser?.callSign || 'Kanal'
                 }...`}
-                className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:outline-none focus:border-blue-500 placeholder-slate-500 font-mono"
+                className="flex-1 px-4 py-3 rounded-xl bg-slate-900 border border-slate-600 text-slate-50 text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 placeholder-slate-400 font-sans shadow-inner"
               />
 
               <button
                 type="submit"
                 disabled={!inputText.trim() && !includeLocation}
-                className="h-10 px-4 sm:px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg disabled:opacity-40 transition cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                className="h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg disabled:opacity-40 transition cursor-pointer flex items-center justify-center gap-2 shrink-0"
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-5 h-5" />
                 <span className="hidden sm:inline">Senden</span>
               </button>
             </div>
@@ -1330,8 +1333,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       {/* --- MODAL 1: 📜 Chatverlauf --- */}
       {showHistoryModal && (
         <div className="fixed inset-0 z-[6000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-4xl text-slate-100 flex flex-col h-[85vh] overflow-hidden">
-            <div className="bg-slate-900 p-4 border-b border-slate-700 flex items-center justify-between shrink-0">
+          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-4xl text-slate-100 flex flex-col h-[85vh] overflow-hidden printable-chat-modal">
+            <div className="bg-slate-900 p-4 border-b border-slate-700 flex items-center justify-between shrink-0 hide-on-print">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-blue-400" />
                 <div>
@@ -1343,15 +1346,29 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowHistoryModal(false)}
-                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {isFirstAdmin(currentUser) && (
+                  <button
+                    onClick={() => {
+                      window.print();
+                      setTimeout(() => clearChatHistory(), 1000);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer"
+                    title="Drucken / Als PDF speichern und anschließend leeren"
+                  >
+                    Als PDF speichern & Leeren
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowHistoryModal(false)}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <div className="p-3 bg-slate-900/50 border-b border-slate-700 shrink-0">
+            <div className="p-3 bg-slate-900/50 border-b border-slate-700 shrink-0 hide-on-print">
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                 <input
@@ -1364,9 +1381,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
               </div>
             </div>
 
-            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#0F172A]/40 font-mono">
+            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#0F172A]/40 font-mono printable-area">
               {chatMessages
                 .filter((m) => {
+                  if (
+                    m.channel === 'system' ||
+                    m.channel === 'logs' ||
+                    m.text.includes('hat sich soeben eingeloggt') ||
+                    m.text.includes('hat das System verlassen')
+                  ) {
+                    return false;
+                  }
                   if (!historySearchQuery.trim()) return true;
                   const q = historySearchQuery.toLowerCase();
                   return (
@@ -1397,8 +1422,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       {/* --- MODAL 2: 📋 Logbuch (Ein- und Ausloggen) --- */}
       {showLogbookModal && (
         <div className="fixed inset-0 z-[6000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-3xl text-slate-100 flex flex-col h-[80vh] overflow-hidden">
-            <div className="bg-slate-900 p-4 border-b border-slate-700 flex items-center justify-between shrink-0">
+          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-3xl text-slate-100 flex flex-col h-[80vh] overflow-hidden printable-chat-modal">
+            <div className="bg-slate-900 p-4 border-b border-slate-700 flex items-center justify-between shrink-0 hide-on-print">
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-slate-400" />
                 <div>
@@ -1410,15 +1435,29 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowLogbookModal(false)}
-                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {isFirstAdmin(currentUser) && (
+                  <button
+                    onClick={() => {
+                      window.print();
+                      setTimeout(() => clearLogbook(), 1000);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer"
+                    title="Drucken / Als PDF speichern und anschließend leeren"
+                  >
+                    Als PDF speichern & Leeren
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowLogbookModal(false)}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <div className="flex-1 p-4 overflow-y-auto space-y-2 bg-[#0F172A]/40 font-mono">
+            <div className="flex-1 p-4 overflow-y-auto space-y-2 bg-[#0F172A]/40 font-mono printable-area">
               {logbookMessages.length === 0 ? (
                 <div className="text-center py-12 text-slate-500 text-xs">Keine Logbuch-Einträge vorhanden.</div>
               ) : (
@@ -1443,8 +1482,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       {/* --- MODAL 3: 🚨 Alarme & Funde --- */}
       {showAlertsModal && (
         <div className="fixed inset-0 z-[6000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className="bg-[#1E293B] border border-red-900/80 rounded-2xl shadow-2xl w-full max-w-4xl text-slate-100 flex flex-col h-[85vh] overflow-hidden">
-            <div className="bg-red-950/90 p-4 border-b border-red-800 flex items-center justify-between shrink-0">
+          <div className="bg-[#1E293B] border border-red-900/80 rounded-2xl shadow-2xl w-full max-w-4xl text-slate-100 flex flex-col h-[85vh] overflow-hidden printable-chat-modal">
+            <div className="bg-red-950/90 p-4 border-b border-red-800 flex items-center justify-between shrink-0 hide-on-print">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-red-400 animate-pulse" />
                 <div>
@@ -1456,15 +1495,29 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowAlertsModal(false)}
-                className="p-1.5 rounded-lg bg-black/30 hover:bg-black/50 text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {isFirstAdmin(currentUser) && (
+                  <button
+                    onClick={() => {
+                      window.print();
+                      setTimeout(() => clearAlerts(), 1000);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer"
+                    title="Drucken / Als PDF speichern und anschließend leeren"
+                  >
+                    Als PDF speichern & Leeren
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowAlertsModal(false)}
+                  className="p-1.5 rounded-lg bg-black/30 hover:bg-black/50 text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#0F172A]/40 font-mono">
+            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#0F172A]/40 font-mono printable-area">
               {/* Findings section */}
               {findings && findings.length > 0 && (
                 <div className="space-y-2 mb-4">
