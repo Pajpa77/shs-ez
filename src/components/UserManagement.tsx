@@ -174,18 +174,18 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       setCustomEquipmentNotes(user.customEquipmentNotes || '');
     } else {
       setUsername('');
-      setPassword('sucher123');
+      setPassword('');
       setName('');
       setRole('responder');
       setIsAlsoAdmin(false);
       setCanLeadOperations(false);
-      setCallSign('Sucher ' + Math.floor(10 + Math.random() * 90));
-      setLicensePlate('SLK-' + Math.floor(100 + Math.random() * 900));
-      setMemberId('SHS-' + Math.floor(100000 + Math.random() * 900000));
-      setPhone('+49 170 ' + Math.floor(1000000 + Math.random() * 9000000));
+      setCallSign('');
+      setLicensePlate('');
+      setMemberId('');
+      setPhone('');
       setOrganization('Spürhunde-Salzlandkreis e.V.');
       setPhotoUrl('');
-      setEquipment(['k9_mantrailer']);
+      setEquipment(['foot_search']);
       setCustomEquipmentTags([]);
       setCustomEquipmentNotes('');
     }
@@ -379,25 +379,41 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md overflow-y-auto font-sans">
       <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl text-black dark:text-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-white dark:bg-slate-900/90 p-4 border-b border-slate-300 dark:border-slate-700 flex items-center justify-between">
+        <div className={`p-4 border-b flex items-center justify-between ${
+          !activeUser 
+            ? 'bg-blue-50 dark:bg-blue-900/40 border-blue-300 dark:border-blue-700'
+            : 'bg-white dark:bg-slate-900/90 border-slate-300 dark:border-slate-700'
+        }`}>
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-blue-400 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-xl">
+            <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold text-xl border ${
+              !activeUser
+                ? 'bg-blue-100 dark:bg-blue-800/50 text-blue-600 dark:text-blue-300 border-blue-300 dark:border-blue-600'
+                : 'bg-slate-50 dark:bg-slate-800 text-blue-600 dark:text-blue-400 border-slate-300 dark:border-slate-700'
+            }`}>
               <Key className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white uppercase tracking-wide">
-                {activeUser ? `Account bearbeiten: ${activeUser.name}` : 'Neuen Account anlegen & Zugangsdaten vergeben'}
+              <h2 className={`text-sm font-bold uppercase tracking-wide ${
+                !activeUser ? 'text-blue-800 dark:text-blue-100' : 'text-slate-900 dark:text-white'
+              }`}>
+                {activeUser ? `Account bearbeiten: ${activeUser.name}` : 'Neuen Account anlegen (Bitte unten ausfüllen)'}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                Einsatzleitung vergibt Logindaten, Funkrufnamen, KFZ und Hilfsmittel
+              <p className={`text-xs font-mono ${
+                !activeUser ? 'text-blue-700 dark:text-blue-300' : 'text-slate-500 dark:text-slate-400'
+              }`}>
+                {activeUser ? 'Einsatzleitung ändert Logindaten' : 'Das Formular ist nun leer und bereit für einen neuen User'}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 flex items-center justify-center transition cursor-pointer"
+            className={`h-8 w-8 rounded-lg flex items-center justify-center transition cursor-pointer border ${
+              !activeUser
+                ? 'bg-blue-100/50 hover:bg-blue-200 dark:bg-blue-800/30 dark:hover:bg-blue-800/50 border-blue-200 dark:border-blue-700'
+                : 'bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border-slate-300 dark:border-slate-700'
+            }`}
           >
-            <X className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+            <X className={`w-4 h-4 ${!activeUser ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`} />
           </button>
         </div>
 
@@ -414,16 +430,18 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               onClick={() => populateForm(null)}
               className={`px-2.5 py-1.5 rounded-xl border text-left transition shrink-0 cursor-pointer font-mono text-[11px] flex items-center gap-2 ${
                 !activeUser
-                  ? 'bg-blue-600/30 border-blue-400 text-white shadow ring-1 ring-blue-400'
-                  : 'bg-white dark:bg-slate-900 border-dashed border-blue-500/50 text-blue-300 hover:bg-slate-50 dark:bg-slate-800'
+                  ? 'bg-blue-600 border-blue-500 text-white shadow ring-2 ring-blue-400/50'
+                  : 'bg-white dark:bg-slate-900 border-dashed border-blue-500/50 text-blue-600 dark:text-blue-300 hover:bg-slate-50 dark:bg-slate-800'
               }`}
             >
-              <div className="w-5 h-5 rounded-full bg-blue-600/40 text-blue-300 border border-blue-400/50 flex items-center justify-center font-bold text-xs">
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-xs ${
+                !activeUser ? 'bg-white/20 text-white' : 'bg-blue-600/10 text-blue-600 dark:text-blue-400'
+              }`}>
                 +
               </div>
               <div>
-                <div className="font-bold">Neuer Account</div>
-                <div className="text-[9px] text-slate-500 dark:text-slate-400 font-normal">Formular leeren</div>
+                <div className="font-bold">{!activeUser ? 'Neuen Account (aktiv)' : 'Neuen Account'}</div>
+                <div className="text-[9px] font-normal opacity-80">Formular leeren</div>
               </div>
             </button>
             {allUsers.map((u) => {
