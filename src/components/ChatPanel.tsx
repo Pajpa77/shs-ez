@@ -233,6 +233,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
   const [historySearchQuery, setHistorySearchQuery] = useState('');
   const [autoPlayAudio, setAutoPlayAudio] = useState(true);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Push-To-Talk Voice Recording State
   const [isRecording, setIsRecording] = useState(false);
@@ -799,8 +800,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         </div>
       ) : (
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 h-full overflow-hidden">
+          {/* Mobile Toggle Button for Sidebar */}
+          <div className="lg:hidden shrink-0">
+            <button
+              onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+              className="w-full py-2 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-600 text-xs font-bold text-blue-300 flex items-center justify-center gap-2 shadow transition"
+            >
+              <span>{isMobileSidebarOpen ? '🔽' : '▶️'}</span>
+              <span>{isMobileSidebarOpen ? 'Kanäle & Kontakte ausblenden' : 'Kanäle & Kontakte einblenden'}</span>
+            </button>
+          </div>
+
           {/* Left Selector Drawer: 3-Way Scope Switcher (Einsatzfunk, Einsatzkräfte, Vereinsfunk) */}
-          <div className="w-full lg:w-80 bg-[#1E293B] border border-slate-700/80 rounded-2xl p-3 flex flex-col justify-between shadow-xl shrink-0 overflow-hidden max-h-[240px] sm:max-h-[280px] lg:max-h-none min-h-0">
+          <div className={`w-full lg:w-80 bg-[#1E293B] border border-slate-700/80 rounded-2xl p-3 flex-col justify-between shadow-xl shrink-0 overflow-hidden min-h-0 ${isMobileSidebarOpen ? 'flex max-h-[30vh]' : 'hidden lg:flex lg:max-h-none'}`}>
             <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-0 font-mono text-xs" style={{ WebkitOverflowScrolling: 'touch' }}>
               {/* Scope Switcher: 2 Options (Einsatz & Kräfte) */}
               <div className="grid grid-cols-2 gap-1 p-1 bg-slate-900 border border-slate-700 rounded-xl text-[10px] font-bold">
@@ -1156,7 +1168,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
           {/* Active Radio Feed Messages */}
           <div
-            className="flex-1 p-3 sm:p-5 pb-12 sm:pb-8 overflow-y-auto space-y-4 bg-[#0B1120] touch-pan-y shadow-inner"
+            className="flex-1 p-3 sm:p-5 pb-12 sm:pb-8 overflow-y-auto space-y-4 bg-slate-900/60 touch-pan-y shadow-inner"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {activeChannelMessages.length === 0 ? (
@@ -1193,10 +1205,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                     )}
 
                     <div
-                      className={`max-w-[88%] sm:max-w-[75%] px-4 py-3 rounded-2xl text-sm space-y-2 shadow-lg transition ${
+                      className={`max-w-[92%] sm:max-w-[75%] px-4 py-3 rounded-2xl text-sm space-y-2 shadow-lg transition ${
                         isMe
-                          ? 'bg-blue-600 text-white rounded-br-none shadow-blue-900/50'
-                          : 'bg-slate-700 text-slate-50 rounded-bl-none border border-slate-600 shadow-slate-900/50'
+                          ? 'bg-gradient-to-br from-emerald-600 to-teal-500 text-white rounded-br-none shadow-emerald-900/30 border border-emerald-400/50'
+                          : 'bg-[#1E293B] text-slate-100 rounded-bl-none border border-slate-700 shadow-slate-900/50'
                       }`}
                     >
                       {msg.text && <p className="leading-relaxed whitespace-pre-wrap font-medium">{msg.text}</p>}
@@ -1260,7 +1272,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           )}
 
           {/* Input Bar */}
-          <form onSubmit={handleSend} className="bg-slate-800 p-3 sm:p-4 border-t border-slate-600 space-y-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.2)]">
+          <form onSubmit={handleSend} className="bg-slate-900 p-3 sm:p-4 border-t border-slate-700/80 space-y-3 shadow-lg rounded-b-2xl">
             <div className="flex items-center justify-between text-xs px-1">
               <button
                 type="button"
