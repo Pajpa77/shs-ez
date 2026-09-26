@@ -3,7 +3,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import JsBarcode from 'jsbarcode';
 import { useRescue } from '../context/RescueContext';
-import { User, isUserAdmin } from '../types';
+import { User, isUserAdmin, isFirstAdmin } from '../types';
 import {
   Users,
   X,
@@ -30,6 +30,7 @@ export const UserListPdfModal: React.FC<UserListPdfModalProps> = ({ isOpen, onCl
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [showCredentials, setShowCredentials] = useState(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -251,6 +252,17 @@ export const UserListPdfModal: React.FC<UserListPdfModalProps> = ({ isOpen, onCl
               <option value="active">Nur Aktive Online ({allUsers.filter((u) => u.isActive).length})</option>
             </select>
           </div>
+          {isFirstAdmin(currentUser) && (
+            <label className="flex items-center gap-2 text-[11px] text-red-300 font-bold bg-red-950/40 border border-red-900/50 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-red-900/60 transition ml-2">
+              <input
+                type="checkbox"
+                checked={showCredentials}
+                onChange={(e) => setShowCredentials(e.target.checked)}
+                className="rounded border-red-700 text-red-600 focus:ring-red-500/30"
+              />
+              Zugangsdaten (Benutzer & Passwort) einblenden
+            </label>
+          )}
         </div>
 
         {/* Scrollable Preview Grid inside Modal */}
@@ -309,6 +321,14 @@ export const UserListPdfModal: React.FC<UserListPdfModalProps> = ({ isOpen, onCl
                   </div>
                 )}
 
+                {/* Zugangsdaten (nur First Admin) */}
+                {showCredentials && (
+                  <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 p-2 rounded-lg mt-2 text-[10px] font-mono text-red-800 dark:text-red-300">
+                    <div><strong>Benutzer:</strong> {u.username}</div>
+                    {u.password && <div><strong>Passwort:</strong> {u.password}</div>}
+                  </div>
+                )}
+
                 {/* Strichcode Canvas Container */}
                 <div className="bg-white p-2 rounded-xl border border-slate-300 flex flex-col items-center justify-center shadow-inner mt-2">
                   <canvas id={`user-barcode-canvas-${u.id}`} className="max-w-full h-auto" />
@@ -345,16 +365,32 @@ export const UserListPdfModal: React.FC<UserListPdfModalProps> = ({ isOpen, onCl
                 className="border border-gray-400 p-3 rounded-lg flex flex-col justify-between bg-white text-black break-inside-avoid"
               >
                 <div className="flex items-start justify-between gap-2 border-b border-gray-300 pb-2 mb-2">
-                  <div>
-                    <h3 className="font-bold text-sm text-black uppercase">{u.name}</h3>
-                    <div className="text-xs text-blue-900 font-mono font-bold">
-                      Funkrufname: {u.callSign} {u.licensePlate ? `• KFZ: ${u.licensePlate}` : ''}
+                  <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 rounded overflow-hidden bg-gray-100 border border-gray-300 shrink-0 flex items-center justify-center font-bold text-lg text-gray-400">
+                      {u.photoUrl ? (
+                        <img src={u.photoUrl} alt={u.name} className="w-full h-full object-cover" />
+                      ) : (
+                        u.name.charAt(0)
+                      )}
                     </div>
-                    <div className="text-[10px] text-gray-600 font-mono">
-                      Rolle: {u.role.toUpperCase()} • Ausweis-ID: {u.memberId || u.id}
+                    <div>
+                      <h3 className="font-bold text-sm text-black uppercase">{u.name}</h3>
+                      <div className="text-xs text-blue-900 font-mono font-bold">
+                        Funkrufname: {u.callSign} {u.licensePlate ? `• KFZ: ${u.licensePlate}` : ''}
+                      </div>
+                      <div className="text-[10px] text-gray-600 font-mono">
+                        Rolle: {u.role.toUpperCase()} • Ausweis-ID: {u.memberId || u.id}
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {showCredentials && (
+                  <div className="bg-red-50 border border-red-200 p-1.5 mb-2 rounded text-[10px] font-mono text-red-900">
+                    <div><strong>Benutzer:</strong> {u.username}</div>
+                    {u.password && <div><strong>Passwort:</strong> {u.password}</div>}
+                  </div>
+                )}
 
                 <div className="flex items-center justify-center p-1 bg-white border border-gray-300 rounded">
                   <canvas id={`user-barcode-canvas-${u.id}-print`} className="max-w-full h-auto" />
