@@ -1121,20 +1121,30 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           {/* Active Target Header */}
           <div className="bg-slate-800 p-4 border-b border-slate-600 flex items-center justify-between gap-3 shrink-0 shadow-md z-10">
             <div className="flex items-center gap-3 truncate">
-              <div className="h-10 w-10 rounded-xl bg-slate-900 border border-slate-600 shadow-inner text-blue-400 flex items-center justify-center font-bold text-xl shrink-0">
-                {activeChannel === 'all'
-                  ? '📢'
-                  : activeChannel === 'admins'
-                  ? '🛡️'
-                  : activeTeam
-                  ? '👥'
-                  : activeSector
-                  ? '🧭'
-                  : '💬'}
-              </div>
+              {activeTargetUser ? (
+                <div className="relative h-10 w-10 rounded-full overflow-hidden bg-slate-700 border border-slate-500 shadow-inner flex items-center justify-center font-bold text-white text-lg shrink-0">
+                  {activeTargetUser.photoUrl ? (
+                    <img src={activeTargetUser.photoUrl} alt={activeTargetUser.name} className="h-full w-full object-cover" />
+                  ) : (
+                    activeTargetUser.name.charAt(0)
+                  )}
+                </div>
+              ) : (
+                <div className="h-10 w-10 rounded-xl bg-slate-900 border border-slate-600 shadow-inner text-blue-400 flex items-center justify-center font-bold text-xl shrink-0">
+                  {activeChannel === 'all'
+                    ? '📢'
+                    : activeChannel === 'admins'
+                    ? '🛡️'
+                    : activeTeam
+                    ? '👥'
+                    : activeSector
+                    ? '🧭'
+                    : '💬'}
+                </div>
+              )}
               <div className="truncate">
-                <h3 className="font-extrabold text-sm sm:text-base text-white uppercase tracking-wide truncate flex items-center gap-2">
-                  <span className="truncate">
+                <h3 className="font-extrabold text-sm sm:text-base text-white tracking-wide truncate flex items-center gap-2">
+                  <span className="truncate uppercase">
                     {activeChannel === 'all'
                       ? 'Gesamter Einsatzfunk'
                       : activeChannel === 'admins'
@@ -1143,25 +1153,40 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                       ? `Gruppenfunk: ${activeTeam.name}`
                       : activeSector
                       ? `Funk Sektor: ${activeSector.name}`
-                      : `Direktfunk mit: ${activeTargetUser?.name || 'Suchkraft'}`}
+                      : ''}
                   </span>
                   {activeTargetUser && (
-                    <span className="text-sm text-blue-400 font-mono font-semibold shrink-0 bg-blue-900/30 px-2 py-0.5 rounded-lg border border-blue-800/50">
+                    <span className="truncate">{activeTargetUser.name}</span>
+                  )}
+                  {activeTargetUser && (
+                    <span className="text-[10px] sm:text-xs text-blue-300 font-mono font-semibold shrink-0 bg-blue-900/40 px-2 py-0.5 rounded-full border border-blue-700/50">
                       {activeTargetUser.callSign}
                     </span>
                   )}
                 </h3>
-                <p className="text-xs text-slate-300 font-sans truncate mt-0.5">
-                  {activeChannel === 'all'
-                    ? `${activeUsersCount} Einsatzkräfte online`
-                    : activeChannel === 'admins'
-                    ? 'Geschützter Führungskanal der Einsatzleitung'
-                    : activeTeam
-                    ? `Gruppen-Funkkanal (${(activeTeam.memberUserIds?.length || 0) + (activeTeam.externalVolunteersCount || 0)} Kräfte • Sektoren: ${getTeamSectorsText(activeTeam, effectiveOperation)})`
-                    : activeSector
-                    ? `Sektor-Funk (${secAssignedCount(activeSector, allUsers)} online)`
-                    : `Direkte 1:1 Verbindung • KFZ: ${activeTargetUser?.licensePlate || 'k.A.'}`}
-                </p>
+                <div className="text-xs text-slate-300 font-sans truncate mt-0.5 flex items-center gap-1.5">
+                  {activeTargetUser ? (
+                    <>
+                      <span className={`w-2 h-2 rounded-full ${userLocations[activeTargetUser.id]?.isLive || activeTargetUser.isActive ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]' : 'bg-slate-500'}`} />
+                      <span className={userLocations[activeTargetUser.id]?.isLive || activeTargetUser.isActive ? 'text-emerald-400 font-medium' : 'text-slate-400'}>
+                        {userLocations[activeTargetUser.id]?.isLive || activeTargetUser.isActive ? 'Online' : 'Offline'}
+                      </span>
+                      {activeTargetUser.licensePlate && <span className="opacity-75 font-mono text-[10px]">• KFZ: {activeTargetUser.licensePlate}</span>}
+                    </>
+                  ) : (
+                    <span>
+                      {activeChannel === 'all'
+                        ? `${activeUsersCount} Einsatzkräfte online`
+                        : activeChannel === 'admins'
+                        ? 'Geschützter Führungskanal der Einsatzleitung'
+                        : activeTeam
+                        ? `Gruppen-Funkkanal (${(activeTeam.memberUserIds?.length || 0) + (activeTeam.externalVolunteersCount || 0)} Kräfte)`
+                        : activeSector
+                        ? `Sektor-Funk (${secAssignedCount(activeSector, allUsers)} online)`
+                        : ''}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
