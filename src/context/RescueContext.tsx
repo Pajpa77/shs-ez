@@ -21,6 +21,7 @@ import {
   isOwner,
   getUserTrackColor,
   TACTICAL_TRACK_COLORS,
+  isUserAdminOrEL,
 } from '../types';
 import { useWakeLock } from '../hooks/useWakeLock';
 import {
@@ -1376,11 +1377,14 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const isCharging = Boolean(battery.charging);
 
             setAllUsers((prev) =>
-              prev.map((u) =>
-                u.id === currentUserId
-                  ? { ...u, batteryLevel: level, batteryCharging: isCharging }
-                  : u
-              )
+              prev.map((u) => {
+                if (u.id === currentUserId) {
+                  const updated = { ...u, batteryLevel: level, batteryCharging: isCharging };
+                  syncUserToCloud(updated);
+                  return updated;
+                }
+                return u;
+              })
             );
           };
 
@@ -2025,6 +2029,55 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       'users'
     );
   }, []);
+
+  const alertedLowBatteryUserIdsRef = useRef<Set<string>>(new Set());
+
+  // Battery Telemetry & Automatic Low Battery Alert for Incident Command (EZ)
+  useEffect(() => {
+    if (!currentUser || !currentOperation || (currentOperation.status !== 'active' && currentOperation.status !== 'planned')) return;
+
+    allUsers.forEach((u) => {
+      const isParticipant = (currentOperation.participantIds?.includes(u.id) || u.isActive) && u.role !== 'observer';
+      const battery = u.batteryLevel;
+      const isLow = battery !== undefined && battery > 0 && battery <= 15 && !u.batteryCharging && isParticipant;
+
+      if (isLow && !alertedLowBatteryUserIdsRef.current.has(u.id)) {
+        alertedLowBatteryUserIdsRef.current.add(u.id);
+
+        const warningMsg = `🔋 AKKU-WARNUNG: Suchkraft "${u.name}" (${u.callSign || 'Sucher'}) hat nur noch ${battery}% Akku! Powerbank anfordern oder Funkgerät nutzen.`;
+
+        const logEntry: OperationLogEntry = {
+          id: `log-batt-${u.id}-${Date.now()}`,
+          operationId: currentOperation.id,
+          timestamp: new Date().toISOString(),
+          category: 'member',
+          text: warningMsg,
+          authorName: 'System / Akku-Wächter',
+          authorRole: 'admin',
+        };
+
+        setAllOperations((prev) =>
+          prev.map((op) =>
+            op.id === currentOperation.id
+              ? { ...op, logs: [...(op.logs || []), logEntry] }
+              : op
+          )
+        );
+
+        // Alert chime and banner if current user is Admin or Einsatzleitung
+        if (isUserAdminOrEL(currentUser)) {
+          playAlertSound('ping');
+          setActiveAlertNotification({
+            title: '⚠️ KRITISCHER AKKUSTAND IM FELD',
+            message: `${u.name} (${u.callSign || 'Suchkraft'}): nur noch ${battery}% Akku verbleibend!`,
+            timestamp: new Date().toLocaleTimeString(),
+          });
+        }
+      } else if (battery !== undefined && (battery > 25 || u.batteryCharging)) {
+        alertedLowBatteryUserIdsRef.current.delete(u.id);
+      }
+    });
+  }, [allUsers, currentUser, currentOperation]);
 
 function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371e3;

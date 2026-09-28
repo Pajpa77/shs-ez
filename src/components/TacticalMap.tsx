@@ -54,8 +54,13 @@ import {
   Save,
   Building2,
   Search,
+  FileUp,
+  WifiOff,
 } from 'lucide-react';
 import { useDraggable } from '../hooks/useDraggable';
+import { GeoImportModal } from './GeoImportModal';
+import { OfflineMapModal } from './OfflineMapModal';
+import { ImportedTrack, ImportedWaypoint } from '../lib/geoImport';
 
 function escapeHtml(str: unknown): string {
   if (str === null || str === undefined) return '';
@@ -214,6 +219,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     activeTrackingTest,
     updateOperation,
     playAlertSound,
+    addMultipleSectors,
+    reportFinding,
   } = useRescue();
 
   const currentOperation = propOperation !== undefined ? propOperation : globalOperation;
@@ -244,6 +251,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const [showWeatherOverlay, setShowWeatherOverlay] = useState(true);
   const [isWeatherModalOpenMobile, setIsWeatherModalOpenMobile] = useState(false);
   const [isLayersOpenMobile, setIsLayersOpenMobile] = useState(false);
+  const [isGeoImportOpen, setIsGeoImportOpen] = useState(false);
+  const [isOfflineModalOpen, setIsOfflineModalOpen] = useState(false);
+  const [externalImportedTracks, setExternalImportedTracks] = useState<ImportedTrack[]>([]);
   const [isMobileScreen, setIsMobileScreen] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.innerWidth < 768 || window.innerHeight <= 500;
@@ -448,6 +458,58 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       title: 'Vereinsbüro Aschersleben',
     };
   }, [currentOperation]);
+
+  // Bounding box for offline tile caching
+  const operationSearchBounds = useMemo(() => {
+    const sectors = currentOperation?.sectors || [];
+    if (sectors.length === 0) {
+      if (weatherTarget.lat && weatherTarget.lng) {
+        return {
+          minLat: weatherTarget.lat - 0.03,
+          maxLat: weatherTarget.lat + 0.03,
+          minLng: weatherTarget.lng - 0.04,
+          maxLng: weatherTarget.lng + 0.04,
+        };
+      }
+      return undefined;
+    }
+    let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+    sectors.forEach((sec) => {
+      sec.polygon.forEach(([lat, lng]) => {
+        if (lat < minLat) minLat = lat;
+        if (lat > maxLat) maxLat = lat;
+        if (lng < minLng) minLng = lng;
+        if (lng > maxLng) maxLng = lng;
+      });
+    });
+    if (minLat > maxLat) return undefined;
+    return {
+      minLat: minLat - 0.006,
+      maxLat: maxLat + 0.006,
+      minLng: minLng - 0.008,
+      maxLng: maxLng + 0.008,
+    };
+  }, [currentOperation, weatherTarget]);
+
+  const handleImportSectors = (newSectors: Omit<SearchSector, 'id' | 'operationId'>[]) => {
+    addMultipleSectors(newSectors);
+  };
+
+  const handleImportTracks = (tracks: ImportedTrack[]) => {
+    setExternalImportedTracks((prev) => [...prev, ...tracks]);
+  };
+
+  const handleImportWaypoints = (waypoints: ImportedWaypoint[]) => {
+    waypoints.forEach((w) => {
+      reportFinding({
+        title: w.name,
+        description: w.description || 'Importierter GPX/KML Wegpunkt / Hinweis',
+        category: 'other',
+        urgency: 'standard',
+        location: { lat: w.lat, lng: w.lng, timestamp: new Date().toISOString() },
+      });
+    });
+  };
 
   interface TrackSummaryItem {
     userId: string;
@@ -1789,7 +1851,34 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         }
       });
     }
-  }, [userLocations, allUsers, currentOperation, showTracks, showInactiveResponders, isArchiveMode, activeTrackingTest]);
+
+    // Render external imported tracks (e.g. from police / forestry GPX/KML import)
+    if (showTracks && externalImportedTracks.length > 0) {
+      externalImportedTracks.forEach((trk) => {
+        const latlngs: [number, number][] = trk.points.map((p) => [p.lat, p.lng]);
+        if (latlngs.length >= 2) {
+          const extPolyline = L.polyline(latlngs, {
+            color: '#38BDF8',
+            weight: 3.5,
+            opacity: 0.9,
+            dashArray: '6, 6',
+          });
+          extPolyline.bindPopup(`
+            <div style="font-family: system-ui, sans-serif; min-width: 170px;">
+              <div style="font-weight: 800; font-size: 13px; color: #0284c7; margin-bottom: 2px;">
+                📁 ${escapeHtml(trk.name)}
+              </div>
+              <div style="font-size: 11px; color: #64748b; font-family: monospace;">
+                Externe Referenzspur (GPX/KML)<br/>
+                ${trk.points.length} Punkte • ${(trk.distanceMeters / 1000).toFixed(2)} km
+              </div>
+            </div>
+          `);
+          tracksLayerRef.current?.addLayer(extPolyline);
+        }
+      });
+    }
+  }, [userLocations, allUsers, currentOperation, showTracks, showInactiveResponders, isArchiveMode, activeTrackingTest, externalImportedTracks]);
 
   // Render Active Responders / Units Pins (with Spiderfy radial layout for co-located responders)
   useEffect(() => {
@@ -2610,6 +2699,36 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               </div>
             </div>
 
+            {/* Taktische Werkzeuge: Offline-Puffer & Import */}
+            <div className="pt-2 border-t border-slate-700 space-y-1.5">
+              <span className="text-[10px] text-slate-400 uppercase font-mono block">EINSATZ-WERKZEUGE:</span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    setIsLayersOpenMobile(false);
+                    setIsGeoImportOpen(true);
+                  }}
+                  className="px-2.5 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer font-mono"
+                  title="Externe GPX / KML Spuren & Sektoren importieren"
+                >
+                  <FileUp className="w-3.5 h-3.5" />
+                  <span>GPX/KML Import</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsLayersOpenMobile(false);
+                    setIsOfflineModalOpen(true);
+                  }}
+                  className="px-2.5 py-2 rounded-xl bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer font-mono"
+                  title="Kartenkacheln für das Funkloch vorab puffern"
+                >
+                  <WifiOff className="w-3.5 h-3.5" />
+                  <span>Offline sichern</span>
+                </button>
+              </div>
+            </div>
+
             {/* Suchspuren-Legende Mobile */}
             {trackSummaries.length > 0 && (
               <div className="pt-2 border-t border-slate-700 space-y-1.5">
@@ -2851,6 +2970,30 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                       {item.label}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Taktische Werkzeuge: Offline-Puffer & GPX/KML Import */}
+              <div className="pt-2 border-t border-slate-700/80 space-y-1">
+                <span className="text-[10px] text-slate-400 font-mono uppercase block">WERKZEUGE:</span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    onClick={() => setIsGeoImportOpen(true)}
+                    className="px-2 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 text-[10px] font-bold flex items-center justify-center gap-1 transition cursor-pointer font-mono"
+                    title="Externe GPX / KML Spuren & Sektoren importieren"
+                  >
+                    <FileUp className="w-3 h-3" />
+                    <span>GPX/KML</span>
+                  </button>
+
+                  <button
+                    onClick={() => setIsOfflineModalOpen(true)}
+                    className="px-2 py-1.5 rounded-lg bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40 text-[10px] font-bold flex items-center justify-center gap-1 transition cursor-pointer font-mono"
+                    title="Kartenkacheln für das Funkloch vorab puffern"
+                  >
+                    <WifiOff className="w-3 h-3" />
+                    <span>Offline</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -3828,6 +3971,24 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           </div>
         </div>
       )}
+
+      {/* GeoImport Modal (GPX/KML) */}
+      <GeoImportModal
+        isOpen={isGeoImportOpen}
+        onClose={() => setIsGeoImportOpen(false)}
+        onImportSectors={handleImportSectors}
+        onImportTracks={handleImportTracks}
+        onImportWaypoints={handleImportWaypoints}
+        activeOperationTitle={currentOperation?.title}
+      />
+
+      {/* Offline Map Pre-Caching Modal */}
+      <OfflineMapModal
+        isOpen={isOfflineModalOpen}
+        onClose={() => setIsOfflineModalOpen(false)}
+        operationTitle={currentOperation?.title}
+        searchBounds={operationSearchBounds}
+      />
     </div>
   );
 };
