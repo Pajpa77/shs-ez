@@ -42,6 +42,13 @@ function calculatePolygonHectares(coords: [number, number][]): number {
   return Number((area / 10000).toFixed(1));
 }
 
+function getSectorLabel(index: number): string {
+  if (index < 26) return String.fromCharCode(65 + index);
+  const first = String.fromCharCode(65 + Math.floor(index / 26) - 1);
+  const second = String.fromCharCode(65 + (index % 26));
+  return `${first}${second}`;
+}
+
 const EQUIPMENT_OPTIONS: { id: EquipmentType; label: string; icon: string }[] = [
   { id: 'drone', label: 'Drohne / UAS (Luftaufklärung)', icon: '🚁' },
   { id: 'k9_mantrailer', label: 'K9 Mantrailer (Fährtenhund)', icon: '🐕' },
@@ -92,7 +99,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
         setAreaHectares(sector.areaHectares || 25);
       }
     } else {
-      setName(`Sektor ${String.fromCharCode(65 + (currentOperation?.sectors.length || 0))} - Suchgebiet`);
+      setName(`Sektor ${getSectorLabel(currentOperation?.sectors.length || 0)} - Suchgebiet`);
       setPriority('high');
       setStatus('open');
       setAssignedGroupName('');

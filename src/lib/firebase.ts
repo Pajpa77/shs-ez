@@ -439,14 +439,19 @@ export function deserializeOperationFromFirestore(data: any): SearchOperation {
   };
 }
 
-export function serializeLocationForFirestore(loc: UserLocationState): Record<string, any> {
+export function serializeLocationForFirestore(loc: UserLocationState, includeHistory = true): Record<string, any> {
   const data: Record<string, any> = {
     userId: loc.userId,
     isLive: loc.isLive ?? true,
     lastUpdated: loc.lastUpdated || new Date().toISOString(),
     currentPosition: loc.currentPosition,
-    trackHistoryJson: JSON.stringify(loc.trackHistory || []),
   };
+  if (includeHistory) {
+    // Cap to most recent 1500 points in Firestore to avoid 1MB document limit and reduce bandwidth.
+    // Full tracks remain preserved in local storage and in operation archive tracks.
+    const history = (loc.trackHistory || []).slice(-1500);
+    data.trackHistoryJson = JSON.stringify(history);
+  }
   if (loc.operationalRole) data.operationalRole = loc.operationalRole;
   return cleanUndefinedFields(data);
 }

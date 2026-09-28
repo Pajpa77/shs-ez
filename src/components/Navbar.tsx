@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 
 export interface OpStatusTheme {
-  type: 'standby' | 'exercise' | 'operation' | 'archived';
+  type: 'standby' | 'exercise' | 'operation' | 'archived' | 'planned';
   colorName: string;
   emoji: string;
   label: string;
@@ -53,144 +53,87 @@ export interface OpStatusTheme {
   badge: string;
 }
 
-const ACTIVE_OP_PALETTES = [
-  {
-    name: 'Blau',
-    emoji: '🔵',
-    dotBg: 'bg-blue-500',
-    pingBg: 'bg-blue-400',
-    ring: 'ring-blue-500/60 shadow-[0_0_15px_rgba(59,130,246,0.5)]',
-    border: 'border-blue-500',
-    text: 'text-blue-400',
-    badge: 'bg-blue-950/80 text-blue-300 border-blue-700',
-  },
-  {
-    name: 'Lila',
-    emoji: '🟣',
-    dotBg: 'bg-purple-500',
-    pingBg: 'bg-purple-400',
-    ring: 'ring-purple-500/60 shadow-[0_0_15px_rgba(168,85,247,0.5)]',
-    border: 'border-purple-500',
-    text: 'text-purple-400',
-    badge: 'bg-purple-950/80 text-purple-300 border-purple-700',
-  },
-  {
-    name: 'Pink',
-    emoji: '🌸',
-    dotBg: 'bg-pink-500',
-    pingBg: 'bg-pink-400',
-    ring: 'ring-pink-500/60 shadow-[0_0_15px_rgba(236,72,153,0.5)]',
-    border: 'border-pink-500',
-    text: 'text-pink-400',
-    badge: 'bg-pink-950/80 text-pink-300 border-pink-700',
-  },
-  {
-    name: 'Cyan',
-    emoji: '🔷',
-    dotBg: 'bg-cyan-400',
-    pingBg: 'bg-cyan-300',
-    ring: 'ring-cyan-400/60 shadow-[0_0_15px_rgba(6,182,212,0.5)]',
-    border: 'border-cyan-400',
-    text: 'text-cyan-400',
-    badge: 'bg-cyan-950/80 text-cyan-300 border-cyan-700',
-  },
-];
-
 export const getOpTheme = (
   op: any | null,
   activeOpsList: any[]
 ): OpStatusTheme => {
   if (!op) {
     return {
-      type: 'standby',
-      colorName: 'Weiß',
-      emoji: '⚪',
-      label: 'Bereitschaft (Kein aktiver Einsatz)',
-      dotBg: 'bg-slate-100',
-      pingBg: 'bg-white',
-      animatePing: false,
-      ring: 'ring-slate-300/50 shadow-[0_0_10px_rgba(255,255,255,0.25)]',
-      border: 'border-slate-300',
-      text: 'text-slate-200',
+      type: 'standby', colorName: 'Weiß', emoji: '🐾', label: 'Bereitschaft (Kein Einsatz)',
+      dotBg: 'bg-white', pingBg: 'bg-white', animatePing: false,
+      ring: 'ring-white/50 shadow-[0_0_10px_rgba(255,255,255,0.25)]',
+      border: 'border-slate-300', text: 'text-slate-200',
       badge: 'bg-slate-800 text-slate-300 border-slate-700',
+    };
+  }
+
+  if (op.type === 'exercise') {
+    if (op.status === 'active') {
+      return {
+        type: 'exercise', colorName: 'Gelb', emoji: '🟡', label: op.title,
+        dotBg: 'bg-yellow-400', pingBg: 'bg-yellow-300', animatePing: true,
+        ring: 'ring-yellow-400/60 shadow-[0_0_15px_rgba(250,204,21,0.5)]',
+        border: 'border-yellow-400', text: 'text-yellow-300',
+        badge: 'bg-yellow-950/80 text-yellow-300 border-yellow-800',
+      };
+    } else if (op.status === 'paused') {
+      return {
+        type: 'exercise', colorName: 'Orange', emoji: '🟠', label: op.title,
+        dotBg: 'bg-orange-500', pingBg: 'bg-orange-400', animatePing: true,
+        ring: 'ring-orange-500/60 shadow-[0_0_15px_rgba(249,115,22,0.5)]',
+        border: 'border-orange-500', text: 'text-orange-300',
+        badge: 'bg-orange-950/80 text-orange-300 border-orange-800',
+      };
+    } else if (op.status === 'planned') {
+      return {
+        type: 'planned', colorName: 'Bereitschaft', emoji: '🟢', label: op.title,
+        dotBg: 'bg-emerald-500', pingBg: 'bg-emerald-400', animatePing: true,
+        ring: 'ring-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.5)]',
+        border: 'border-emerald-500', text: 'text-emerald-300',
+        badge: 'bg-emerald-950/80 text-emerald-300 border-emerald-800',
+      };
+    }
+  }
+
+  if (op.status === 'active') {
+    return {
+      type: 'operation', colorName: 'Blau', emoji: '🔵', label: op.title,
+      dotBg: 'bg-blue-500', pingBg: 'bg-blue-400', animatePing: true,
+      ring: 'ring-blue-500/60 shadow-[0_0_15px_rgba(59,130,246,0.5)]',
+      border: 'border-blue-500', text: 'text-blue-300',
+      badge: 'bg-blue-950/80 text-blue-300 border-blue-800',
+    };
+  }
+  
+  if (op.status === 'paused') {
+    return {
+      type: 'operation', colorName: 'Rot', emoji: '🔴', label: op.title,
+      dotBg: 'bg-red-500', pingBg: 'bg-red-400', animatePing: true,
+      ring: 'ring-red-500/60 shadow-[0_0_15px_rgba(239,68,68,0.5)]',
+      border: 'border-red-500', text: 'text-red-300',
+      badge: 'bg-red-950/80 text-red-300 border-red-800',
     };
   }
 
   if (op.status === 'planned') {
     return {
-      type: 'planned',
-      colorName: 'Bereitschaft',
-      emoji: '🕒',
-      label: `Geplant (${op.title})`,
-      dotBg: 'bg-white',
-      pingBg: 'bg-slate-200',
-      animatePing: true,
-      ring: 'ring-white/60 shadow-[0_0_15px_rgba(255,255,255,0.5)]',
-      border: 'border-white',
-      text: 'text-white',
-      badge: 'bg-slate-800 text-white border-slate-600',
+      type: 'planned', colorName: 'Bereitschaft', emoji: '🟢', label: op.title,
+      dotBg: 'bg-emerald-500', pingBg: 'bg-emerald-400', animatePing: true,
+      ring: 'ring-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.5)]',
+      border: 'border-emerald-500', text: 'text-emerald-300',
+      badge: 'bg-emerald-950/80 text-emerald-300 border-emerald-800',
     };
   }
-
-  if (op.status === 'completed' || op.status === 'archived') {
-    return {
-      type: 'archived',
-      colorName: 'Rot',
-      emoji: '🔴',
-      label: `Archiviert (${op.title})`,
-      dotBg: 'bg-red-500',
-      pingBg: 'bg-red-400',
-      animatePing: false,
-      ring: 'ring-red-500/60 shadow-[0_0_15px_rgba(239,68,68,0.5)]',
-      border: 'border-red-500',
-      text: 'text-red-400',
-      badge: 'bg-red-950/80 text-red-300 border-red-800',
-    };
-  }
-
-  if (op.type === 'exercise') {
-    return {
-      type: 'exercise',
-      colorName: 'Gelb',
-      emoji: '🟡',
-      label: `Übung (${op.title})`,
-      dotBg: 'bg-amber-400',
-      pingBg: 'bg-amber-300',
-      animatePing: true,
-      ring: 'ring-amber-400/60 shadow-[0_0_15px_rgba(251,191,36,0.5)]',
-      border: 'border-amber-400',
-      text: 'text-amber-300',
-      badge: 'bg-amber-950/80 text-amber-300 border-amber-800',
-    };
-  }
-
-  // Active or paused real operations (stable sort by createdAt)
-  const realActiveOps = activeOpsList
-    .filter((o) => (o.status === 'active' || o.status === 'paused') && o.type !== 'exercise')
-    .sort((a, b) => {
-      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return timeA - timeB;
-    });
-
-  let idx = realActiveOps.findIndex((o) => o.id === op.id);
-  if (idx < 0) idx = 0;
-  const palette = ACTIVE_OP_PALETTES[idx % ACTIVE_OP_PALETTES.length];
 
   return {
-    type: 'operation',
-    colorName: palette.name,
-    emoji: palette.emoji,
-    label: `Einsatz (${palette.name}) - ${op.title}`,
-    dotBg: palette.dotBg,
-    pingBg: palette.pingBg,
-    animatePing: op.status === 'active',
-    ring: palette.ring,
-    border: palette.border,
-    text: palette.text,
-    badge: palette.badge,
+    type: 'archived', colorName: 'Grau', emoji: '🗃️', label: op.title,
+    dotBg: 'bg-slate-500', pingBg: 'bg-slate-400', animatePing: false,
+    ring: 'ring-slate-500/60 shadow-[0_0_10px_rgba(100,116,139,0.3)]',
+    border: 'border-slate-500', text: 'text-slate-400',
+    badge: 'bg-slate-800 text-slate-400 border-slate-700',
   };
 };
+
 
 interface NavbarProps {
   activeTab: 'map' | 'sectors' | 'chat' | 'responders' | 'log' | 'archive' | 'admin' | 'reports';
@@ -242,6 +185,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     currentOperation,
     allOperations,
     setCurrentOperationId,
+    updateOperation,
     reactivateOperation,
     deleteOperation,
     pauseOperation,
@@ -338,22 +282,22 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Current dynamic operation status theme for the SHS central button and UI
   const currentOpTheme = useMemo<OpStatusTheme>(() => {
     if (activeTab === 'archive') {
-      const archivedOp = selectedArchiveOpId
-        ? allOperations.find((o) => o.id === selectedArchiveOpId)
-        : null;
-      return {
-        type: 'archived',
-        colorName: 'Rot',
-        emoji: '🔴',
-        label: archivedOp ? `Archiv: ${archivedOp.title}` : 'Einsatzarchiv',
-        dotBg: 'bg-red-500',
-        pingBg: 'bg-red-400',
-        animatePing: false,
-        ring: 'ring-red-500/60 shadow-[0_0_15px_rgba(239,68,68,0.5)]',
-        border: 'border-red-500',
-        text: 'text-red-400',
-        badge: 'bg-red-950/80 text-red-300 border-red-800',
-      };
+        const archivedOp = selectedArchiveOpId
+          ? allOperations.find((o) => o.id === selectedArchiveOpId)
+          : null;
+        return {
+          type: 'archived',
+          colorName: 'Grau',
+          emoji: '🗃️',
+          label: archivedOp ? 'Archiv: ' + archivedOp.title : 'Einsatzarchiv',
+          dotBg: 'bg-slate-500',
+          pingBg: 'bg-slate-400',
+          animatePing: false,
+          ring: 'ring-slate-500/60 shadow-[0_0_10px_rgba(100,116,139,0.3)]',
+          border: 'border-slate-500',
+          text: 'text-slate-400',
+          badge: 'bg-slate-800 text-slate-400 border-slate-700',
+        };
     }
 
     if (!currentOperation) {
@@ -953,18 +897,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <div className="text-[10px] font-bold text-emerald-400 uppercase font-mono px-2 py-1 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                            <span>Aktuell & Geplant ({allOperations.filter((o) => o.status === 'active' || o.status === 'planned').length})</span>
+                            <span>Aktuell & Geplant ({allOperations.filter((o) => o.status === 'active' || o.status === 'planned' || o.status === 'paused').length})</span>
                           </div>
                           <span className="text-[9px] text-slate-400 font-mono">Farbcodiert</span>
                         </div>
-                        {allOperations.filter((o) => o.status === 'active' || o.status === 'planned').length === 0 ? (
+                        {allOperations.filter((o) => o.status === 'active' || o.status === 'planned' || o.status === 'paused').length === 0 ? (
                           <div className="px-3 py-2 bg-slate-900/60 rounded-xl text-[11px] text-slate-400 font-mono text-center border border-slate-800">
                             Kein Einsatz läuft. (Bereitschaft)
                           </div>
                         ) : (
                           <div className="space-y-1">
                             {allOperations
-                              .filter((o) => o.status === 'active' || o.status === 'planned')
+                              .filter((o) => o.status === 'active' || o.status === 'planned' || o.status === 'paused')
                               .map((op) => {
                                 const opTheme = getOpTheme(op, allOperations);
                                 const isSelected = op.id === currentOperation?.id && activeTab !== 'archive';
@@ -1360,16 +1304,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setShowUserDropdown(false);
                   setShowResponderListDropdown(false);
                 }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-950/70 hover:bg-red-900/80 text-red-300 hover:text-white border border-red-700/60 transition cursor-pointer text-left shadow-sm group font-mono text-[10px] sm:text-xs font-bold shrink-0"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800/70 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-600/60 transition cursor-pointer text-left shadow-sm group font-mono text-[10px] sm:text-xs font-bold shrink-0"
                 title="Archivierte Einsätze anzeigen (Klicken zum Wechseln)"
               >
-                <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
-                <span className="font-bold text-red-300">ARCHIV 🔴</span>
-                <span className="text-red-300/80 text-[10px] hidden sm:inline truncate max-w-[160px]">
+                <span className="w-2 h-2 rounded-full bg-slate-500 shrink-0" />
+                <span className="font-bold text-slate-300">ARCHIV 🗃️</span>
+                <span className="text-slate-300/80 text-[10px] hidden sm:inline truncate max-w-[160px]">
                   {currentOpTheme.label}
                 </span>
               </button>
-            ) : currentOperation && currentOperation.status === 'active' ? (
+            ) : currentOperation ? (
               <button
                 type="button"
                 onClick={() => {
@@ -1658,5 +1602,15 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+
+
+
+
+
+
+
+
+
+
 
 

@@ -819,6 +819,10 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     lat: 0,
     lng: 0,
   });
+  const lastCloudTrackSyncRef = useRef<{ timestamp: number; pointsCount: number }>({
+    timestamp: 0,
+    pointsCount: 0,
+  });
 
   // Maximum GPS track points stored per responder (10,000 points = approx. 30-50 km search movement without data loss)
   const MAX_TRACK_POINTS = 10000;
@@ -1995,9 +1999,9 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     );
   }, []);
 
-  const syncLocationToCloud = useCallback((userId: string, locState: UserLocationState) => {
+  const syncLocationToCloud = useCallback((userId: string, locState: UserLocationState, includeHistory = true) => {
     if (!isFirebaseConfigured) return;
-    const payload = serializeLocationForFirestore(locState);
+    const payload = serializeLocationForFirestore(locState, includeHistory);
     safeFirestoreWrite(
       () => setDoc(doc(db, 'user_locations', userId), payload, { merge: true }),
       'user_locations'
@@ -2166,13 +2170,19 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 // Signal loss gap detection: if >= 45 seconds elapsed since last recorded point, annotate as gap start
                 const isGap = lastHistorical && timeSinceLastMs >= 45000;
 
-                // Capture fine movements down to 0.5m (captures tight zigzag patterns of search dogs & searchers)
+                // Stationary detection & jitter filter:
+                // When stationary (speed < 1.2 km/h and distMoved < 1.5m), suppress GPS sensor drift jitter
+                const currentSpeedKmh = point.speed || 0;
+                const isStationaryJitter = currentSpeedKmh < 1.2 && distMoved < 1.5;
+
+                // Capture real movements: down to 0.8m when moving (dog zig-zag & responder steps)
+                // If stationary, suppress jitter; only record heartbeat if 45s passed AND moved >= 1.2m
                 const shouldAdd =
                   !lastHistorical ||
-                  (!isTeleportSpike && isAccurate && (
-                    distMoved >= 0.5 ||
-                    (timeSinceLastMs >= 4000 && distMoved >= 0.25) ||
-                    (timeSinceLastMs >= 10000)
+                  (!isTeleportSpike && isAccurate && !isStationaryJitter && (
+                    distMoved >= 1.5 ||
+                    (currentSpeedKmh >= 1.0 && distMoved >= 0.8) ||
+                    (timeSinceLastMs >= 45000 && distMoved >= 1.2)
                   ));
 
                 if (shouldAdd) {
@@ -2209,16 +2219,26 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 [currentUser.id]: updatedLocState,
               };
 
-              // High-precision Cloud sync: sync position when moved at least 1.5 meters or 8 seconds elapsed
-              // Note: Live location marker is ALWAYS synced to cloud so EZ and other searchers see units approaching!
+              // Decoupled Cloud Sync:
+              // - Live marker (currentPosition) syncs every 8s (if moved >= 1.5m or initial fix) with tiny ~150-byte payload
+              // - Heavy trackHistory syncs every 35s or when >= 8 new points accumulated (saves bandwidth and mobile battery)
               const now = Date.now();
               const lastSync = lastCloudGpsSyncRef.current;
               const timeDiff = now - lastSync.timestamp;
-              const distMoved = calculateDistanceMeters(lastSync.lat, lastSync.lng, point.lat, point.lng);
+              const distMovedSync = calculateDistanceMeters(lastSync.lat, lastSync.lng, point.lat, point.lng);
 
-              if (timeDiff >= 8000 && (distMoved >= 1.5 || lastSync.timestamp === 0)) {
+              if (timeDiff >= 8000 && (distMovedSync >= 1.5 || lastSync.timestamp === 0)) {
                 lastCloudGpsSyncRef.current = { timestamp: now, lat: point.lat, lng: point.lng };
-                syncLocationToCloud(currentUser.id, updatedLocState);
+                const lastTrackSync = lastCloudTrackSyncRef.current;
+                const trackTimeDiff = now - lastTrackSync.timestamp;
+                const pointsDiff = Math.abs(updatedHistory.length - lastTrackSync.pointsCount);
+                const shouldSyncHistory = trackTimeDiff >= 35000 || pointsDiff >= 8 || lastTrackSync.timestamp === 0;
+
+                if (shouldSyncHistory) {
+                  lastCloudTrackSyncRef.current = { timestamp: now, pointsCount: updatedHistory.length };
+                }
+
+                syncLocationToCloud(currentUser.id, updatedLocState, shouldSyncHistory);
               }
 
               // Broadcast to local tabs instantly for fluid UI
@@ -2320,7 +2340,16 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                     : 99999;
                   const isAccurate = !bgPoint.accuracy || bgPoint.accuracy <= 25;
                   const isGap = lastPt && timeSinceLastMs >= 45000;
-                  const shouldAdd = !lastPt || (isAccurate && (distMoved >= 0.5 || timeSinceLastMs >= 5000));
+                  const currentSpeedKmh = bgPoint.speed || 0;
+                  const isStationaryJitter = currentSpeedKmh < 1.2 && distMoved < 1.5;
+
+                  const shouldAdd =
+                    !lastPt ||
+                    (isAccurate && !isStationaryJitter && (
+                      distMoved >= 1.5 ||
+                      (currentSpeedKmh >= 1.0 && distMoved >= 0.8) ||
+                      (timeSinceLastMs >= 45000 && distMoved >= 1.2)
+                    ));
 
                   if (shouldAdd) {
                     const pointToStore: GpsPoint = isGap
@@ -2337,7 +2366,27 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                   lastUpdated: new Date().toISOString(),
                   isLive: true,
                 };
-                syncLocationToCloud(currentUser.id, updatedState);
+
+                // Decoupled Background Cloud Sync: throttled to >= 8s for live pos, >= 35s for full track
+                const now = Date.now();
+                const lastSync = lastCloudGpsSyncRef.current;
+                const timeDiff = now - lastSync.timestamp;
+                const distMovedSync = calculateDistanceMeters(lastSync.lat, lastSync.lng, bgPoint.lat, bgPoint.lng);
+
+                if (timeDiff >= 8000 && (distMovedSync >= 1.5 || lastSync.timestamp === 0)) {
+                  lastCloudGpsSyncRef.current = { timestamp: now, lat: bgPoint.lat, lng: bgPoint.lng };
+                  const lastTrackSync = lastCloudTrackSyncRef.current;
+                  const trackTimeDiff = now - lastTrackSync.timestamp;
+                  const pointsDiff = Math.abs(nextHistory.length - lastTrackSync.pointsCount);
+                  const shouldSyncHistory = trackTimeDiff >= 35000 || pointsDiff >= 8 || lastTrackSync.timestamp === 0;
+
+                  if (shouldSyncHistory) {
+                    lastCloudTrackSyncRef.current = { timestamp: now, pointsCount: nextHistory.length };
+                  }
+
+                  syncLocationToCloud(currentUser.id, updatedState, shouldSyncHistory);
+                }
+
                 return { ...prev, [currentUser.id]: updatedState };
               });
             }

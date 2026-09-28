@@ -84,6 +84,27 @@ export default defineConfig(() => {
       outDir: 'dist',
       emptyOutDir: true,
       sourcemap: true,
+      chunkSizeWarningLimit: 800,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('leaflet')) {
+                return 'vendor-leaflet';
+              }
+              if (id.includes('firebase')) {
+                return 'vendor-firebase';
+              }
+              if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('fflate') || id.includes('canvg')) {
+                return 'vendor-pdf';
+              }
+              if (id.includes('lucide-react')) {
+                return 'vendor-icons';
+              }
+            }
+          },
+        },
+      },
     }
   };
 });

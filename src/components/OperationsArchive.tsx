@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf';
 import { useRescue } from '../context/RescueContext';
 import { SearchOperation, OperationLogEntry, User, EquipmentType } from '../types';
 import { TacticalMap } from './TacticalMap';
+import { exportOperationTracksAsGpx, exportSingleTrackAsGpx } from '../lib/gpxExport';
 import {
   Archive,
   FileText,
@@ -1183,6 +1184,17 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                       <Download className="w-3.5 h-3.5 text-emerald-400" />
                       <span>CSV Export</span>
                     </button>
+
+                    {selectedOp?.archivedTracks && selectedOp.archivedTracks.length > 0 && (
+                      <button
+                        onClick={() => exportOperationTracksAsGpx(selectedOp)}
+                        className="px-3 py-2 bg-indigo-950/70 hover:bg-indigo-900 text-indigo-300 rounded-xl border border-indigo-700/60 transition flex items-center gap-1.5 cursor-pointer text-xs font-mono"
+                        title="Alle Such- und Hundespuren als standardisiertes GPX (Garmin / QGIS / Polizei) exportieren"
+                      >
+                        <Download className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>GPX Spuren</span>
+                      </button>
+                    )}
 
                     <button
                       onClick={handlePrint}

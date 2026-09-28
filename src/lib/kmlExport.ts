@@ -1,5 +1,15 @@
 import { SearchSector } from '../types';
 
+function escapeXml(str: unknown): string {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 export const exportSectorAsKml = (sector: SearchSector) => {
   if (!sector.polygon || sector.polygon.length < 3) {
     alert('Dieser Sektor hat keine gültigen Koordinaten.');
@@ -16,13 +26,16 @@ export const exportSectorAsKml = (sector: SearchSector) => {
     .map((point) => `${point[1]},${point[0]},0`)
     .join(' ');
 
+  const safeSectorName = escapeXml(sector.name);
+  const safeSectorStatus = escapeXml(sector.status);
+
   const kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
-    <name>SHS-EZ Sektor: ${sector.name}</name>
+    <name>SHS-EZ Sektor: ${safeSectorName}</name>
     <description>
       Zugewiesenes Suchgebiet für Drohne / Flächensuche.
-      Status: ${sector.status}
+      Status: ${safeSectorStatus}
       Exportiert: ${new Date().toLocaleString('de-DE')}
     </description>
     <Style id="sectorStyle">
@@ -35,7 +48,7 @@ export const exportSectorAsKml = (sector: SearchSector) => {
       </PolyStyle>
     </Style>
     <Placemark>
-      <name>${sector.name}</name>
+      <name>${safeSectorName}</name>
       <styleUrl>#sectorStyle</styleUrl>
       <Polygon>
         <tessellate>1</tessellate>

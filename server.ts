@@ -1,8 +1,8 @@
+// Server entry point for SHS-EZ
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -17,23 +17,6 @@ async function startServer() {
   // API Routes
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  });
-
-  // AI Endpoint Proxy (Example)
-  app.post('/api/ai/analyze', async (req, res) => {
-    try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) throw new Error('GEMINI_API_KEY is missing');
-      
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-      
-      const { prompt } = req.body;
-      const result = await model.generateContent(prompt);
-      res.json({ response: result.response.text() });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
   });
 
   // Vite middleware for development vs production

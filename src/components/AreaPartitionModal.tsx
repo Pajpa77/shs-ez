@@ -80,22 +80,26 @@ function clipPolygonToRect(
   let output = [...subjectPolygon];
 
   output = clipHalfPlane(output, (p) => p[0] <= maxLat, (p1, p2) => {
-    const t = (maxLat - p1[0]) / (p2[0] - p1[0]);
+    const denom = p2[0] - p1[0];
+    const t = Math.abs(denom) < 1e-9 ? 0 : (maxLat - p1[0]) / denom;
     return [maxLat, p1[1] + t * (p2[1] - p1[1])];
   });
 
   output = clipHalfPlane(output, (p) => p[0] >= minLat, (p1, p2) => {
-    const t = (minLat - p1[0]) / (p2[0] - p1[0]);
+    const denom = p2[0] - p1[0];
+    const t = Math.abs(denom) < 1e-9 ? 0 : (minLat - p1[0]) / denom;
     return [minLat, p1[1] + t * (p2[1] - p1[1])];
   });
 
   output = clipHalfPlane(output, (p) => p[1] <= maxLng, (p1, p2) => {
-    const t = (maxLng - p1[1]) / (p2[1] - p1[1]);
+    const denom = p2[1] - p1[1];
+    const t = Math.abs(denom) < 1e-9 ? 0 : (maxLng - p1[1]) / denom;
     return [p1[0] + t * (p2[0] - p1[0]), maxLng];
   });
 
   output = clipHalfPlane(output, (p) => p[1] >= minLng, (p1, p2) => {
-    const t = (minLng - p1[1]) / (p2[1] - p1[1]);
+    const denom = p2[1] - p1[1];
+    const t = Math.abs(denom) < 1e-9 ? 0 : (minLng - p1[1]) / denom;
     return [p1[0] + t * (p2[0] - p1[0]), minLng];
   });
 

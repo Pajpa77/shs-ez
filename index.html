@@ -21,7 +21,7 @@
     <script>
       // Force purge outdated ServiceWorker caches when a major build deployment lands
       (function() {
-        var CURRENT_VERSION = '2026-09-15-v3.4-release';
+        var CURRENT_VERSION = '2026-09-28-v3.7.0-release';
         var storedVersion = localStorage.getItem('shs_ez_cache_version');
 
         if (storedVersion !== CURRENT_VERSION) {
@@ -61,15 +61,9 @@
         window.deferredPWAInstallPrompt = e;
       });
 
-      // Apply dark mode early to prevent FOUC (default to dark for tactical EZ interface)
-      if (localStorage.theme === 'light') {
-        document.documentElement.classList.remove('dark');
-      } else {
-        document.documentElement.classList.add('dark');
-      }
+      // Tactical EZ interface is permanently in dark theme
+      document.documentElement.classList.add('dark');
     </script>
-
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
     <style>
       html, body {
         margin: 0;

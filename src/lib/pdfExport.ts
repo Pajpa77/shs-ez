@@ -95,7 +95,7 @@ export const generateOperationPDF = async (
     yPos += 6;
   } else {
     participants.forEach((p) => {
-      const dogText = p.dogInfo?.name ? ` | 🐕 Hund: ${p.dogInfo.name}` : '';
+      const dogText = p.dogInfo?.name ? ` | [Hund: ${p.dogInfo.name}]` : '';
       pdf.text(`- ${p.name} (${p.callSign || 'Spürhund-Einheit'}) [${p.role.toUpperCase()}]${dogText}`, 18, yPos);
       yPos += 5;
       if (yPos > 270) {

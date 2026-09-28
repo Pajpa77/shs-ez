@@ -28,6 +28,7 @@ import {
   Plus,
   Building2,
   Cloud,
+  Archive,
 } from 'lucide-react';
 import { VEREINSBUERO_LOCATION } from '../mockData';
 import { fetchRescueWeather } from '../lib/weatherService';

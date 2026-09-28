@@ -8,7 +8,7 @@ service cloud.firestore {
     }
 
     function isValidOperationStatus(status) {
-      return status in ['active', 'paused', 'completed', 'archived'];
+      return status in ['planned', 'active', 'paused', 'completed', 'archived', 'aborted'];
     }
 
     function isValidOperationType(type) {
@@ -16,7 +16,7 @@ service cloud.firestore {
     }
 
     function isValidArrivalStatus(status) {
-      return status == null || status in ['', 'in_transit', 'ez_reached', 'ready'];
+      return status == null || status in ['', 'in_transit', 'near_ez', 'ez_reached', 'ready'];
     }
 
     function isValidCoordinate(lat, lng) {
@@ -43,22 +43,13 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if request.resource.data.id is string
         && request.resource.data.title is string
-        && request.resource.data.title.size() <= 150
+        && request.resource.data.title.size() <= 200
         && isValidOperationStatus(request.resource.data.status)
         && isValidOperationType(request.resource.data.type);
       allow delete: if true;
     }
 
-    // Locations Collections (Live GPS & Breadcrumbs)
-    match /locations/{userId} {
-      allow read: if true;
-      allow create, update: if request.resource.data.userId is string
-        && request.resource.data.isLive is bool
-        && request.resource.data.currentPosition != null
-        && isValidCoordinate(request.resource.data.currentPosition.lat, request.resource.data.currentPosition.lng);
-      allow delete: if true;
-    }
-
+    // Live GPS & Telemetry Locations
     match /user_locations/{userId} {
       allow read: if true;
       allow create, update: if request.resource.data.userId is string
@@ -68,30 +59,21 @@ service cloud.firestore {
       allow delete: if true;
     }
 
-    // Chat Collections
-    match /chat/{messageId} {
-      allow read: if true;
-      allow create, update: if request.resource.data.id is string
-        && request.resource.data.senderId is string
-        && request.resource.data.senderName is string
-        && request.resource.data.text is string
-        && request.resource.data.text.size() <= 3000;
-      allow delete: if true;
-    }
-
+    // Tactical Chat Transmissions (Append-Only Audit Trail)
     match /chat_messages/{messageId} {
       allow read: if true;
-      allow create, update: if request.resource.data.id is string
+      allow create: if request.resource.data.id is string
         && request.resource.data.senderId is string
         && request.resource.data.senderName is string
-        && request.resource.data.text is string
-        && request.resource.data.text.size() <= 3000;
-      allow delete: if true;
+        && (!('text' in request.resource.data) || (request.resource.data.text is string && request.resource.data.text.size() <= 3000));
+      // Preserved immutability: chat cannot be tampered with or deleted once sent
+      allow update, delete: if false;
     }
 
-    // Settings Collection
+    // Global Settings
     match /settings/{settingId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if false;
     }
   }
 }

@@ -25,9 +25,11 @@ import {
   UserX,
   Scan,
   CreditCard,
+  Download,
 } from 'lucide-react';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { MemberCardModal } from './MemberCardModal';
+import { exportSingleTrackAsGpx } from '../lib/gpxExport';
 
 interface ResponderListProps {
   onOpenCreateUser: () => void;
@@ -741,6 +743,23 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                     >
                       <MapPin className="w-3.5 h-3.5" />
                       Karte
+                    </button>
+                  )}
+
+                  {(userLocations[user.id]?.trackHistory?.length || 0) > 1 && (
+                    <button
+                      onClick={() => {
+                        exportSingleTrackAsGpx({
+                          points: userLocations[user.id]?.trackHistory || [],
+                          callSign: user.callSign,
+                          userName: user.name,
+                          operationTitle: currentOperation?.title || 'Aktiver Einsatz'
+                        });
+                      }}
+                      className="p-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-amber-500 dark:text-amber-400 rounded-lg font-bold text-xs flex items-center justify-center transition cursor-pointer shadow border border-amber-500/30"
+                      title={`GPX-Track herunterladen (${userLocations[user.id]?.trackHistory?.length} Punkte) für Garmin / QGIS / Polizei`}
+                    >
+                      <Download className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>

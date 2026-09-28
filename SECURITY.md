@@ -1,21 +1,15 @@
-# Security Policy
+# Security Policy: SHS-EZ (Spürhunde-Salzlandkreis e.V.)
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+| Version | Supported          | Status |
+| ------- | ------------------ | ------ |
+| 3.7.x   | :white_check_mark: | Active Production Release |
+| < 3.7   | :x:                | Deprecated |
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+## Architecture & Authentication Model
 
-## Reporting a Vulnerability
-
-Use this section to tell people how to report a vulnerability.
-
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+- **Field Authentication**: Fast pin/password-based access designed for tactical field responders and emergency dog handlers without requiring personal email addresses.
+- **Credential Governance**: Administrative oversight via designated incident commanders (`admin` / `einsatzleitung`).
+- **Data Protection**: Audit log immutability on tactical chat messages (`chat_messages` append-only rule), protected First-Admin identity (`user-maria`), and strict coordinate boundaries.
+- **Reporting Vulnerabilities**: Contact the IT & Incident Command team of Spürhunde-Salzlandkreis e.V.

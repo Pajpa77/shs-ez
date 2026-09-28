@@ -57,6 +57,25 @@ import {
 } from 'lucide-react';
 import { useDraggable } from '../hooks/useDraggable';
 
+function escapeHtml(str: unknown): string {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function sanitizeImageUrl(url: unknown): string {
+  if (typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('https://') || trimmed.startsWith('http://') || trimmed.startsWith('data:image/')) {
+    return escapeHtml(trimmed);
+  }
+  return '';
+}
+
 interface TacticalMapProps {
   operation?: SearchOperation | null;
   mode?: 'live' | 'archive' | 'report';
@@ -1044,9 +1063,17 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       });
 
       const mp = currentOperation.missingPerson;
-      const plsPhotoHtml = mp?.photoUrl && mp.photoUrl.trim() !== ''
+      const safePlsPhotoUrl = sanitizeImageUrl(mp?.photoUrl);
+      const safeMpName = escapeHtml(mp?.name || 'Vermisste Person');
+      const safePlsAddress = escapeHtml(pls.address);
+      const safePlsDesc = escapeHtml(pls.description);
+      const safeClothing = escapeHtml(mp?.clothing);
+      const safeMedical = (mp?.medicalConditions || []).map(escapeHtml).join(', ');
+      const safeLastSeenTime = escapeHtml(mp?.lastSeenTime || 'Unbekannt');
+
+      const plsPhotoHtml = safePlsPhotoUrl
         ? `<div style="width: 100%; height: 160px; max-height: 180px; border-radius: 10px; overflow: hidden; margin-bottom: 10px; background: #0f172a; border: 1px solid #cbd5e1; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
-            <img src="${mp.photoUrl}" alt="${mp.name || 'Vermisste Person'}" style="width: 100%; height: 100%; object-fit: cover; display: block;" referrerpolicy="no-referrer" />
+            <img src="${safePlsPhotoUrl}" alt="${safeMpName}" style="width: 100%; height: 100%; object-fit: cover; display: block;" referrerpolicy="no-referrer" />
            </div>`
         : `<div style="width: 100%; height: 60px; border-radius: 8px; margin-bottom: 8px; background: #fee2e2; border: 1px dashed #f87171; display: flex; align-items: center; justify-content: center; color: #b91c1c; font-size: 11px; font-weight: 600;">
             Kein Foto hinterlegt
@@ -1060,16 +1087,16 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             <span>📍 LETZTER SICHTUNGSPUNKT (PLS)</span>
           </div>
           <div style="font-size: 15px; font-weight: 700; color: #ffffff; line-height: 1.2;">
-            ${mp?.name || 'Unbekannt'}${mp?.age ? ` (${mp.age} Jahre)` : ''}
+            ${safeMpName}${mp?.age ? ` (${Number(mp.age)} Jahre)` : ''}
           </div>
           <div style="font-size: 12px; color: #cbd5e1; font-weight: 500; margin-top: 4px; line-height: 1.3;">
-            ${pls.address}
+            ${safePlsAddress}
           </div>
-          ${pls.description ? `<div style="font-size: 11px; color: #94a3b8; font-style: italic; margin-top: 4px; background: #0f172a; padding: 4px 6px; border-radius: 4px; border: 1px solid #334155;">${pls.description}</div>` : ''}
-          ${mp?.clothing ? `<div style="font-size: 11px; color: #cbd5e1; margin-top: 5px;"><strong>Bekleidung:</strong> ${mp.clothing}</div>` : ''}
-          ${mp?.medicalConditions && mp.medicalConditions.length > 0 ? `<div style="font-size: 11px; color: #fca5a5; background: #450a0a; border: 1px solid #7f1d1d; padding: 3px 6px; border-radius: 4px; margin-top: 5px;"><strong>⚠️ Medizinisch:</strong> ${mp.medicalConditions.join(', ')}</div>` : ''}
+          ${safePlsDesc ? `<div style="font-size: 11px; color: #94a3b8; font-style: italic; margin-top: 4px; background: #0f172a; padding: 4px 6px; border-radius: 4px; border: 1px solid #334155;">${safePlsDesc}</div>` : ''}
+          ${safeClothing ? `<div style="font-size: 11px; color: #cbd5e1; margin-top: 5px;"><strong>Bekleidung:</strong> ${safeClothing}</div>` : ''}
+          ${safeMedical ? `<div style="font-size: 11px; color: #fca5a5; background: #450a0a; border: 1px solid #7f1d1d; padding: 3px 6px; border-radius: 4px; margin-top: 5px;"><strong>⚠️ Medizinisch:</strong> ${safeMedical}</div>` : ''}
           <div style="font-size: 11px; color: #94a3b8; margin-top: 6px; font-family: monospace;">
-            Sichtung: <strong style="color: #ffffff;">${mp?.lastSeenTime || 'Unbekannt'}</strong>
+            Sichtung: <strong style="color: #ffffff;">${safeLastSeenTime}</strong>
           </div>
           <div style="font-size: 10px; color: #64748b; font-family: monospace; margin-top: 6px; border-top: 1px solid #334155; padding-top: 4px;">
             GPS: ${pls.lat.toFixed(5)}, ${pls.lng.toFixed(5)}
@@ -1095,9 +1122,17 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       });
 
       const mp = currentOperation.missingPerson;
-      const homePhotoHtml = mp?.photoUrl && mp.photoUrl.trim() !== ''
+      const safeHomePhotoUrl = sanitizeImageUrl(mp?.photoUrl);
+      const safeMpName = escapeHtml(mp?.name || 'Vermisste Person');
+      const safeHomeAddress = escapeHtml(home.address);
+      const safeHomeNotes = escapeHtml(home.notes);
+      const safeClothing = escapeHtml(mp?.clothing);
+      const safeDesc = escapeHtml(mp?.description);
+      const safeMedical = (mp?.medicalConditions || []).map(escapeHtml).join(', ');
+
+      const homePhotoHtml = safeHomePhotoUrl
         ? `<div style="width: 100%; height: 160px; max-height: 180px; border-radius: 10px; overflow: hidden; margin-bottom: 10px; background: #0f172a; border: 1px solid #334155; box-shadow: 0 4px 10px rgba(0,0,0,0.4);">
-            <img src="${mp.photoUrl}" alt="${mp.name || 'Vermisste Person'}" style="width: 100%; height: 100%; object-fit: cover; display: block;" referrerpolicy="no-referrer" />
+            <img src="${safeHomePhotoUrl}" alt="${safeMpName}" style="width: 100%; height: 100%; object-fit: cover; display: block;" referrerpolicy="no-referrer" />
            </div>`
         : `<div style="width: 100%; height: 60px; border-radius: 8px; margin-bottom: 8px; background: #451a03; border: 1px dashed #f59e0b; display: flex; align-items: center; justify-content: center; color: #fbbf24; font-size: 11px; font-weight: 600;">
             Kein Foto hinterlegt
@@ -1111,15 +1146,15 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             <span>🏠 WOHNADRESSE DER PERSON</span>
           </div>
           <div style="font-size: 15px; font-weight: 700; color: #ffffff; line-height: 1.2;">
-            ${mp?.name || 'Unbekannt'}${mp?.age ? ` (${mp.age} Jahre)` : ''}
+            ${safeMpName}${mp?.age ? ` (${Number(mp.age)} Jahre)` : ''}
           </div>
           <div style="font-size: 12px; color: #cbd5e1; font-weight: 500; margin-top: 4px; line-height: 1.3;">
-            ${home.address}
+            ${safeHomeAddress}
           </div>
-          ${home.notes ? `<div style="font-size: 11px; color: #94a3b8; margin-top: 4px; background: #0f172a; padding: 4px 6px; border-radius: 4px; border: 1px solid #334155;"><strong>Hinweis:</strong> ${home.notes}</div>` : ''}
-          ${mp?.clothing ? `<div style="font-size: 11px; color: #cbd5e1; margin-top: 5px;"><strong>Bekleidung:</strong> ${mp.clothing}</div>` : ''}
-          ${mp?.description ? `<div style="font-size: 11px; color: #94a3b8; margin-top: 4px;"><strong>Merkmale:</strong> ${mp.description}</div>` : ''}
-          ${mp?.medicalConditions && mp.medicalConditions.length > 0 ? `<div style="font-size: 11px; color: #fca5a5; background: #450a0a; border: 1px solid #7f1d1d; padding: 3px 6px; border-radius: 4px; margin-top: 5px;"><strong>⚠️ Medizinisch:</strong> ${mp.medicalConditions.join(', ')}</div>` : ''}
+          ${safeHomeNotes ? `<div style="font-size: 11px; color: #94a3b8; margin-top: 4px; background: #0f172a; padding: 4px 6px; border-radius: 4px; border: 1px solid #334155;"><strong>Hinweis:</strong> ${safeHomeNotes}</div>` : ''}
+          ${safeClothing ? `<div style="font-size: 11px; color: #cbd5e1; margin-top: 5px;"><strong>Bekleidung:</strong> ${safeClothing}</div>` : ''}
+          ${safeDesc ? `<div style="font-size: 11px; color: #94a3b8; margin-top: 4px;"><strong>Merkmale:</strong> ${safeDesc}</div>` : ''}
+          ${safeMedical ? `<div style="font-size: 11px; color: #fca5a5; background: #450a0a; border: 1px solid #7f1d1d; padding: 3px 6px; border-radius: 4px; margin-top: 5px;"><strong>⚠️ Medizinisch:</strong> ${safeMedical}</div>` : ''}
           <div style="font-size: 10px; color: #64748b; font-family: monospace; margin-top: 6px; border-top: 1px solid #334155; padding-top: 4px;">
             GPS: ${home.lat.toFixed(5)}, ${home.lng.toFixed(5)}
           </div>
@@ -1289,9 +1324,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               <div class="flex items-center justify-between bg-slate-800/90 px-1.5 py-1 rounded text-[11px] border border-slate-700/60">
                 <div class="font-medium text-slate-200 flex items-center gap-1">
                   <span>${r.operationalRole === 'ez_command' ? '🏢' : '👤'}</span>
-                  <span>${r.name}</span>
+                  <span>${escapeHtml(r.name)}</span>
                 </div>
-                <span class="text-[10px] text-slate-400 font-mono">${r.callSign || 'EZ'}</span>
+                <span class="text-[10px] text-slate-400 font-mono">${escapeHtml(r.callSign || 'EZ')}</span>
               </div>
             `).join('')}
           </div>
@@ -1307,11 +1342,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       <div class="p-2.5 text-slate-100 font-sans min-w-[220px]">
         <div class="font-bold text-indigo-400 text-sm flex items-center gap-1.5">
           <span>${isStandbyOffice ? '📡' : '🚨'}</span>
-          <span>${hqTitle}</span>
+          <span>${escapeHtml(hqTitle)}</span>
         </div>
-        <div class="text-xs text-slate-300 mt-1 font-medium">${hqAddress}</div>
+        <div class="text-xs text-slate-300 mt-1 font-medium">${escapeHtml(hqAddress)}</div>
         <div class="text-[10px] text-slate-400 font-mono mt-0.5">${hqLat.toFixed(5)}° N, ${hqLng.toFixed(5)}° E</div>
-        ${!isStandbyOffice && currentOperation ? `<div class="text-xs text-slate-300 mt-1.5 bg-slate-800/80 border border-slate-700 p-1.5 rounded">Einsatz: <strong class="text-white">${currentOperation.title}</strong><br/>Leitung: <strong class="text-white">${currentOperation.commander}</strong></div>` : `<div class="text-[11px] text-emerald-400 font-medium mt-1">🟢 Status: Bereitschaft am Vereinsbüro</div>`}
+        ${!isStandbyOffice && currentOperation ? `<div class="text-xs text-slate-300 mt-1.5 bg-slate-800/80 border border-slate-700 p-1.5 rounded">Einsatz: <strong class="text-white">${escapeHtml(currentOperation.title)}</strong><br/>Leitung: <strong class="text-white">${escapeHtml(currentOperation.commander)}</strong></div>` : `<div class="text-[11px] text-emerald-400 font-medium mt-1">🟢 Status: Bereitschaft am Vereinsbüro</div>`}
         ${ezRespondersListHtml}
         ${dragHintHtml}
         <div class="mt-2.5 pt-2 border-t border-slate-700">
@@ -1357,7 +1392,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         className: 'search-area-center-label',
         html: `
           <div class="transform -translate-x-1/2 -translate-y-1/2 px-3 py-1 rounded-full text-xs font-mono font-bold shadow-lg flex items-center gap-1.5 whitespace-nowrap bg-purple-950/90 text-purple-200 border border-purple-500 ring-2 ring-purple-500/30">
-            <span>🗺️ ${currentOperation.searchAreaName || 'Haupt-Suchgebiet'}</span>
+            <span>🗺️ ${escapeHtml(currentOperation.searchAreaName || 'Haupt-Suchgebiet')}</span>
             <span class="text-[10px] text-purple-300 font-normal">(${totalHectares.toFixed(1)} ha)</span>
           </div>
         `,
@@ -1425,7 +1460,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               : 'bg-[#1E293B]/95 text-slate-100 border-slate-600'
           }">
             <span>${isSearched ? '✅' : isInProgress ? '⏳' : '🎯'}</span>
-            <span>${sector.name}</span>
+            <span>${escapeHtml(sector.name)}</span>
             ${equipmentBadges ? `<span class="opacity-90 ml-0.5">${equipmentBadges}</span>` : ''}
           </div>
         `,
@@ -1974,14 +2009,18 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         }
 
         // Custom animated responder pin with photo/equipment & connection status
+        const safeUserPhoto = sanitizeImageUrl(item.user.photoUrl);
+        const safeUserName = escapeHtml(item.user.name);
+        const safeCallSign = escapeHtml(item.user.callSign);
+
         const iconHtml = `
           <div class="relative group cursor-pointer">
             <div class="absolute -inset-1.5 rounded-full ${outerGlowClass}"></div>
             <div class="relative flex items-center justify-center h-10 w-10 rounded-full border-2 ${avatarBorderClass} shadow-2xl overflow-hidden" style="background-color: ${item.trackColor};">
               ${
-                item.user.photoUrl
-                  ? `<img src="${item.user.photoUrl}" alt="${item.user.name}" class="h-full w-full object-cover" />`
-                  : `<span class="text-white font-bold text-xs">${item.user.name.charAt(0)}</span>`
+                safeUserPhoto
+                  ? `<img src="${safeUserPhoto}" alt="${safeUserName}" class="h-full w-full object-cover" />`
+                  : `<span class="text-white font-bold text-xs">${escapeHtml(item.user.name.charAt(0))}</span>`
               }
             </div>
             <!-- Sub-badge with equipment icon -->
@@ -1990,7 +2029,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             </div>
             <!-- Call sign banner with Sector, Cluster Position & Connection Status -->
             <div class="absolute top-11 left-1/2 transform -translate-x-1/2 px-2 py-0.5 rounded ${item.isOnline ? 'bg-[#1E293B]/95 text-white' : 'bg-slate-800/90 text-slate-300'} text-[10px] font-semibold border border-slate-700 whitespace-nowrap shadow-md flex items-center gap-1">
-              <span>${item.user.callSign}</span>
+              <span>${safeCallSign}</span>
               ${ezBadge}
               ${clusterBadge}
               ${sectorTag}
