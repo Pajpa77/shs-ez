@@ -2179,8 +2179,12 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                         ...point,
                         isGapStart: true,
                         gapDurationSec: Math.round(timeSinceLastMs / 1000),
+                        operationId: currentOperation?.id,
                       }
-                    : point;
+                    : {
+                        ...point,
+                        operationId: currentOperation?.id,
+                      };
                   nextHistory = [...cleanHistory, pointToStore].slice(-MAX_TRACK_POINTS);
                 } else {
                   nextHistory = cleanHistory;

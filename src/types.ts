@@ -158,6 +158,7 @@ export interface GpsPoint {
   heading?: number; // Grad 0-360 Laufrichtung
   isGapStart?: boolean; // Erster Punkt nach Signalverlust / Funkloch (> 45s)
   gapDurationSec?: number; // Dauer der Funkloch-Lücke in Sekunden
+  operationId?: string; // Verknüpfter Einsatz / Übung
 }
 
 export interface UserLocationState {

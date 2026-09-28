@@ -450,7 +450,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
     // 1. Live tracks from userLocations
     Object.entries(userLocations).forEach(([userId, locState]) => {
-      const history = locState.trackHistory || [];
+      const history = (locState.trackHistory || []).filter(pt => pt.operationId === globalOperation?.id);
       if (history.length < 2) return;
       seenUserIds.add(userId);
 
@@ -1519,10 +1519,10 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
         // If the live user location currently has equal or more points, let live renderer draw the full extended track
         const liveLoc = userLocations[archivedTrack.userId];
+        const liveHistory = (liveLoc?.trackHistory || []).filter(pt => pt.operationId === currentOperation?.id);
         const isCurrentlyLiveWithMore =
           !isArchiveMode &&
-          liveLoc?.trackHistory &&
-          liveLoc.trackHistory.length >= archivedTrack.points.length;
+          liveHistory.length >= archivedTrack.points.length;
 
         if (isCurrentlyLiveWithMore) {
           return; // Skip archived version so the live extended track is shown seamlessly
@@ -1620,7 +1620,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           return;
         }
 
-        const history = locState.trackHistory;
+        const history = (locState.trackHistory || []).filter(pt => pt.operationId === currentOperation?.id);
         if (!history || history.length < 2) return;
 
         // If this user track was already rendered in full via archivedTracks, avoid duplicate draw
@@ -2133,7 +2133,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       }
       if (userLocations) {
         Object.values(userLocations).forEach((loc) => {
-          if (loc.trackHistory) loc.trackHistory.forEach((pt) => allPoints.push([pt.lat, pt.lng]));
+          if (loc.trackHistory) {
+            loc.trackHistory
+              .filter((pt) => pt.operationId === currentOperation?.id)
+              .forEach((pt) => allPoints.push([pt.lat, pt.lng]));
+          }
         });
       }
     }
