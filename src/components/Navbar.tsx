@@ -116,6 +116,22 @@ export const getOpTheme = (
     };
   }
 
+  if (op.status === 'planned') {
+    return {
+      type: 'planned',
+      colorName: 'Bereitschaft',
+      emoji: '🕒',
+      label: `Geplant (${op.title})`,
+      dotBg: 'bg-white',
+      pingBg: 'bg-slate-200',
+      animatePing: true,
+      ring: 'ring-white/60 shadow-[0_0_15px_rgba(255,255,255,0.5)]',
+      border: 'border-white',
+      text: 'text-white',
+      badge: 'bg-slate-800 text-white border-slate-600',
+    };
+  }
+
   if (op.status === 'completed' || op.status === 'archived') {
     return {
       type: 'archived',
@@ -558,7 +574,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <span className="text-[9px] text-blue-400">Pausieren / Beenden</span>
                         </div>
                         <div className="grid grid-cols-2 gap-1.5">
-                          {currentOperation.status === 'active' ? (
+                          {currentOperation.status === 'planned' ? (
+                            <button
+                              onClick={() => {
+                                setShowOpDropdown(false);
+                                updateOperation(currentOperation.id, { status: 'active' });
+                              }}
+                              className="py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 text-[10px] font-bold transition flex items-center justify-center gap-1 font-mono cursor-pointer uppercase"
+                              title="Geplanten Einsatz jetzt starten"
+                            >
+                              🚀 Starten
+                            </button>
+                          ) : currentOperation.status === 'active' ? (
                             <button
                               onClick={() => {
                                 setShowSarAdminMenu(false);
@@ -921,23 +948,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
 
                     <div className="space-y-2 my-1.5 pr-1">
-                      {/* Section 1: Aktive Einsätze */}
+                      {/* Section 1: Aktive Einsätze & Bereitschaft */}
                       <div>
                         <div className="text-[10px] font-bold text-emerald-400 uppercase font-mono px-2 py-1 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                            <span>Aktive Einsätze ({allOperations.filter((o) => o.status === 'active').length})</span>
+                            <span>Aktuell & Geplant ({allOperations.filter((o) => o.status === 'active' || o.status === 'planned').length})</span>
                           </div>
                           <span className="text-[9px] text-slate-400 font-mono">Farbcodiert</span>
                         </div>
-                        {allOperations.filter((o) => o.status === 'active').length === 0 ? (
+                        {allOperations.filter((o) => o.status === 'active' || o.status === 'planned').length === 0 ? (
                           <div className="px-3 py-2 bg-slate-900/60 rounded-xl text-[11px] text-slate-400 font-mono text-center border border-slate-800">
-                            Kein aktiver Einsatz läuft. (Bereitschaft ⚪)
+                            Kein Einsatz läuft. (Bereitschaft)
                           </div>
                         ) : (
                           <div className="space-y-1">
                             {allOperations
-                              .filter((o) => o.status === 'active')
+                              .filter((o) => o.status === 'active' || o.status === 'planned')
                               .map((op) => {
                                 const opTheme = getOpTheme(op, allOperations);
                                 const isSelected = op.id === currentOperation?.id && activeTab !== 'archive';
@@ -971,8 +998,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                                     </div>
                                     <div className="flex items-center gap-1.5 shrink-0">
                                       <span className={`text-[9px] uppercase font-mono px-2 py-0.5 rounded font-bold border ${opTheme.badge}`}>
-                                        {op.type === 'exercise' ? 'Übung' : 'Aktiv'}
+                                        {op.status === 'planned' ? 'Bereit' : op.type === 'exercise' ? 'Übung' : 'Aktiv'}
                                       </span>
+                                      {op.status === 'planned' && isAdmin && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            updateOperation(op.id, { status: 'active' });
+                                          }}
+                                          className="px-2 py-0.5 text-[10px] text-white bg-emerald-600 hover:bg-emerald-500 rounded border border-emerald-400 transition cursor-pointer font-bold font-mono uppercase"
+                                          title="Diesen Einsatz jetzt aktivieren und starten"
+                                        >
+                                          Start
+                                        </button>
+                                      )}
                                       {onOpenOperationDetailModal && (
                                         <button
                                           type="button"
@@ -1137,7 +1177,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                           Einsatz-Steuerung (Beenden / Pausieren / Reaktivieren)
                         </div>
                         <div className="grid grid-cols-2 gap-1.5">
-                          {currentOperation.status === 'active' ? (
+                          {currentOperation.status === 'planned' ? (
+                            <button
+                              onClick={() => {
+                                setShowOpDropdown(false);
+                                updateOperation(currentOperation.id, { status: 'active' });
+                              }}
+                              className="py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 text-[10px] font-bold transition flex items-center justify-center gap-1 font-mono cursor-pointer uppercase"
+                              title="Geplanten Einsatz jetzt starten"
+                            >
+                              🚀 Starten
+                            </button>
+                          ) : currentOperation.status === 'active' ? (
                             <button
                               onClick={() => {
                                 setShowOpDropdown(false);
@@ -1607,4 +1658,5 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+
 

@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'einsatzleitung' | 'responder' | 'observer' | 'group_leader';
+﻿export type UserRole = 'admin' | 'einsatzleitung' | 'responder' | 'observer' | 'group_leader';
 
 export type EquipmentType =
   | 'drone'
@@ -171,7 +171,7 @@ export interface UserLocationState {
 }
 
 export type OperationType = 'operation' | 'exercise' | 'live_search'; // Einsatz vs. Übung
-export type OperationStatus = 'active' | 'paused' | 'completed' | 'archived';
+export type OperationStatus = 'planned' | 'active' | 'paused' | 'completed' | 'archived';
 
 export type SectorStatus = 'open' | 'in_progress' | 'searched' | 'suspicious';
 export type SectorPriority = 'low' | 'medium' | 'high' | 'urgent';
@@ -418,3 +418,4 @@ export function getUserTrackColor(user?: Partial<User> | string | null, allUsers
   const colorIdx = Math.abs(hash) % TACTICAL_TRACK_COLORS.length;
   return TACTICAL_TRACK_COLORS[colorIdx];
 }
+

@@ -75,6 +75,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
   const isAdmin = canManage;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [hqSaveSuccess, setHqSaveSuccess] = useState('');
+  const [submitAction, setSubmitAction] = useState<'active' | 'planned'>('active');
 
   const [type, setType] = useState<OperationType>('live_search');
   const [title, setTitle] = useState('Vermisstensuche Salzlandkreis');
@@ -492,6 +493,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
       createOperation({
         title: title.trim(),
         type,
+        status: submitAction,
         commander: commander.trim(),
         missingPerson,
         headquartersLocation,
@@ -1478,8 +1480,19 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
               >
                 Abbrechen
               </button>
+              {mode === 'create' && (
+                <button
+                  type="submit"
+                  onClick={() => setSubmitAction('planned')}
+                  className="px-6 py-2.5 rounded-xl text-slate-100 font-bold transition cursor-pointer flex items-center gap-2 shadow-lg uppercase tracking-wider font-mono text-xs bg-slate-600 hover:bg-slate-500 ring-2 ring-slate-400/40"
+                >
+                  <Archive className="w-4 h-4" />
+                  <span>Nur anlegen (Bereitschaft)</span>
+                </button>
+              )}
               <button
                 type="submit"
+                onClick={() => setSubmitAction('active')}
                 className={`px-6 py-2.5 rounded-xl text-white font-bold transition cursor-pointer flex items-center gap-2 shadow-lg uppercase tracking-wider font-mono text-xs ${
                   mode === 'edit'
                     ? 'bg-blue-600 hover:bg-blue-500 ring-2 ring-blue-400/40'
@@ -1487,7 +1500,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 }`}
               >
                 {mode === 'edit' ? <Save className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-                <span>{mode === 'edit' ? 'Änderungen speichern' : 'Einsatz initialisieren & starten'}</span>
+                <span>{mode === 'edit' ? 'Änderungen speichern' : 'Anlegen & Sofort starten'}</span>
               </button>
             </div>
           </div>

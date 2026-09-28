@@ -3425,7 +3425,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       id: newId,
       title: data.title,
       type: data.type,
-      status: 'active',
+      status: data.status || 'active',
       createdAt: now,
       updatedAt: now,
       commander: data.commander || currentUser?.name || 'Einsatzleiter vom Dienst',
