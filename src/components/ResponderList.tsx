@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { User, EquipmentType, SearchTeam, isFirstAdmin, isOwner, getUserTrackColor, getUserConnectionStatus, getSignalFreshnessText, isUserAdmin, isUserEL, isUserAdminOrEL } from '../types';
 import {
@@ -93,14 +93,10 @@ export const ResponderList: React.FC<ResponderListProps> = ({
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [cardUser, setCardUser] = useState<User | null>(null);
 
-  // Filter allUsers to only contain participants of the active operation
+  // Filter allUsers to only contain participants of the active operation, BUT actually we want to see everyone who is in the system so new signups aren't hidden.
   const currentOperationUsers = React.useMemo(() => {
-    if (currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused')) {
-      const participantIds = currentOperation.participantIds || [];
-      return allUsers.filter((u) => participantIds.includes(u.id));
-    }
     return allUsers;
-  }, [allUsers, currentOperation]);
+  }, [allUsers]);
 
   const isRealAdmin = isUserAdmin(currentUser);
   const canLead = isUserEL(currentUser);
