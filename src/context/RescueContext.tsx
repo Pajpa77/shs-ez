@@ -3473,6 +3473,28 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     } catch {
       // ignore
     }
+    
+    // Reset arrival status for everyone when a new operation starts
+    setAllUsers((prev) => {
+      const next = prev.map((u) => {
+        const updatedUser: User = {
+          ...u,
+          arrivalStatus: 'in_transit',
+          updatedAt: new Date().toISOString(),
+        };
+        syncUserToCloud(updatedUser);
+        return updatedUser;
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    setUserArrivalStatuses({});
+    try {
+      localStorage.removeItem('rescue_app_arrival_statuses_slk_v4');
+    } catch {}
+
     syncOperationToCloud(newOp);
     return newOp;
   };
@@ -3980,18 +4002,17 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       return next;
     });
 
-    // 5. Automatically log out all non-admin users (responders, group leaders)
+    // 5. Automatically log out all non-admin users (responders, group leaders) and reset arrival status for everyone
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setAllUsers((prev) => {
       const next = prev.map((u) => {
-        if (u.role === 'admin' || u.role === 'einsatzleitung') {
-          return u; // Admins and EL remain logged in
-        }
+        const isAdmin = u.role === 'admin' || u.role === 'einsatzleitung';
         const updatedUser: User = {
           ...u,
-          isActive: false,
-          lastSeen: `Abgemeldet (Einsatzende ${timeStr})`,
+          isActive: isAdmin ? u.isActive : false,
+          lastSeen: isAdmin ? u.lastSeen : `Abgemeldet (Einsatzende ${timeStr})`,
           assignedSectorId: undefined,
+          arrivalStatus: 'in_transit',
           updatedAt: new Date().toISOString(),
         };
         syncUserToCloud(updatedUser);
@@ -4004,6 +4025,11 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       }
       return next;
     });
+
+    setUserArrivalStatuses({});
+    try {
+      localStorage.removeItem('rescue_app_arrival_statuses_slk_v4');
+    } catch {}
 
     // 6. Turn off live GPS for all non-admins in userLocations
     setUserLocations((prev) => {
