@@ -67,74 +67,67 @@ export const LoginScreen: React.FC = () => {
   // - bei mehreren aktiven einsätzen rot blinken
   // - bei gleichzeitigen übung und einsatz orange
   const loginStatusTheme = useMemo(() => {
-    const activeRealOps = (allOperations || []).filter(
-      (o) => o.status === 'active' && o.type !== 'exercise'
-    );
-    const activeExercises = (allOperations || []).filter(
-      (o) => o.status === 'active' && o.type === 'exercise'
-    );
+    // Highest priority operation based on user rules:
+    // einsatz aktiv=blau, einsatz pausiert = rot, einsatz angelegt=grün (bereitschaft)
+    // übung=gelb, übungpause=orange
+    // nix dergleichen=weiß
 
-    const realCount = activeRealOps.length;
-    const exerciseCount = activeExercises.length;
-
-    // 1. Gleichzeitige Übung und Einsatz -> Orange blinken
-    if (realCount > 0 && exerciseCount > 0) {
+    const activeReal = allOperations.find(o => o.type !== 'exercise' && o.status === 'active');
+    if (activeReal) {
       return {
-        dotBg: 'bg-orange-500',
-        pingBg: 'bg-orange-400',
-        animatePing: true,
-        glow: 'shadow-[0_0_12px_rgba(249,115,22,0.8)]',
-        badgeBg: 'bg-orange-950/70 border-orange-700/60 text-orange-300',
-        title: `Lage: Gleichzeitig ${realCount} Realeinsatz und ${exerciseCount} Übung aktiv`,
+        dotBg: 'bg-blue-500', pingBg: 'bg-blue-400', animatePing: true,
+        glow: 'shadow-[0_0_12px_rgba(59,130,246,0.8)]',
+        badgeBg: 'bg-blue-950/70 border-blue-700/60 text-blue-300',
+        title: 'Lage: Einsatz Aktiv',
       };
     }
 
-    // 2. Mehrere aktive Einsätze -> Rot blinken
-    if (realCount > 1) {
+    const pausedReal = allOperations.find(o => o.type !== 'exercise' && o.status === 'paused');
+    if (pausedReal) {
       return {
-        dotBg: 'bg-red-500',
-        pingBg: 'bg-red-400',
-        animatePing: true,
+        dotBg: 'bg-red-500', pingBg: 'bg-red-400', animatePing: true,
         glow: 'shadow-[0_0_12px_rgba(239,68,68,0.8)]',
         badgeBg: 'bg-red-950/70 border-red-700/60 text-red-300',
-        title: `Lage: ${realCount} aktive Realeinsätze laufen`,
+        title: 'Lage: Einsatz Pausiert',
       };
     }
 
-    // 3. Genau 1 Realeinsatz aktiv -> Übernimm diese Farbe (aus taktischer Farbpalette)
-    if (realCount === 1) {
-      const singleOp = activeRealOps[0];
-      const opTheme = getOpTheme(singleOp, allOperations || []);
+    const plannedReal = allOperations.find(o => o.type !== 'exercise' && o.status === 'planned');
+    if (plannedReal) {
       return {
-        dotBg: opTheme.dotBg,
-        pingBg: opTheme.pingBg,
-        animatePing: true,
-        glow: 'shadow-[0_0_12px_rgba(59,130,246,0.8)]',
-        badgeBg: `${opTheme.badge}`,
-        title: `Lage: 1 Realeinsatz aktiv (${opTheme.colorName}) - ${singleOp.title}`,
+        dotBg: 'bg-emerald-500', pingBg: 'bg-emerald-400', animatePing: true,
+        glow: 'shadow-[0_0_12px_rgba(16,185,129,0.8)]',
+        badgeBg: 'bg-emerald-950/70 border-emerald-700/60 text-emerald-300',
+        title: 'Lage: Einsatz Angelegt (Bereitschaft)',
       };
     }
 
-    // 4. Nur Übung(en) aktiv -> Gelb blinken
-    if (exerciseCount > 0) {
+    const activeEx = allOperations.find(o => o.type === 'exercise' && o.status === 'active');
+    if (activeEx) {
       return {
-        dotBg: 'bg-amber-400',
-        pingBg: 'bg-amber-300',
-        animatePing: true,
-        glow: 'shadow-[0_0_12px_rgba(251,191,36,0.8)]',
-        badgeBg: 'bg-amber-950/70 border-amber-700/60 text-amber-300',
-        title: `Lage: ${exerciseCount === 1 ? '1 Übung' : `${exerciseCount} Übungen`} aktiv`,
+        dotBg: 'bg-yellow-400', pingBg: 'bg-yellow-300', animatePing: true,
+        glow: 'shadow-[0_0_12px_rgba(250,204,21,0.8)]',
+        badgeBg: 'bg-yellow-950/70 border-yellow-700/60 text-yellow-300',
+        title: 'Lage: Übung Aktiv',
       };
     }
 
-    // 5. Alles inaktiv -> Weiß leuchten lassen (Bereitschaft)
+    const pausedEx = allOperations.find(o => o.type === 'exercise' && o.status === 'paused');
+    if (pausedEx) {
+      return {
+        dotBg: 'bg-orange-500', pingBg: 'bg-orange-400', animatePing: true,
+        glow: 'shadow-[0_0_12px_rgba(249,115,22,0.8)]',
+        badgeBg: 'bg-orange-950/70 border-orange-700/60 text-orange-300',
+        title: 'Lage: Übung Pausiert',
+      };
+    }
+
+    // Default: Nothing active/planned/paused
     return {
-      dotBg: 'bg-white',
-      pingBg: 'bg-white',
-      animatePing: false,
+      dotBg: 'bg-white', pingBg: 'bg-white', animatePing: false,
       glow: 'shadow-[0_0_10px_rgba(255,255,255,0.85)]',
-      badgeBg: 'bg-blue-950/60 border-blue-700/50 text-blue-300',
-      title: 'Lage: Bereitschaft (Kein aktiver Einsatz)',
+      badgeBg: 'bg-slate-900/60 border-slate-700/50 text-slate-300',
+      title: 'Lage: Bereitschaft (Kein Einsatz)',
     };
   }, [allOperations]);
 
