@@ -3143,17 +3143,29 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   }, [allUsers, currentUser, confirmUserReady, syncOperationToCloud, updateUser]);
 
   const getUserArrivalStatus = useCallback((userId: string): 'in_transit' | 'near_ez' | 'ez_reached' | 'ready' => {
-    if (userArrivalStatuses[userId]) return userArrivalStatuses[userId];
-    const user = allUsers.find((u) => u.id === userId);
-    if (user?.arrivalStatus) return user.arrivalStatus;
+    let explicitStatus = userArrivalStatuses[userId];
+    if (!explicitStatus) {
+      const user = allUsers.find((u) => u.id === userId);
+      explicitStatus = user?.arrivalStatus as any;
+    }
+
+    if (explicitStatus === 'ready' || explicitStatus === 'ez_reached') {
+      return explicitStatus;
+    }
 
     const loc = userLocations[userId]?.currentPosition || (userId === currentUser?.id ? myLocation : null);
-    if (!loc) return 'in_transit';
+    if (!loc) return explicitStatus === 'near_ez' ? 'near_ez' : 'in_transit';
+
     const dist = calculateDistanceToEzMeters(loc.lat, loc.lng);
     if (dist !== null && dist <= 500) {
       return 'near_ez';
     }
-    return 'in_transit';
+    
+    if (dist !== null && dist > 500) {
+      return 'in_transit';
+    }
+
+    return explicitStatus === 'near_ez' ? 'near_ez' : 'in_transit';
   }, [allUsers, userArrivalStatuses, userLocations, currentUser, myLocation, calculateDistanceToEzMeters]);
 
   const deactivateAllUsers = (includeSelf: boolean = false) => {
