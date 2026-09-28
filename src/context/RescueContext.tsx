@@ -2121,8 +2121,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 trackHistory: [],
               };
 
-              // Safely handle track history: only drop the solitary initial seed mock point if present.
-              let cleanHistory = [...(userLoc.trackHistory || [])];
+              // Safely handle track history: only drop the solitary initial seed mock point if present, and purge old operation tracks.
+              let cleanHistory = (userLoc.trackHistory || []).filter(
+                pt => !pt.operationId || pt.operationId === currentOperation?.id
+              );
               if (cleanHistory.length === 1) {
                 const pt0 = cleanHistory[0];
                 const isNearDummy =
@@ -2305,7 +2307,9 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 const isReady =
                   currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
                 const isEzCommand = (currentUser.operationalRole || operationalRole) === 'ez_command';
-                let nextHistory = isEzCommand ? [] : (uLoc.trackHistory || []);
+                let nextHistory = isEzCommand ? [] : ((uLoc.trackHistory || []).filter(
+                  pt => !pt.operationId || pt.operationId === currentOperation?.id
+                ));
                 if (isReady && isOpRunning && !isEzCommand) {
                   const lastPt = nextHistory[nextHistory.length - 1];
                   const distMoved = lastPt
@@ -2320,8 +2324,8 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
                   if (shouldAdd) {
                     const pointToStore: GpsPoint = isGap
-                      ? { ...bgPoint, isGapStart: true, gapDurationSec: Math.round(timeSinceLastMs / 1000) }
-                      : bgPoint;
+                      ? { ...bgPoint, isGapStart: true, gapDurationSec: Math.round(timeSinceLastMs / 1000), operationId: currentOperation?.id }
+                      : { ...bgPoint, operationId: currentOperation?.id };
                     nextHistory = [...nextHistory, pointToStore].slice(-MAX_TRACK_POINTS);
                   }
                 }
@@ -5181,6 +5185,24 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   const dismissAlertNotification = () => {
     setActiveAlertNotification(null);
   };
+
+  // Prevent accidental tab closure if actively tracking
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const isTracking = 
+        currentUser?.isActive && 
+        (currentUser?.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready') && 
+        currentOperation?.status === 'active';
+        
+      if (isTracking) {
+        e.preventDefault();
+        e.returnValue = 'Aktiver Sucheinsatz läuft! Wenn Sie die Seite verlassen, stoppt das Tracking.';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [currentUser, userArrivalStatuses, currentOperation]);
 
   return (
     <RescueContext.Provider
