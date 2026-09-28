@@ -17,7 +17,7 @@ import {
   OperationLogEntry,
   isUserAdminOrEL,
 } from '../types';
-import { VEREINSBUERO_LOCATION } from '../mockData';
+import { VEREINSBUERO_LOCATION, saveSavedVereinsbueroLocation, getSavedVereinsbueroLocation } from '../mockData';
 import { TacticalWeatherOverlay } from './TacticalWeatherOverlay';
 import {
   Layers,
@@ -30,6 +30,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Radio,
+  Pause,
   Plus,
   Shield,
   Phone,
@@ -263,6 +264,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     return window.innerWidth < 768 || window.innerHeight <= 500;
   });
   const [desktopSidebarTab, setDesktopSidebarTab] = useState<'layers' | 'tracks' | 'actions'>('layers');
+  const [isTrackLegendExpanded, setIsTrackLegendExpanded] = useState(false);
 
   // Handle device orientation changes and responsive resizing for smartphone view (hoch <-> quer)
   useEffect(() => {
@@ -328,6 +330,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const [isCapturingSnapshot, setIsCapturingSnapshot] = useState(false);
   const [snapshotSavedNotice, setSnapshotSavedNotice] = useState(false);
   const isAdminOrEL = Boolean(currentUser && isUserAdminOrEL(currentUser));
+  const canManageOps = isAdminOrEL;
 
   // EZ Navigation Modal state for interactive coordination transfer to GPS/Navi apps
   const [ezNavData, setEzNavData] = useState<{
@@ -342,7 +345,10 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   } | null>(null);
   const [copiedCoords, setCopiedCoords] = useState(false);
 
-  // EZ Inline Editing on Tactical Map
+  // EZ Inline Editing & Repositioning on Tactical Map
+  const isDrawingSectorRef = useRef(isDrawingSector);
+  isDrawingSectorRef.current = isDrawingSector;
+
   const [isEditingEz, setIsEditingEz] = useState(false);
   const [editEzAddress, setEditEzAddress] = useState('');
   const [editEzLat, setEditEzLat] = useState<number | ''>('');
@@ -350,6 +356,55 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const [isGeocodingEz, setIsGeocodingEz] = useState(false);
   const [ezGeocodeStatus, setEzGeocodeStatus] = useState<'idle' | 'success' | 'not_found'>('idle');
   const [ezModalSuccess, setEzModalSuccess] = useState('');
+
+  // Mode for placing EZ by tapping the map
+  const [isPlacingEzMode, setIsPlacingEzMode] = useState(false);
+  const isPlacingEzModeRef = useRef(false);
+  isPlacingEzModeRef.current = isPlacingEzMode;
+
+  // Modal for confirming EZ move after Long-Press or Tap
+  const [ezMoveModal, setEzMoveModal] = useState<{
+    lat: number;
+    lng: number;
+    address: string;
+    description: string;
+    isStandby: boolean;
+    isLoadingAddress: boolean;
+  } | null>(null);
+
+  const [dismissEzWarning, setDismissEzWarning] = useState(false);
+  const [ezToastNotice, setEzToastNotice] = useState<string>('');
+
+  // Reverse Geocoding helper via OpenStreetMap Nominatim
+  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        { headers: { 'Accept-Language': 'de' } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.address) {
+          const a = data.address;
+          const street = a.road || a.pedestrian || a.footway || a.path || a.cycleway || '';
+          const num = a.house_number || '';
+          const city = a.city || a.town || a.village || a.municipality || a.suburb || '';
+          const postcode = a.postcode || '';
+          const parts = [
+            [street, num].filter(Boolean).join(' '),
+            [postcode, city].filter(Boolean).join(' ')
+          ].filter(Boolean);
+          if (parts.length > 0) return parts.join(', ');
+        }
+        if (data.display_name) {
+          return data.display_name.split(',').slice(0, 3).join(', ').trim();
+        }
+      }
+    } catch (e) {
+      console.warn('Reverse geocoding failed', e);
+    }
+    return `GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  };
 
   const geocodeEzAddress = async (query: string) => {
     if (!query.trim()) return;
@@ -376,35 +431,210 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     }
   };
 
-  const handleSaveEzFromMapModal = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!currentOperation?.id) return;
-    const lat = typeof editEzLat === 'number' && !isNaN(editEzLat) ? editEzLat : VEREINSBUERO_LOCATION.lat;
-    const lng = typeof editEzLng === 'number' && !isNaN(editEzLng) ? editEzLng : VEREINSBUERO_LOCATION.lng;
-    const address = editEzAddress.trim() || VEREINSBUERO_LOCATION.address;
+  // Trigger modal when user long-presses anywhere on map or taps in placement mode
+  const triggerEzRepositionModal = useCallback(async (lat: number, lng: number) => {
+    const isOpActive = Boolean(currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused'));
+    const roundedLat = Number(lat.toFixed(6));
+    const roundedLng = Number(lng.toFixed(6));
 
+    setEzMoveModal({
+      lat: roundedLat,
+      lng: roundedLng,
+      address: 'Ermittle Adresse...',
+      description: isOpActive ? 'EZ vor Ort / Bereitstellungsraum' : 'Vereinshaus Aschersleben',
+      isStandby: !isOpActive,
+      isLoadingAddress: true,
+    });
+
+    playAlertSound('notification');
+
+    const detectedAddress = await reverseGeocode(roundedLat, roundedLng);
+    setEzMoveModal((prev) => (prev ? { ...prev, address: detectedAddress, isLoadingAddress: false } : null));
+  }, [currentOperation, playAlertSound]);
+
+  const handleConfirmEzMove = (customAddress?: string, customDesc?: string) => {
+    if (!ezMoveModal) return;
+    const { lat, lng, isStandby } = ezMoveModal;
+    const finalAddress = (customAddress !== undefined ? customAddress : ezMoveModal.address).trim() || VEREINSBUERO_LOCATION.address;
+    const finalDesc = (customDesc !== undefined ? customDesc : ezMoveModal.description).trim();
+
+    if (isStandby) {
+      // Save permanent Vereinsbüro position (Vereinshaus)
+      saveSavedVereinsbueroLocation({
+        lat,
+        lng,
+        address: finalAddress,
+      });
+      if (currentOperation) {
+        updateOperation(currentOperation.id, {
+          headquartersLocation: {
+            lat,
+            lng,
+            address: finalAddress,
+            description: finalDesc || 'Vereinshaus Aschersleben',
+          },
+        });
+      }
+      setEzToastNotice(`🏢 Standard-EZ erfolgreich auf Vereinshaus gespeichert (${lat.toFixed(5)}, ${lng.toFixed(5)})!`);
+      setTimeout(() => setEzToastNotice(''), 4500);
+    } else if (currentOperation) {
+      // Active operation HQ move
+      const newHq = {
+        lat,
+        lng,
+        address: finalAddress,
+        description: finalDesc || 'EZ vor Ort / Bereitstellungsraum',
+      };
+      const logEntry: OperationLogEntry = {
+        id: `log-${Date.now()}`,
+        operationId: currentOperation.id,
+        timestamp: new Date().toISOString(),
+        authorName: currentUser?.name || 'Einsatzleitung',
+        authorRole: currentUser?.role || 'admin',
+        category: 'general',
+        text: `📡 Einsatzzentrale im Gelände/Parkplatz neu positioniert: ${finalAddress} (GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)})`,
+      };
+      updateOperation(currentOperation.id, (prevOp) => ({
+        headquartersLocation: newHq,
+        logs: [logEntry, ...(prevOp.logs || [])],
+      }));
+      setEzToastNotice(`📡 EZ für Einsatz „${currentOperation.title}“ erfolgreich an neuen Standort verlegt!`);
+      setTimeout(() => setEzToastNotice(''), 4500);
+    }
+
+    playAlertSound('success');
+    setEzMoveModal(null);
+    setIsPlacingEzMode(false);
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setView([lat, lng], Math.max(16, mapInstanceRef.current.getZoom()));
+    }
+  };
+
+  const handleSetEzToPls = async (lat: number, lng: number, label: string) => {
+    if (!currentOperation) return;
+    const detectedAddr = await reverseGeocode(lat, lng);
     const newHq = {
-      lat,
-      lng,
-      address,
-      description: currentOperation.headquartersLocation?.description || 'EZ vor Ort',
+      lat: Number(lat.toFixed(6)),
+      lng: Number(lng.toFixed(6)),
+      address: detectedAddr || label || 'Einsatzzentrale am Einsatzort',
+      description: `EZ vor Ort (${label})`,
     };
-
-    const now = new Date().toISOString();
     const logEntry: OperationLogEntry = {
       id: `log-${Date.now()}`,
       operationId: currentOperation.id,
-      timestamp: now,
+      timestamp: new Date().toISOString(),
       authorName: currentUser?.name || 'Einsatzleitung',
       authorRole: currentUser?.role || 'admin',
       category: 'general',
-      text: `EZ-Standort auf Lagekarte verschoben: ${address} (GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)})`,
+      text: `📡 EZ-Standort von Aschersleben an den Einsatzort verlegt: ${newHq.address} (GPS: ${newHq.lat.toFixed(5)}, ${newHq.lng.toFixed(5)})`,
     };
-
     updateOperation(currentOperation.id, (prevOp) => ({
       headquartersLocation: newHq,
       logs: [logEntry, ...(prevOp.logs || [])],
     }));
+    playAlertSound('success');
+    setDismissEzWarning(true);
+    setEzToastNotice(`✅ EZ erfolgreich an den Einsatzort verlegt! Alle Einsatzkräfte navigieren ab sofort direkt hierher.`);
+    setTimeout(() => setEzToastNotice(''), 5000);
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setView([newHq.lat, newHq.lng], 16);
+    }
+  };
+
+  // Check if active operation EZ is mistakenly left in Aschersleben while search area is elsewhere
+  const ezDistanceWarning = useMemo(() => {
+    if (!currentOperation || (currentOperation.status !== 'active' && currentOperation.status !== 'paused')) {
+      return null;
+    }
+    const hq = currentOperation.headquartersLocation;
+    if (!hq || typeof hq.lat !== 'number' || typeof hq.lng !== 'number') return null;
+
+    // Check if HQ is near Vereinsbüro Aschersleben (< 800m)
+    const distToVereinsbuero = calculateDistanceMeters(hq.lat, hq.lng, VEREINSBUERO_LOCATION.lat, VEREINSBUERO_LOCATION.lng);
+    const isHqInAschersleben = distToVereinsbuero < 800;
+    if (!isHqInAschersleben) return null;
+
+    // Check if PLS is > 2000m away
+    const pls = currentOperation.missingPerson?.lastSeenLocation;
+    if (pls?.lat && pls?.lng) {
+      const distToPls = calculateDistanceMeters(hq.lat, hq.lng, pls.lat, pls.lng);
+      if (distToPls > 2000) {
+        return {
+          distKm: distToPls / 1000,
+          targetLat: pls.lat,
+          targetLng: pls.lng,
+          targetLabel: pls.address || pls.description || 'Letzter Sichtort (PLS)',
+        };
+      }
+    }
+
+    // Check if sectors are > 2000m away
+    if (Array.isArray(currentOperation.sectors) && currentOperation.sectors.length > 0) {
+      for (const sec of currentOperation.sectors) {
+        if (Array.isArray(sec.polygon) && sec.polygon.length > 0) {
+          const p0 = sec.polygon[0];
+          const distToSec = calculateDistanceMeters(hq.lat, hq.lng, p0[0], p0[1]);
+          if (distToSec > 2000) {
+            return {
+              distKm: distToSec / 1000,
+              targetLat: p0[0],
+              targetLng: p0[1],
+              targetLabel: `Sektor ${sec.name}`,
+            };
+          }
+        }
+      }
+    }
+
+    return null;
+  }, [currentOperation]);
+
+  const handleSaveEzFromMapModal = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const lat = typeof editEzLat === 'number' && !isNaN(editEzLat) ? editEzLat : VEREINSBUERO_LOCATION.lat;
+    const lng = typeof editEzLng === 'number' && !isNaN(editEzLng) ? editEzLng : VEREINSBUERO_LOCATION.lng;
+    const address = editEzAddress.trim() || VEREINSBUERO_LOCATION.address;
+
+    const isStandby = !currentOperation || (currentOperation.status !== 'active' && currentOperation.status !== 'paused');
+
+    if (isStandby) {
+      saveSavedVereinsbueroLocation({ lat, lng, address });
+      if (currentOperation) {
+        updateOperation(currentOperation.id, {
+          headquartersLocation: {
+            lat,
+            lng,
+            address,
+            description: 'Vereinshaus Aschersleben',
+          },
+        });
+      }
+      setEzModalSuccess('✅ Vereinsbüro-Position erfolgreich gespeichert!');
+    } else {
+      const newHq = {
+        lat,
+        lng,
+        address,
+        description: currentOperation.headquartersLocation?.description || 'EZ vor Ort',
+      };
+
+      const now = new Date().toISOString();
+      const logEntry: OperationLogEntry = {
+        id: `log-${Date.now()}`,
+        operationId: currentOperation.id,
+        timestamp: now,
+        authorName: currentUser?.name || 'Einsatzleitung',
+        authorRole: currentUser?.role || 'admin',
+        category: 'general',
+        text: `EZ-Standort auf Lagekarte verschoben: ${address} (GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)})`,
+      };
+
+      updateOperation(currentOperation.id, (prevOp) => ({
+        headquartersLocation: newHq,
+        logs: [logEntry, ...(prevOp.logs || [])],
+      }));
+      setEzModalSuccess('✅ EZ-Standort erfolgreich gespeichert & übernommen!');
+    }
 
     playAlertSound('success');
     setEzNavData((prev) =>
@@ -414,12 +644,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             lat,
             lng,
             address,
-            isStandbyOffice: false,
+            isStandbyOffice: isStandby,
           }
         : null
     );
 
-    setEzModalSuccess('✅ EZ-Standort erfolgreich gespeichert & übernommen!');
     setIsEditingEz(false);
     setTimeout(() => setEzModalSuccess(''), 4000);
 
@@ -522,49 +751,17 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     isDrone: boolean;
     equipmentIcon: string;
     boundsPoints: [number, number][];
+    phaseLabel?: string;
   }
 
-  // Aggregated summary of all search tracks on map (Live and Archived)
+  // Aggregated summary of all search tracks on map (1 User = 1 Spur, selbst wenn unterbrochen oder über mehrere Phasen)
   const trackSummaries = useMemo<TrackSummaryItem[]>(() => {
-    const list: TrackSummaryItem[] = [];
-    const seenUserIds = new Set<string>();
+    const userMap = new Map<string, TrackSummaryItem>();
 
-    // 1. Live tracks from userLocations
-    Object.entries(userLocations).forEach(([userId, locState]) => {
-      const history = (locState.trackHistory || []).filter(pt => pt.operationId === globalOperation?.id);
-      if (history.length < 2) return;
-      seenUserIds.add(userId);
-
-      const user = allUsers.find((u) => u.id === userId);
-      const color = getUserTrackColor(user || userId, allUsers);
-      const isDrone = Boolean(user?.equipment?.includes('drone'));
-
-      let totalDist = 0;
-      for (let i = 1; i < history.length; i++) {
-        const d = calculateDistanceMeters(history[i - 1].lat, history[i - 1].lng, history[i].lat, history[i].lng);
-        if (d <= 1200) totalDist += d;
-      }
-
-      list.push({
-        userId,
-        name: user?.name || 'Suchkraft',
-        callSign: user?.callSign || 'Unit',
-        color,
-        pointCount: history.length,
-        distanceMeters: totalDist,
-        isLive: locState.isLive,
-        isDrone,
-        equipmentIcon: isDrone ? '🚁' : user?.equipment?.includes('k9_mantrailer') ? '🐕' : '🚶',
-        boundsPoints: history.map((p) => [p.lat, p.lng]),
-      });
-    });
-
-    // 2. Archived tracks from currentOperation
+    // 1. Historical / Archived tracks (e.g. Suchphase 1 von gestern)
     if (currentOperation?.archivedTracks) {
       currentOperation.archivedTracks.forEach((t) => {
         if (!t.points || t.points.length < 2) return;
-        if (seenUserIds.has(t.userId)) return;
-        seenUserIds.add(t.userId);
 
         const user = allUsers.find((u) => u.id === t.userId);
         const color = t.color || getUserTrackColor(user || t.userId, allUsers);
@@ -573,10 +770,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         let totalDist = 0;
         for (let i = 1; i < t.points.length; i++) {
           const d = calculateDistanceMeters(t.points[i - 1].lat, t.points[i - 1].lng, t.points[i].lat, t.points[i].lng);
-          if (d <= 1200) totalDist += d;
+          const tDiff = Math.abs(new Date(t.points[i].timestamp).getTime() - new Date(t.points[i - 1].timestamp).getTime());
+          if (d <= 1200 && tDiff <= 15 * 60 * 1000) totalDist += d;
         }
 
-        list.push({
+        userMap.set(t.userId, {
           userId: t.userId,
           name: t.userName || user?.name || 'Suchkraft',
           callSign: t.callSign || user?.callSign || 'Unit',
@@ -585,13 +783,76 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           distanceMeters: totalDist,
           isLive: false,
           isDrone,
-          equipmentIcon: isDrone ? '🚁' : '🚶',
+          phaseLabel: t.phaseLabel || 'Suchphase 1 (Referenz)',
+          equipmentIcon: isDrone ? '🚁' : user?.equipment?.includes('k9_mantrailer') ? '🐕' : '🚶',
           boundsPoints: t.points.map((p) => [p.lat, p.lng]),
         });
       });
     }
 
-    return list;
+    // 2. Active / Live tracks (e.g. Suchphase 2 heute)
+    Object.entries(userLocations).forEach(([userId, locState]) => {
+      const history = (locState.trackHistory || []).filter(
+        pt => !pt.operationId || !currentOperation?.id || pt.operationId === currentOperation.id
+      );
+      if (history.length < 2) return;
+
+      const user = allUsers.find((u) => u.id === userId);
+      const color = getUserTrackColor(user || userId, allUsers);
+      const isDrone = Boolean(user?.equipment?.includes('drone'));
+
+      const archivedForUser = currentOperation?.archivedTracks?.find((at) => at.userId === userId);
+      let activePoints = history;
+      let hasArchived = false;
+
+      if (archivedForUser && archivedForUser.points.length > 0) {
+        hasArchived = true;
+        const lastArchivedTime = new Date(archivedForUser.points[archivedForUser.points.length - 1].timestamp).getTime();
+        const newer = history.filter((p) => new Date(p.timestamp).getTime() > lastArchivedTime + 2000);
+        if (newer.length >= 2) {
+          activePoints = newer;
+        } else if (archivedForUser.points.length >= history.length) {
+          if (userMap.has(userId) && locState.isLive) {
+            const existing = userMap.get(userId)!;
+            existing.isLive = true;
+          }
+          return;
+        }
+      }
+
+      let activeDist = 0;
+      for (let i = 1; i < activePoints.length; i++) {
+        const d = calculateDistanceMeters(activePoints[i - 1].lat, activePoints[i - 1].lng, activePoints[i].lat, activePoints[i].lng);
+        const tDiff = Math.abs(new Date(activePoints[i].timestamp).getTime() - new Date(activePoints[i - 1].timestamp).getTime());
+        if (d <= 1200 && tDiff <= 15 * 60 * 1000) activeDist += d;
+      }
+
+      if (userMap.has(userId)) {
+        // Consolidate: 1 User = 1 Spur!
+        const existing = userMap.get(userId)!;
+        existing.distanceMeters += activeDist;
+        existing.pointCount += activePoints.length;
+        existing.isLive = locState.isLive;
+        existing.phaseLabel = 'Suchphase 1 + 2 (Kombiniert)';
+        existing.boundsPoints = [...existing.boundsPoints, ...activePoints.map((p) => [p.lat, p.lng] as [number, number])];
+      } else {
+        userMap.set(userId, {
+          userId,
+          name: user?.name || 'Suchkraft',
+          callSign: user?.callSign || 'Unit',
+          color,
+          pointCount: activePoints.length,
+          distanceMeters: activeDist,
+          isLive: locState.isLive,
+          isDrone,
+          phaseLabel: hasArchived ? 'Suchphase 2 (Aktiv)' : 'Suchphase (Aktiv)',
+          equipmentIcon: isDrone ? '🚁' : user?.equipment?.includes('k9_mantrailer') ? '🐕' : '🚶',
+          boundsPoints: activePoints.map((p) => [p.lat, p.lng]),
+        });
+      }
+    });
+
+    return Array.from(userMap.values());
   }, [userLocations, allUsers, currentOperation]);
 
   const zoomToTrack = useCallback((points: [number, number][]) => {
@@ -636,7 +897,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     if (!currentOperation) return;
     setIsCapturingSnapshot(true);
     try {
-      const dataUrl = await captureTacticalMapScreenshot(currentOperation, userLocations);
+      const dataUrl = await captureTacticalMapScreenshot(currentOperation, userLocations, allUsers);
       if (dataUrl) {
         if (onSaveSnapshot) {
           onSaveSnapshot(dataUrl);
@@ -668,7 +929,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     const timer = setTimeout(async () => {
       try {
         console.log('Automatischer Snapshot der Lagekarte bei Einsatzstart wird erfasst...');
-        const dataUrl = await captureTacticalMapScreenshot(currentOperation, userLocations);
+        const dataUrl = await captureTacticalMapScreenshot(currentOperation, userLocations, allUsers);
         if (dataUrl) {
           saveMapSnapshot(currentOperation.id, dataUrl, 'Einsatzstart');
         }
@@ -1015,6 +1276,91 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     }
   }, [isDrawingSector, drawMode]);
 
+  // EZ Repositioning via Long-Press (Mobile Hold & Desktop Right-Click) or Tap in Placement Mode
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // 1. Desktop Contextmenu (Right click) or native mobile long-press
+    const handleContextMenu = (e: L.LeafletMouseEvent) => {
+      if (isDrawingSectorRef.current || mode === 'archive') return;
+      L.DomEvent.preventDefault(e.originalEvent);
+      triggerEzRepositionModal(e.latlng.lat, e.latlng.lng);
+    };
+
+    // 2. Click in Placement Mode
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
+      if (isPlacingEzModeRef.current && !isDrawingSectorRef.current && mode !== 'archive') {
+        triggerEzRepositionModal(e.latlng.lat, e.latlng.lng);
+        setIsPlacingEzMode(false);
+      }
+    };
+
+    map.on('contextmenu', handleContextMenu);
+    map.on('click', handleMapClick);
+
+    // 3. Touchhold detector for Touchscreens (iOS Safari, Android Chrome)
+    const container = map.getContainer();
+    let touchTimer: any = null;
+    let startX = 0;
+    let startY = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1 || isDrawingSectorRef.current || mode === 'archive') return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      touchTimer = setTimeout(() => {
+        touchTimer = null;
+        if (!mapInstanceRef.current) return;
+        const rect = container.getBoundingClientRect();
+        const pt = L.point(startX - rect.left, startY - rect.top);
+        const latlng = mapInstanceRef.current.containerPointToLatLng(pt);
+        if (navigator.vibrate) {
+          navigator.vibrate([40, 50, 40]);
+        }
+        triggerEzRepositionModal(latlng.lat, latlng.lng);
+      }, 550);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!touchTimer) return;
+      const dx = Math.abs(e.touches[0].clientX - startX);
+      const dy = Math.abs(e.touches[0].clientY - startY);
+      if (dx > 10 || dy > 10) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
+    };
+
+    const onTouchEnd = () => {
+      if (touchTimer) {
+        clearTimeout(touchTimer);
+        touchTimer = null;
+      }
+    };
+
+    // Custom event listener from popup buttons
+    const handleCustomPlaceMode = () => {
+      setIsPlacingEzMode(true);
+    };
+    window.addEventListener('shs-place-ez-mode', handleCustomPlaceMode);
+
+    container.addEventListener('touchstart', onTouchStart, { passive: true });
+    container.addEventListener('touchmove', onTouchMove, { passive: true });
+    container.addEventListener('touchend', onTouchEnd, { passive: true });
+    container.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+    return () => {
+      map.off('contextmenu', handleContextMenu);
+      map.off('click', handleMapClick);
+      window.removeEventListener('shs-place-ez-mode', handleCustomPlaceMode);
+      container.removeEventListener('touchstart', onTouchStart);
+      container.removeEventListener('touchmove', onTouchMove);
+      container.removeEventListener('touchend', onTouchEnd);
+      container.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [triggerEzRepositionModal, mode]);
+
   // Render temporary drawing polygon & vertex markers & area label
   useEffect(() => {
     if (!drawLayerRef.current) return;
@@ -1326,7 +1672,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     });
 
     const canManageOps = isUserAdminOrEL(currentUser);
-    const isDraggableHq = canManageOps && mode !== 'archive' && Boolean(currentOperation);
+    const isDraggableHq = canManageOps && mode !== 'archive';
 
     const hqMarker = L.marker([hqLat, hqLng], {
       icon: hqIcon,
@@ -1336,23 +1682,54 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     });
 
     if (isDraggableHq) {
-      hqMarker.on('dragend', (e: L.LeafletEvent) => {
+      hqMarker.on('dragend', async (e: L.LeafletEvent) => {
         const marker = e.target as L.Marker;
         const newPos = marker.getLatLng();
         const newLat = Number(newPos.lat.toFixed(6));
         const newLng = Number(newPos.lng.toFixed(6));
 
-        if (currentOperation) {
-          const existingHq = currentOperation.headquartersLocation;
+        if (currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused')) {
+          const detectedAddr = await reverseGeocode(newLat, newLng);
           const updatedHq = {
             lat: newLat,
             lng: newLng,
-            address: existingHq?.address || 'Einsatzzentrale',
-            description: 'Manuell auf Karte feinjustiert',
+            address: detectedAddr || currentOperation.headquartersLocation?.address || 'Einsatzzentrale vor Ort',
+            description: currentOperation.headquartersLocation?.description || 'Manuell auf Karte verschoben',
           };
-          updateOperation(currentOperation.id, {
+          const logEntry: OperationLogEntry = {
+            id: `log-${Date.now()}`,
+            operationId: currentOperation.id,
+            timestamp: new Date().toISOString(),
+            authorName: currentUser?.name || 'Einsatzleitung',
+            authorRole: currentUser?.role || 'admin',
+            category: 'general',
+            text: `📡 EZ-Standort im Gelände/Parkplatz neu positioniert: ${updatedHq.address} (GPS: ${newLat.toFixed(5)}, ${newLng.toFixed(5)})`,
+          };
+          updateOperation(currentOperation.id, (prevOp) => ({
             headquartersLocation: updatedHq,
+            logs: [logEntry, ...(prevOp.logs || [])],
+          }));
+          setEzToastNotice(`📡 EZ erfolgreich auf ${updatedHq.address} verschoben!`);
+          setTimeout(() => setEzToastNotice(''), 4500);
+          playAlertSound('notification');
+        } else {
+          // Standby: Vereinshaus Aschersleben
+          saveSavedVereinsbueroLocation({
+            lat: newLat,
+            lng: newLng,
           });
+          if (currentOperation) {
+            updateOperation(currentOperation.id, {
+              headquartersLocation: {
+                lat: newLat,
+                lng: newLng,
+                address: VEREINSBUERO_LOCATION.address,
+                description: 'Vereinshaus Aschersleben',
+              },
+            });
+          }
+          setEzToastNotice(`🏢 Standard-EZ (Vereinshaus) erfolgreich auf ${newLat.toFixed(5)}, ${newLng.toFixed(5)} gespeichert!`);
+          setTimeout(() => setEzToastNotice(''), 4500);
           playAlertSound('notification');
         }
       });
@@ -1397,7 +1774,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       : '';
 
     const dragHintHtml = isDraggableHq
-      ? `<div class="mt-2 text-[10px] text-amber-300 bg-amber-950/70 p-1.5 rounded border border-amber-700/60 text-center font-mono">📍 EZ-Pin auf der Karte verschiebbar (Gedrückt halten & ziehen zum Ufer/Parkplatz)</div>`
+      ? `<div class="mt-2 text-[10px] text-amber-300 bg-amber-950/70 p-1.5 rounded border border-amber-700/60 text-center font-mono">📍 EZ-Pin verschiebbar (Ziehen oder Karte lange gedrückt halten)</div>`
       : '';
 
     hqMarker.bindPopup(`
@@ -1411,7 +1788,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         ${!isStandbyOffice && currentOperation ? `<div class="text-xs text-slate-300 mt-1.5 bg-slate-800/80 border border-slate-700 p-1.5 rounded">Einsatz: <strong class="text-white">${escapeHtml(currentOperation.title)}</strong><br/>Leitung: <strong class="text-white">${escapeHtml(currentOperation.commander)}</strong></div>` : `<div class="text-[11px] text-emerald-400 font-medium mt-1">🟢 Status: Bereitschaft am Vereinsbüro</div>`}
         ${ezRespondersListHtml}
         ${dragHintHtml}
-        <div class="mt-2.5 pt-2 border-t border-slate-700">
+        <div class="mt-2.5 pt-2 border-t border-slate-700 space-y-1.5">
           <a
             href="https://www.google.com/maps/dir/?api=1&destination=${hqLat},${hqLng}"
             target="_blank"
@@ -1420,6 +1797,15 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           >
             🧭 In Navi-App öffnen
           </a>
+          ${canManageOps ? `
+            <button
+              type="button"
+              onclick="window.dispatchEvent(new CustomEvent('shs-place-ez-mode'))"
+              class="w-full py-1 px-2 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 font-mono text-[11px] cursor-pointer transition text-center"
+            >
+              📍 EZ per Kartentipp verlegen
+            </button>
+          ` : ''}
         </div>
       </div>
     `);
@@ -1544,6 +1930,43 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     });
   }, [currentOperation, allUsers, showSectors]);
 
+  // Helper to render directional chevrons/arrows along GPS tracks (like sports/tracking watches)
+  const renderTrackDirectionArrows = (
+    points: { lat: number; lng: number }[],
+    trackColor: string,
+    layerGroup: L.LayerGroup
+  ) => {
+    if (!points || points.length < 2) return;
+    const step = Math.max(1, Math.min(14, Math.floor(points.length / 10)));
+    for (let i = 0; i < points.length - 1; i += step) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const d = calculateDistanceMeters(p1.lat, p1.lng, p2.lat, p2.lng);
+      if (d < 1.5 || d > 800) continue;
+
+      const dLat = (p2.lat - p1.lat) * (Math.PI / 180);
+      const dLng = (p2.lng - p1.lng) * (Math.PI / 180);
+      const y = Math.sin(dLng) * Math.cos((p2.lat * Math.PI) / 180);
+      const x =
+        Math.cos((p1.lat * Math.PI) / 180) * Math.sin((p2.lat * Math.PI) / 180) -
+        Math.sin((p1.lat * Math.PI) / 180) * Math.cos((p2.lat * Math.PI) / 180) * Math.cos(dLng);
+      const angleDeg = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+
+      const arrowIcon = L.divIcon({
+        className: 'track-arrow-marker',
+        html: `<div style="transform: rotate(${angleDeg}deg); width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+          <svg viewBox="0 0 12 12" width="12" height="12" style="filter: drop-shadow(0 1px 2px rgba(0,0,0,0.85));">
+            <path d="M 6 0 L 12 11 L 6 8 L 0 11 Z" fill="${trackColor}" stroke="#ffffff" stroke-width="1.2" />
+          </svg>
+        </div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+      });
+      const marker = L.marker([p1.lat, p1.lng], { icon: arrowIcon, interactive: false });
+      layerGroup.addLayer(marker);
+    }
+  };
+
   // Render GPS Movement Trails (Suchspuren / Tracks) - Live & Archiviert (Phase 1 / Reaktiviert) & TrackingTest
   useEffect(() => {
     if (!tracksLayerRef.current) return;
@@ -1602,6 +2025,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         });
         tracksLayerRef.current.addLayer(latestMarker);
       }
+
+      // Add direction arrows
+      renderTrackDirectionArrows(activeTrackingTest.trackPoints, '#38bdf8', tracksLayerRef.current);
     }
 
     if (!showTracks) return;
@@ -1613,17 +2039,6 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     if (currentOperation?.archivedTracks && currentOperation.archivedTracks.length > 0 && !activeTrackingTest?.isActive) {
       currentOperation.archivedTracks.forEach((archivedTrack) => {
         if (!archivedTrack.points || archivedTrack.points.length < 2) return;
-
-        // If the live user location currently has equal or more points, let live renderer draw the full extended track
-        const liveLoc = userLocations[archivedTrack.userId];
-        const liveHistory = (liveLoc?.trackHistory || []).filter(pt => pt.operationId === currentOperation?.id);
-        const isCurrentlyLiveWithMore =
-          !isArchiveMode &&
-          liveHistory.length >= archivedTrack.points.length;
-
-        if (isCurrentlyLiveWithMore) {
-          return; // Skip archived version so the live extended track is shown seamlessly
-        }
 
         renderedTrackUserIds.add(archivedTrack.userId);
 
@@ -1637,7 +2052,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           } else {
             const prevPt = currentSeg[currentSeg.length - 1];
             const dist = calculateDistanceMeters(prevPt[0], prevPt[1], pt.lat, pt.lng);
-            if (dist > 1200) {
+            const prevTimestamp = archivedTrack.points[i - 1]?.timestamp;
+            const currTimestamp = pt.timestamp;
+            const timeDiff = prevTimestamp && currTimestamp ? Math.abs(new Date(currTimestamp).getTime() - new Date(prevTimestamp).getTime()) : 0;
+            // Break segments on large teleports (> 800m) or long pauses (> 15 min)
+            if (dist > 800 || timeDiff > 15 * 60 * 1000) {
               if (currentSeg.length > 1) {
                 segments.push(currentSeg);
               }
@@ -1651,20 +2070,30 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           segments.push(currentSeg);
         }
 
-        const isPausedOrEnded = currentOperation.status === 'paused' || currentOperation.status === 'completed';
         const isPhase1 = archivedTrack.phaseLabel?.includes('Suchphase 1') || archivedTrack.phaseLabel?.includes('Phase 1');
+        const trackColor = archivedTrack.color || getUserTrackColor(archivedTrack.userId, allUsers);
 
         segments.forEach((seg) => {
+          // High-contrast outline casing
+          const casing = L.polyline(seg, {
+            color: '#0f172a',
+            weight: 5.5,
+            opacity: 0.6,
+            smoothFactor: 0,
+            dashArray: isPhase1 && currentOperation.status === 'active' ? '8, 6' : undefined,
+          });
+          tracksLayerRef.current?.addLayer(casing);
+
           const polyline = L.polyline(seg, {
-            color: archivedTrack.color || getUserTrackColor(archivedTrack.userId, allUsers),
+            color: trackColor,
             weight: 3.5,
-            opacity: 0.85,
+            opacity: isPhase1 && currentOperation.status === 'active' ? 0.8 : 0.9,
             smoothFactor: 0,
             dashArray: isPhase1 && currentOperation.status === 'active' ? '8, 6' : undefined,
           });
 
           polyline.bindTooltip(
-            `📍 Bewegungsprofil: ${archivedTrack.userName} (${archivedTrack.callSign}) • ${archivedTrack.points.length} Wegpunkte (${archivedTrack.phaseLabel || 'Gesichert'})`,
+            `📍 Bewegungsprofil: ${archivedTrack.userName} (${archivedTrack.callSign}) • ${archivedTrack.points.length} Wegpunkte (${archivedTrack.phaseLabel || 'Suchphase 1 Referenz'})`,
             { sticky: true }
           );
 
@@ -1682,6 +2111,10 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             fillOpacity: 1,
             weight: 1.5,
           });
+          startMarker.bindTooltip(
+            `🟢 Startpunkt (Phase 1): ${archivedTrack.userName}`,
+            { sticky: true }
+          );
           tracksLayerRef.current?.addLayer(startMarker);
         }
         if (endPt && archivedTrack.points.length > 1) {
@@ -1692,7 +2125,20 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             fillOpacity: 1,
             weight: 1.5,
           });
+          endMarker.bindTooltip(
+            `⚫ Stand/Ende (Phase 1): ${archivedTrack.userName}`,
+            { sticky: true }
+          );
           tracksLayerRef.current?.addLayer(endMarker);
+        }
+
+        // Direction arrows along archived track
+        if (tracksLayerRef.current) {
+          renderTrackDirectionArrows(
+            archivedTrack.points,
+            trackColor,
+            tracksLayerRef.current
+          );
         }
       });
     }
@@ -1717,12 +2163,26 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           return;
         }
 
-        const history = (locState.trackHistory || []).filter(pt => pt.operationId === currentOperation?.id);
+        const history = (locState.trackHistory || []).filter(
+          pt => !pt.operationId || !currentOperation?.id || pt.operationId === currentOperation.id
+        );
         if (!history || history.length < 2) return;
 
-        // If this user track was already rendered in full via archivedTracks, avoid duplicate draw
-        if (renderedTrackUserIds.has(userId) && (currentOperation?.archivedTracks?.find(t => t.userId === userId)?.points.length || 0) >= history.length) {
-          return;
+        // Check if user already has an archived track from previous phase
+        const archivedForUser = currentOperation?.archivedTracks?.find((at) => at.userId === userId);
+        let activeHistory = history;
+        let isPhase2 = false;
+
+        if (archivedForUser && archivedForUser.points.length > 0) {
+          const lastArchivedTime = new Date(archivedForUser.points[archivedForUser.points.length - 1].timestamp).getTime();
+          const newer = history.filter((p) => new Date(p.timestamp).getTime() > lastArchivedTime + 2000);
+          if (newer.length >= 2) {
+            activeHistory = newer;
+            isPhase2 = true;
+          } else {
+            // No new points recorded yet in Phase 2
+            return;
+          }
         }
 
         const isDrone = user?.equipment?.includes('drone');
@@ -1730,20 +2190,21 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
         const isPaused = currentOperation?.status === 'paused';
         const isCompleted = currentOperation?.status === 'completed';
-        const modeLabel = isPaused ? 'Pausiert' : isCompleted ? 'Abgeschlossen' : locState.isLive ? 'Live' : 'Gesichert';
+        const modeLabel = isPhase2 ? 'Suchphase 2 (Live)' : isPaused ? 'Pausiert' : isCompleted ? 'Abgeschlossen' : locState.isLive ? 'Live' : 'Gesichert';
 
         // Draw track segments with gap-awareness for Funklöcher (> 45s signal loss)
-        for (let i = 1; i < history.length; i++) {
-          const prevPt = history[i - 1];
-          const currPt = history[i];
+        for (let i = 1; i < activeHistory.length; i++) {
+          const prevPt = activeHistory[i - 1];
+          const currPt = activeHistory[i];
           const dist = calculateDistanceMeters(prevPt.lat, prevPt.lng, currPt.lat, currPt.lng);
 
-          // Skip extreme teleports / map bounds jumps (> 1200m)
-          if (dist > 1200) {
+          const timeDiffMs = Math.abs(new Date(currPt.timestamp).getTime() - new Date(prevPt.timestamp).getTime());
+
+          // Skip extreme teleports / map bounds jumps (> 800m) or overnight gaps (> 15 min): DO NOT DRAW A LINE
+          if (dist > 800 || timeDiffMs > 15 * 60 * 1000) {
             continue;
           }
 
-          const timeDiffMs = Math.abs(new Date(currPt.timestamp).getTime() - new Date(prevPt.timestamp).getTime());
           const isGap = currPt.isGapStart || timeDiffMs >= 45000;
 
           if (isGap) {
@@ -1770,11 +2231,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 [currPt.lat, currPt.lng],
               ],
               {
-                color: trackColor, // Eigene User-Farbe!
+                color: trackColor,
                 weight: isDrone ? 3 : 3.5,
                 opacity: 0.9,
                 smoothFactor: 0,
-                dashArray: '6, 6', // Gestrichelt im Funklochbereich
+                dashArray: '6, 6',
               }
             );
             const gapSec = currPt.gapDurationSec || Math.round(timeDiffMs / 1000);
@@ -1815,15 +2276,15 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               }
             );
             segPolyline.bindTooltip(
-              `📍 Bewegungsprofil (${modeLabel}): ${user?.name || 'Sucher'} (${user?.callSign || 'Unit'}) • ${history.length} Wegpunkte`,
+              `📍 Bewegungsprofil (${modeLabel}): ${user?.name || 'Sucher'} (${user?.callSign || 'Unit'}) • ${activeHistory.length} Wegpunkte`,
               { sticky: true }
             );
             tracksLayerRef.current?.addLayer(segPolyline);
           }
         }
 
-        // Render Start point (green) for this user's recorded track
-        const startPt = history[0];
+        // Render Start point (green) for this user's active track
+        const startPt = activeHistory[0];
         if (startPt) {
           const startMarker = L.circleMarker([startPt.lat, startPt.lng], {
             radius: 4,
@@ -1832,12 +2293,16 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             fillOpacity: 1,
             weight: 1.5,
           });
+          startMarker.bindTooltip(
+            `🟢 Startpunkt (${isPhase2 ? 'Suchphase 2' : 'Start'}): ${user?.name || 'Sucher'}`,
+            { sticky: true }
+          );
           tracksLayerRef.current?.addLayer(startMarker);
         }
 
         // If operation is paused or completed, render End point (black)
-        if ((isPaused || isCompleted) && history.length > 1) {
-          const endPt = history[history.length - 1];
+        if ((isPaused || isCompleted) && activeHistory.length > 1) {
+          const endPt = activeHistory[activeHistory.length - 1];
           if (endPt) {
             const endMarker = L.circleMarker([endPt.lat, endPt.lng], {
               radius: 4,
@@ -1846,8 +2311,17 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               fillOpacity: 1,
               weight: 1.5,
             });
+            endMarker.bindTooltip(
+              `⚫ Endpunkt / Letzte Position: ${user?.name || 'Sucher'}`,
+              { sticky: true }
+            );
             tracksLayerRef.current?.addLayer(endMarker);
           }
+        }
+
+        // Direction arrows along live track
+        if (tracksLayerRef.current) {
+          renderTrackDirectionArrows(activeHistory, trackColor, tracksLayerRef.current);
         }
       });
     }
@@ -1922,11 +2396,20 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         (user.operationalRole === 'ez_command' || userLocations[userId]?.operationalRole === 'ez_command') &&
         (user.arrivalStatus === 'ready' || user.arrivalStatus === 'ez_reached');
 
-      if (isEzStaff) return;
+      // If user is explicitly selected, NEVER skip them (even if EZ staff) so their location is visible!
+      if (isEzStaff && selectedUser?.id !== userId) return;
 
-      // Only display active / logged-in users unless showInactiveResponders is active
+      // Only display active / logged-in users unless showInactiveResponders is active OR user is a participant of current operation OR user is explicitly selected
+      const isParticipant = Boolean(
+        currentOperation && (
+          currentOperation.participantIds?.includes(userId) ||
+          currentOperation.archivedTracks?.some(t => t.userId === userId) ||
+          (userLocations[userId]?.trackHistory?.length || 0) > 0
+        )
+      );
       const isOnline = user.isActive;
-      if (!isOnline && !showInactiveResponders) return;
+      const isSelected = selectedUser?.id === userId;
+      if (!isOnline && !showInactiveResponders && !isParticipant && !isSelected) return;
 
       let locState = userLocations[userId];
       if (!locState && user.id === currentUser?.id && myLocation) {
@@ -1934,6 +2417,26 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           userId: user.id,
           currentPosition: myLocation,
           isLive: true,
+          lastUpdated: new Date().toISOString(),
+          trackHistory: [],
+        };
+      }
+
+      // If active user or selected user has no location yet, provide a fallback location so they ARE VISIBLE!
+      if ((!locState || !locState.currentPosition) && (user.isActive || isSelected)) {
+        const fallbackPos =
+          currentOperation?.archivedTracks?.find(t => t.userId === userId)?.points?.slice(-1)[0] ||
+          currentOperation?.headquartersLocation ||
+          VEREINSBUERO_LOCATION;
+
+        locState = {
+          userId: user.id,
+          currentPosition: {
+            lat: fallbackPos.lat,
+            lng: fallbackPos.lng,
+            timestamp: new Date().toISOString(),
+          },
+          isLive: user.isActive,
           lastUpdated: new Date().toISOString(),
           trackHistory: [],
         };
@@ -2050,8 +2553,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           : '';
         const clusterBadge = isCluster ? `<span class="bg-blue-600 text-white rounded-full px-1 text-[9px] font-mono shadow ml-1">${itemIdx + 1}/${N}</span>` : '';
 
-        const statusBadgeHtml = !item.isOnline
-          ? '<span class="text-slate-400 font-normal">(Abgemeldet)</span>'
+        const isPaused = currentOperation?.status === 'paused';
+        const statusBadgeHtml = isPaused
+          ? '<span class="text-amber-300 font-bold">⏸️ Stand bei Pause</span>'
+          : !item.isOnline
+          ? `<span class="text-slate-400 font-normal">⚫ Offline (${freshnessText})</span>`
           : connStatus === 'active'
           ? '<span class="text-emerald-400 font-bold">🟢</span>'
           : connStatus === 'stale'
@@ -2060,6 +2566,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
         const outerGlowClass = item.isMe
           ? 'bg-cyan-500/40 animate-ping'
+          : isPaused
+          ? 'bg-amber-500/30'
           : !item.isOnline
           ? 'bg-slate-500/20'
           : connStatus === 'active'
@@ -2068,7 +2576,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           ? 'bg-amber-500/40 animate-pulse'
           : 'bg-rose-500/30';
 
-        const avatarBorderClass = !item.isOnline
+        const avatarBorderClass = isPaused
+          ? 'border-amber-400 ring-2 ring-amber-400/40'
+          : !item.isOnline
           ? 'border-slate-400 opacity-60'
           : connStatus === 'active'
           ? 'border-white'
@@ -2210,15 +2720,23 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     });
   }, [currentOperation, showFindings, showFalseAlarms, onOpenFindingDetails, onOpenFindingDetail, activeTrackingTest]);
 
-  // Center on selected user when they change
+  // Center on selected user when they change & ensure responders layer is active
   useEffect(() => {
     if (!mapInstanceRef.current || !selectedUser) return;
+    setShowResponders(true); // Always activate responders layer so they can be seen!
+
     const userLoc = userLocations[selectedUser.id];
-    if (userLoc) {
-      const { lat, lng } = userLoc.currentPosition;
-      mapInstanceRef.current.flyTo([lat, lng], 16, { duration: 1.2 });
+    const targetPos =
+      userLoc?.currentPosition ||
+      userLoc?.trackHistory?.slice(-1)[0] ||
+      currentOperation?.archivedTracks?.find((t) => t.userId === selectedUser.id)?.points?.slice(-1)[0] ||
+      currentOperation?.headquartersLocation ||
+      VEREINSBUERO_LOCATION;
+
+    if (targetPos && typeof targetPos.lat === 'number' && typeof targetPos.lng === 'number') {
+      mapInstanceRef.current.flyTo([targetPos.lat, targetPos.lng], 16, { duration: 1.2 });
     }
-  }, [selectedUser, userLocations]);
+  }, [selectedUser, userLocations, currentOperation]);
 
   // Center on user position
   const handleCenterOnMe = () => {
@@ -2474,11 +2992,120 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         </div>
       )}
 
+      {/* PAUSED OPERATION BANNER */}
+      {currentOperation?.status === 'paused' && !isArchiveMode && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[950] max-w-xl w-[94%] sm:w-auto bg-[#1E293B]/95 backdrop-blur-md border border-amber-500/70 rounded-2xl px-4 py-2.5 shadow-2xl text-slate-200 flex flex-wrap items-center justify-between gap-3 font-sans animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center shrink-0">
+              <Pause className="w-4 h-4" />
+            </div>
+            <div className="text-xs">
+              <div className="font-bold text-amber-300 uppercase tracking-wider font-mono text-[10px] flex items-center gap-1.5">
+                <span>⏸️ Einsatz pausiert / unterbrochen</span>
+                {currentOperation.pausedReason && (
+                  <span className="text-amber-400 font-normal">({currentOperation.pausedReason})</span>
+                )}
+              </div>
+              <div className="text-slate-300 text-[11px] leading-snug">
+                Positionen der Kräfte zeigen den Stand zur Pause. Tracking im Feld ist pausiert.
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={captureMapSnapshot}
+              disabled={isCapturingSnapshot}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-lg transition cursor-pointer shrink-0 disabled:opacity-50 font-mono"
+              title="Aktuellen Stand als Lagebild im Protokoll speichern"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>{isCapturingSnapshot ? 'Erfasse...' : '📸 Lagebild sichern'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Snapshot saved notice toast */}
       {snapshotSavedNotice && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[1100] bg-emerald-800/95 backdrop-blur-md text-white px-4 py-2 rounded-xl shadow-2xl font-bold text-xs flex items-center gap-2 border border-emerald-400 animate-in fade-in zoom-in-95 duration-200">
           <Check className="w-4 h-4 text-emerald-300" />
           <span>Lagekarten-Snapshot erfolgreich im Einsatzprotokoll hinterlegt!</span>
+        </div>
+      )}
+
+      {/* EZ Toast notification */}
+      {ezToastNotice && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[1150] bg-indigo-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-xl shadow-2xl font-bold text-xs flex items-center gap-2 border border-indigo-400 animate-in fade-in zoom-in-95 duration-200">
+          <Check className="w-4 h-4 text-indigo-300" />
+          <span>{ezToastNotice}</span>
+        </div>
+      )}
+
+      {/* Placement mode banner */}
+      {isPlacingEzMode && (
+        <div className="absolute top-16 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:max-w-md z-[1100] bg-indigo-950/95 border-2 border-indigo-400 text-white p-3 rounded-2xl shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-3">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl animate-pulse">🎯</span>
+            <div className="text-xs">
+              <strong className="block text-indigo-200">EZ-Platzierungsmodus aktiv</strong>
+              <span className="text-slate-300 text-[11px]">Tippen Sie auf die Karte (z. B. Parkplatz oder Vereinshaus), um die EZ exakt dort zu platzieren.</span>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsPlacingEzMode(false)}
+            className="px-2.5 py-1.5 rounded-lg bg-indigo-800 hover:bg-indigo-700 text-white text-xs font-bold border border-indigo-500/60 shrink-0 cursor-pointer"
+          >
+            Abbrechen
+          </button>
+        </div>
+      )}
+
+      {/* Warning banner: EZ is still in Aschersleben while active operation is out of town */}
+      {ezDistanceWarning && !dismissEzWarning && (
+        <div className="absolute top-16 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:max-w-2xl z-[1050] bg-rose-950/95 border-2 border-rose-500 text-white p-3.5 rounded-2xl shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-top-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <span className="text-2xl shrink-0">🚨</span>
+              <div className="text-xs space-y-1">
+                <div className="font-black text-rose-200 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <span>Achtung: EZ steht noch in Aschersleben!</span>
+                  <span className="px-1.5 py-0.5 rounded bg-rose-600 text-white font-mono text-[9px] font-bold">
+                    {ezDistanceWarning.distKm.toFixed(1)} km entfernt
+                  </span>
+                </div>
+                <p className="text-rose-100/90 text-[11px] leading-tight">
+                  Einsatzkräfte, die auf <strong>„Route zur EZ“ / „Navi“</strong> tippen, werden aktuell nach <strong>Aschersleben</strong> geleitet statt zum Einsatzort ({ezDistanceWarning.targetLabel})!
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setDismissEzWarning(true)}
+              className="text-rose-300 hover:text-white p-1 rounded-lg hover:bg-rose-800/50 transition cursor-pointer text-sm"
+              title="Hinweis ausblenden"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="mt-2.5 pt-2 border-t border-rose-800/80 flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => handleSetEzToPls(ezDistanceWarning.targetLat, ezDistanceWarning.targetLng, ezDistanceWarning.targetLabel)}
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow flex items-center gap-1.5 cursor-pointer transition"
+            >
+              <span>📍 EZ an Einsatzort ({ezDistanceWarning.targetLabel}) verlegen</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsPlacingEzMode(true);
+                setDismissEzWarning(true);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-600 shadow flex items-center gap-1.5 cursor-pointer transition"
+            >
+              <span>🗺️ Auf Parkplatz/Karte platzieren</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -2517,6 +3144,21 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               <Compass className="w-3.5 h-3.5 text-indigo-400" />
               <span>EZ</span>
             </button>
+
+            {canManageOps && mode !== 'archive' && (
+              <button
+                onClick={() => setIsPlacingEzMode((prev) => !prev)}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border font-mono ${
+                  isPlacingEzMode
+                    ? 'bg-indigo-600 text-white border-white animate-pulse'
+                    : 'bg-indigo-950/70 text-indigo-300 border-indigo-700/60'
+                }`}
+                title="Einsatzzentrale auf Karte platzieren (oder langes Drücken)"
+              >
+                <MapPin className="w-3.5 h-3.5 text-indigo-400" />
+                <span>EZ Ort</span>
+              </button>
+            )}
 
             <button
               onClick={() => setIsWeatherModalOpenMobile(true)}
@@ -2741,7 +3383,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 <div className="max-h-36 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
                   {trackSummaries.map((item) => (
                     <div
-                      key={item.userId}
+                      key={`${item.userId}-${item.phaseLabel || 'track'}`}
                       className="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs"
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -2752,6 +3394,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                         <div className="truncate text-[11px]">
                           <span className="font-bold text-white">{item.name}</span>
                           <span className="text-slate-400 font-mono ml-1">({item.callSign})</span>
+                          <span className="ml-1.5 text-[9px] px-1 py-0.5 rounded font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                            {item.phaseLabel?.includes('Phase 1') ? 'Phase 1' : item.phaseLabel?.includes('Phase 2') ? 'Phase 2' : item.isLive ? 'Live' : 'Gesichert'}
+                          </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0 font-mono text-[10px]">
@@ -3032,7 +3677,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
                     return (
                       <div
-                        key={item.userId}
+                        key={`${item.userId}-${item.phaseLabel || 'track'}`}
                         className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-700/80 rounded-lg p-2 transition flex flex-col gap-1.5 shadow-sm"
                       >
                         <div className="flex items-center justify-between">
@@ -3056,12 +3701,20 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
                           <span
                             className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 border ${
-                              item.isLive
+                              item.phaseLabel?.includes('Phase 1')
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                : item.isLive
                                 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                                 : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
                             }`}
                           >
-                            {item.isLive ? '🟢 Live' : '📁 Phase 1'}
+                            {item.phaseLabel?.includes('Phase 1')
+                              ? '📁 Phase 1 (Gestern)'
+                              : item.phaseLabel?.includes('Phase 2')
+                              ? '🟢 Phase 2 (Heute)'
+                              : item.isLive
+                              ? '🟢 Live'
+                              : '📁 Gesichert'}
                           </span>
                         </div>
 
@@ -3155,6 +3808,21 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   <Compass className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Navi zur EZ (Koordinatenübermittlung)</span>
                 </button>
+
+                {canManageOps && mode !== 'archive' && (
+                  <button
+                    onClick={() => setIsPlacingEzMode((prev) => !prev)}
+                    className={`col-span-2 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer font-mono ${
+                      isPlacingEzMode
+                        ? 'bg-indigo-600 text-white shadow ring-2 ring-indigo-400 animate-pulse'
+                        : 'bg-indigo-950/70 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/80'
+                    }`}
+                    title="Einsatzzentrale auf Karte platzieren (oder langes Drücken auf Karte)"
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>{isPlacingEzMode ? 'Tippen Sie auf die Karte...' : '📍 EZ auf Karte platzieren / verschieben'}</span>
+                  </button>
+                )}
               </div>
 
               {isAdminOrEL && !isDrawingSector && (
@@ -3928,6 +4596,107 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         </div>
       )}
 
+      {/* EZ MOVE / CONFIRMATION MODAL AFTER LONG-PRESS OR TAP */}
+      {ezMoveModal && (
+        <div
+          className="fixed inset-0 z-[6000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-150 font-sans"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEzMoveModal(null);
+          }}
+        >
+          <div className="bg-[#1E293B] border-2 border-indigo-500 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col text-slate-100 animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="p-4 bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border-b border-indigo-500/40 flex items-center justify-between">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/60 text-indigo-300 flex items-center justify-center text-xl shrink-0 shadow-inner">
+                  📍
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-white text-sm sm:text-base uppercase tracking-wide">
+                    {ezMoveModal.isStandby ? '🏢 Standard-EZ auf Vereinshaus positionieren' : '📡 Einsatzzentrale (EZ) verlegen'}
+                  </h3>
+                  <div className="text-[11px] text-indigo-300 font-mono">
+                    {ezMoveModal.isStandby ? 'Standard-Standort für Bereitschaft (Hohe Str. 15)' : `Einsatz: ${currentOperation?.title}`}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setEzMoveModal(null)}
+                className="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer border border-slate-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-4 sm:p-5 space-y-4 text-xs">
+              <p className="text-slate-300 text-xs">
+                {ezMoveModal.isStandby
+                  ? 'Möchten Sie die Standard-Position der Einsatzzentrale (Vereinsbüro Aschersleben) exakt auf diesen Punkt (z. B. auf das Vereinshaus statt auf die Straße) setzen und dauerhaft speichern?'
+                  : 'Soll die Einsatzzentrale (EZ) an diesen genauen Punkt im Gelände (z. B. Waldparkplatz / Bereitstellungsraum) verlegt werden? Alle Einsatzkräfte navigieren ab sofort hierher.'}
+              </p>
+
+              {/* GPS Badge & Inputs */}
+              <div className="bg-slate-900/90 border border-indigo-500/30 rounded-xl p-3.5 space-y-3">
+                <div className="flex items-center justify-between font-mono text-[11px] pb-2 border-b border-slate-800">
+                  <span className="text-slate-400">GPS-Koordinaten:</span>
+                  <span className="text-indigo-300 font-bold">
+                    {ezMoveModal.lat.toFixed(6)}° N, {ezMoveModal.lng.toFixed(6)}° E
+                  </span>
+                </div>
+
+                {/* Address field with reverse geocoding indicator */}
+                <div>
+                  <label className="block text-[10px] font-mono text-slate-400 uppercase mb-1">
+                    {ezMoveModal.isLoadingAddress ? 'Ermittle Adresse über OpenStreetMap...' : 'Ermittelte Adresse / Standort:'}
+                  </label>
+                  <input
+                    type="text"
+                    value={ezMoveModal.address}
+                    onChange={(e) => setEzMoveModal({ ...ezMoveModal, address: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-indigo-500"
+                    placeholder="z.B. Waldparkplatz oder Hohe Straße 15"
+                  />
+                </div>
+
+                {/* Description field */}
+                <div>
+                  <label className="block text-[10px] font-mono text-slate-400 uppercase mb-1">
+                    Bezeichnung / Lagehinweis (optional):
+                  </label>
+                  <input
+                    type="text"
+                    value={ezMoveModal.description}
+                    onChange={(e) => setEzMoveModal({ ...ezMoveModal, description: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-indigo-500"
+                    placeholder={ezMoveModal.isStandby ? 'Vereinshaus Aschersleben' : 'z.B. Parkplatz Forsthaus / ELW 1'}
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setEzMoveModal(null)}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold font-mono transition cursor-pointer border border-slate-700 text-center"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleConfirmEzMove()}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold font-mono transition cursor-pointer shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{ezMoveModal.isStandby ? 'Auf Vereinshaus sichern' : 'EZ hierher verlegen'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* DESKTOP / TABLET FLOATING WEATHER OVERLAY (Top-Right of Map, Draggable) */}
       {!isMobileScreen && showWeatherOverlay && (
         <div
@@ -3969,6 +4738,132 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               onClose={() => setIsWeatherModalOpenMobile(false)}
             />
           </div>
+        </div>
+      )}
+
+      {/* FLOATING TACTICAL TRACK LEGEND & DIRECTION INDICATORS (On-Map) */}
+      {showTracks && trackSummaries.length > 0 && (
+        <div className="absolute bottom-16 sm:bottom-4 left-3 sm:left-4 z-[900] select-none">
+          {!isTrackLegendExpanded ? (
+            <button
+              type="button"
+              onClick={() => setIsTrackLegendExpanded(true)}
+              className="flex items-center gap-2 px-3 py-2 bg-[#1E293B]/95 hover:bg-slate-800 text-slate-200 border border-slate-700 rounded-xl shadow-2xl backdrop-blur-md text-xs font-bold transition cursor-pointer font-mono group"
+              title="Suchspuren-Legende, Laufrichtung & Einheiten anzeigen"
+            >
+              <span className="text-base group-hover:scale-110 transition-transform">🧭</span>
+              <span className="font-bold">Suchspuren ({trackSummaries.length})</span>
+              <span className="text-emerald-400 font-bold">
+                {(trackSummaries.reduce((sum, t) => sum + t.distanceMeters, 0) / 1000).toFixed(1)} km
+              </span>
+              <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">▲</span>
+            </button>
+          ) : (
+            <div className="w-[310px] max-w-[calc(100vw-1.5rem)] max-h-[min(380px,calc(100vh-160px))] flex flex-col bg-[#1E293B]/95 backdrop-blur-md rounded-2xl border border-slate-700 shadow-2xl overflow-hidden font-mono text-xs animate-in slide-in-from-bottom-2 duration-150">
+              {/* Header */}
+              <div className="p-2.5 bg-slate-900/90 border-b border-slate-700 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-sm">🧭</span>
+                  <span className="font-bold text-white uppercase text-[11px] truncate">
+                    Suchspuren-Legende
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-950 text-blue-300 border border-blue-800 font-bold">
+                    {trackSummaries.length}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsTrackLegendExpanded(false)}
+                  className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800 cursor-pointer text-xs transition"
+                  title="Legende minimieren"
+                >
+                  ▼
+                </button>
+              </div>
+
+              {/* Direction explainer subheader */}
+              <div className="px-2.5 py-1.5 bg-slate-950/70 border-b border-slate-800 flex items-center justify-between text-[10px] text-slate-300">
+                <span className="flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block border border-white"></span>
+                  <span>Start</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="text-[11px] text-amber-400 font-bold">➡️</span>
+                  <span>Laufrichtung</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-slate-900 inline-block border-2 border-white"></span>
+                  <span>Ende/Stand</span>
+                </span>
+              </div>
+
+              {/* Tracks list */}
+              <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-thin">
+                {trackSummaries.map((item) => (
+                  <div
+                    key={`${item.userId}-${item.phaseLabel || 'track'}`}
+                    className="p-2 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span
+                        className="w-3.5 h-3.5 rounded-full shrink-0 border-2 border-white shadow-sm"
+                        style={{ backgroundColor: item.color }}
+                        title={`Farbe: ${item.color}`}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1 truncate">
+                          <span className="text-xs">{item.equipmentIcon}</span>
+                          <span className="font-bold text-white text-[11px] truncate">{item.name}</span>
+                          <span className={`ml-1 text-[9px] px-1 py-0.2 rounded font-mono font-bold shrink-0 border ${
+                            item.phaseLabel?.includes('Phase 1')
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                              : item.isLive
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                          }`}>
+                            {item.phaseLabel?.includes('Phase 1')
+                              ? 'Phase 1'
+                              : item.phaseLabel?.includes('Phase 2')
+                              ? 'Phase 2'
+                              : item.isLive
+                              ? 'Live'
+                              : 'Gesichert'}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate flex items-center gap-1.5">
+                          <span className="text-blue-400 font-bold">{item.callSign}</span>
+                          <span>•</span>
+                          <span>{item.pointCount} Pkt.</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[11px] font-bold text-emerald-400">
+                        {item.distanceMeters >= 1000 ? `${(item.distanceMeters / 1000).toFixed(2)} km` : `${Math.round(item.distanceMeters)} m`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => zoomToTrack(item.boundsPoints)}
+                        className="px-1.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold cursor-pointer transition flex items-center gap-0.5 shadow"
+                        title="Spur auf Karte zentrieren & vergrößern"
+                      >
+                        <span>🔍</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total distance footer */}
+              <div className="p-2 bg-slate-900/90 border-t border-slate-800 flex items-center justify-between text-[11px]">
+                <span className="text-slate-400">Gesamte Suchstrecke:</span>
+                <span className="font-bold text-emerald-400">
+                  {(trackSummaries.reduce((sum, t) => sum + t.distanceMeters, 0) / 1000).toFixed(2)} km
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

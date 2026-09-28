@@ -139,7 +139,7 @@ export const generateOperationPDF = async (
 
   // Map Snapshot
   try {
-    const imgData = await captureTacticalMapScreenshot(operation, userLocations);
+    const imgData = await captureTacticalMapScreenshot(operation, userLocations, allUsers);
     if (imgData) {
       pdf.addPage();
       pdf.setFontSize(14);

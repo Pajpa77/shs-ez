@@ -522,7 +522,7 @@ export const LoginScreen: React.FC = () => {
                   Einsatzzentrale
                 </h1>
                 <h2 className="text-sm font-bold text-cyan-300 uppercase tracking-widest font-mono">
-                  SHS-EZ (Reflex Blue Edition)
+                  SHS-EZ
                 </h2>
               </div>
             </div>

@@ -97,10 +97,57 @@ export const INITIAL_USERS: User[] = [
 ];
 
 // Vereinsbüro Spürhunde-Salzlandkreis e.V.
-export const VEREINSBUERO_LOCATION = {
-  lat: 51.75696,
-  lng: 11.45352,
+const DEFAULT_VEREINSBUERO_BASE = {
+  lat: 51.75691, // Feinausrichtung auf das Vereinshaus Hohe Straße 15
+  lng: 11.45360,
   address: 'Vereinsbüro Spürhunde-Salzlandkreis e.V., Hohe Straße 15, 06449 Aschersleben',
+};
+
+export const getSavedVereinsbueroLocation = (): { lat: number; lng: number; address: string } => {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('shs_vereinsbuero_location');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.lat === 'number' && typeof parsed.lng === 'number' && !isNaN(parsed.lat) && !isNaN(parsed.lng)) {
+          return {
+            lat: parsed.lat,
+            lng: parsed.lng,
+            address: parsed.address || DEFAULT_VEREINSBUERO_BASE.address,
+          };
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return { ...DEFAULT_VEREINSBUERO_BASE };
+};
+
+export const saveSavedVereinsbueroLocation = (loc: { lat: number; lng: number; address?: string }) => {
+  const updated = {
+    lat: Number(loc.lat.toFixed(6)),
+    lng: Number(loc.lng.toFixed(6)),
+    address: loc.address || VEREINSBUERO_LOCATION.address,
+  };
+  VEREINSBUERO_LOCATION.lat = updated.lat;
+  VEREINSBUERO_LOCATION.lng = updated.lng;
+  VEREINSBUERO_LOCATION.address = updated.address;
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('shs_vereinsbuero_location', JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('shs_vereinsbuero_updated', { detail: updated }));
+    } catch (e) {
+      console.error('Failed to save vereinsbuero location', e);
+    }
+  }
+};
+
+const _initialHq = getSavedVereinsbueroLocation();
+export const VEREINSBUERO_LOCATION = {
+  lat: _initialHq.lat,
+  lng: _initialHq.lng,
+  address: _initialHq.address,
 };
 
 // Saubere Ausgangslage für Spürhunde-Salzlandkreis e.V.

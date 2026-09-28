@@ -104,11 +104,11 @@ export const OperationEndModal: React.FC<OperationEndModalProps> = ({
     let snapshotDataUrl: string | undefined = undefined;
     if (includeMapSnapshot) {
       try {
-        snapshotDataUrl = (await captureTacticalMapScreenshot(currentOperation, userLocations)) || undefined;
+        snapshotDataUrl = (await captureTacticalMapScreenshot(currentOperation, userLocations, allUsers)) || undefined;
       } catch (err) {
         console.warn('[OperationEndModal] Primary screenshot capture failed, attempting canvas fallback:', err);
         try {
-          snapshotDataUrl = generateTacticalCanvasFallback(currentOperation, userLocations) || undefined;
+          snapshotDataUrl = generateTacticalCanvasFallback(currentOperation, userLocations, allUsers) || undefined;
         } catch (fallbackErr) {
           console.warn('[OperationEndModal] Tactical canvas fallback failed:', fallbackErr);
         }

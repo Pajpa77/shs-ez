@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { User, EquipmentType, SearchTeam, isFirstAdmin, isOwner, getUserTrackColor, getUserConnectionStatus, getSignalFreshnessText, isUserAdmin, isUserEL, isUserAdminOrEL } from '../types';
+import { VEREINSBUERO_LOCATION } from '../mockData';
 import {
   Users,
   Shield,
@@ -102,9 +103,16 @@ export const ResponderList: React.FC<ResponderListProps> = ({
 
   const isRealAdmin = isUserAdmin(currentUser);
   const canLead = isUserEL(currentUser);
-  const observerUsers = currentOperationUsers.filter((u) => u.role === 'observer');
+  const activeObserverUsers = currentOperationUsers.filter((u) => u.role === 'observer' && u.isActive);
+  const offlineObserverUsers = currentOperationUsers.filter((u) => u.role === 'observer' && !u.isActive);
+  const observerUsers = activeObserverUsers; // Only actively logged-in observers!
   const teams: SearchTeam[] = currentOperation?.teams || [];
   const sectors = currentOperation?.sectors || [];
+
+  const handleFocusUser = (targetUser: User) => {
+    setSelectedUser(targetUser);
+    onFocusUserOnMap();
+  };
 
   const handleToggleAdminRole = (targetUser: User) => {
     if (!isRealAdmin || targetUser.id === currentUser?.id) return;
@@ -218,24 +226,35 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                 EZ & Einsatzkräfte-Bereitschaftsmonitor (Ankunftskontrolle)
               </h2>
               <div className="text-xs text-slate-500 dark:text-slate-400 font-mono flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span>
-                  EZ: {(currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && currentOperation.headquartersLocation?.address) ? currentOperation.headquartersLocation.address : 'Vereinsbüro Hohe Straße 15, Aschersleben'}
-                </span>
-                <span className="text-slate-500">•</span>
-                <span>0,5 km Radius</span>
-                <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${
-                    (currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && currentOperation.headquartersLocation?.lat)
-                      ? `${currentOperation.headquartersLocation.lat},${currentOperation.headquartersLocation.lng}`
-                      : '51.7587,11.4589'
-                  }`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 underline font-bold"
-                  title="Route zur EZ in Google Maps / Navi-App öffnen"
-                >
-                  🧭 Route zur EZ
-                </a>
+                {(() => {
+                  const isOpActive = Boolean(currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused'));
+                  const targetLat = isOpActive
+                    ? (currentOperation?.headquartersLocation?.lat || currentOperation?.missingPerson?.lastSeenLocation?.lat || VEREINSBUERO_LOCATION.lat)
+                    : VEREINSBUERO_LOCATION.lat;
+                  const targetLng = isOpActive
+                    ? (currentOperation?.headquartersLocation?.lng || currentOperation?.missingPerson?.lastSeenLocation?.lng || VEREINSBUERO_LOCATION.lng)
+                    : VEREINSBUERO_LOCATION.lng;
+                  const targetAddr = isOpActive
+                    ? (currentOperation?.headquartersLocation?.address || currentOperation?.missingPerson?.lastSeenLocation?.address || 'Einsatzort')
+                    : VEREINSBUERO_LOCATION.address;
+
+                  return (
+                    <>
+                      <span>EZ: {targetAddr}</span>
+                      <span className="text-slate-500">•</span>
+                      <span>0,5 km Radius</span>
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${targetLat},${targetLng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 underline font-bold"
+                        title={`Route zur EZ (${targetAddr}) in Google Maps / Navi-App öffnen`}
+                      >
+                        🧭 Route zur EZ
+                      </a>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -478,6 +497,14 @@ export const ResponderList: React.FC<ResponderListProps> = ({
         </div>
       </div>
 
+      {/* Tapping user card hint */}
+      <div className="bg-blue-950/40 border border-blue-500/30 rounded-xl px-3.5 py-2.5 flex items-center justify-between text-xs text-blue-200 font-mono shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-base">📍</span>
+          <span><strong>Kräfte-Ortung:</strong> Antippen einer Einsatzkraft zeigt und zentriert sofort ihren Standort auf der Lagekarte.</span>
+        </div>
+      </div>
+
       {/* Filter & Search Bar for Individual Personnel */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#1E293B] p-3 rounded-xl border border-slate-300 dark:border-slate-700">
         <input
@@ -527,13 +554,15 @@ export const ResponderList: React.FC<ResponderListProps> = ({
           return (
             <div
               key={user.id}
-              className={`rounded-2xl p-5 border transition shadow-xl flex flex-col justify-between ${
+              onClick={() => handleFocusUser(user)}
+              className={`rounded-2xl p-5 border transition shadow-xl flex flex-col justify-between cursor-pointer group hover:ring-2 hover:ring-blue-500/50 hover:border-blue-400/80 active:scale-[0.99] ${
                 !user.isActive
                   ? 'opacity-50 grayscale bg-slate-100 dark:bg-slate-950/70 border-slate-200 dark:border-slate-800'
                   : user.role === 'admin'
                   ? 'bg-[#1E293B] border-blue-500/50'
                   : 'bg-[#1E293B] border-slate-300 dark:border-slate-700'
               }`}
+              title="Antippen, um Einsatzkraft auf der Lagekarte anzuzeigen & zu zentrieren"
             >
               <div>
                 {/* Header with Photo, Name & Role */}
@@ -580,7 +609,10 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                           </span>
                         )}
                         <button
-                          onClick={() => setUserActiveStatus(user.id, !user.isActive)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setUserActiveStatus(user.id, !user.isActive);
+                          }}
                           className={`text-[9px] px-2 py-0.5 rounded font-mono font-bold transition cursor-pointer ${
                             !user.isActive
                               ? 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700 hover:bg-emerald-900/40 hover:text-emerald-300'
@@ -717,6 +749,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                   {user.phone && (
                     <a
                       href={`tel:${user.phone}`}
+                      onClick={(e) => e.stopPropagation()}
                       className="flex-1 py-2 px-3 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-200 rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer border border-slate-300 dark:border-slate-700"
                     >
                       <Phone className="w-3.5 h-3.5 text-emerald-400" />
@@ -725,30 +758,32 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                   )}
 
                   <button
-                    onClick={() => onOpenDirectChat(user)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenDirectChat(user);
+                    }}
                     className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     Direktfunk
                   </button>
 
-                  {user.isActive && (
-                    <button
-                      onClick={() => {
-                        setSelectedUser(user);
-                        onFocusUserOnMap();
-                      }}
-                      className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow border border-emerald-500/30"
-                      title="Auf taktischer Karte anzeigen & Bewegungsprofil einsehen"
-                    >
-                      <MapPin className="w-3.5 h-3.5" />
-                      Karte
-                    </button>
-                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleFocusUser(user);
+                    }}
+                    className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer shadow border border-emerald-500/30 font-mono"
+                    title="Standort auf der Lagekarte anzeigen & zentrieren"
+                  >
+                    <MapPin className="w-3.5 h-3.5" />
+                    Karte
+                  </button>
 
                   {(userLocations[user.id]?.trackHistory?.length || 0) > 1 && (
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         exportSingleTrackAsGpx({
                           points: userLocations[user.id]?.trackHistory || [],
                           callSign: user.callSign,
@@ -765,7 +800,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                 </div>
 
                 {(isRealAdmin || canLead) && user.id !== currentUser.id && (
-                  <div className="flex gap-1">
+                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     {isFirstAdmin(user) ? (
                       <div
                         className="px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-amber-950/60 text-amber-300 border border-amber-500/60 font-mono text-[10px] flex items-center gap-1 font-bold select-none cursor-default"
@@ -778,7 +813,10 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                       <>
                         {isRealAdmin && (
                           <button
-                            onClick={() => handleToggleAdminRole(user)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleAdminRole(user);
+                            }}
                             className={`p-2 rounded-lg border transition cursor-pointer ${
                               user.role === 'admin'
                                 ? user.canLeadOperations
@@ -803,7 +841,8 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                         )}
                         {(currentOperation?.participantIds?.includes(user.id) || user.isActive) ? (
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (confirm(`${user.name} (${user.callSign}) wirklich aus dem aktuellen Einsatz abmelden?`)) {
                                 removeUserFromOperation(user.id);
                               }
@@ -847,13 +886,17 @@ export const ResponderList: React.FC<ResponderListProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                Angemeldete Betrachter & Gäste ({observerUsers.length})
+                Angemeldete Betrachter & Gäste ({activeObserverUsers.length})
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                  Nur Leseansicht
+                  {activeObserverUsers.length > 0 ? '🟢 Online' : 'Keine aktiv'}
                 </span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                Personen, die sich einloggen, aber nicht aktiv an der Suche teilnehmen.
+                {activeObserverUsers.length > 0
+                  ? 'Aktuell aktiv eingeloggte Behörden, Polizei oder Gäste (reine Leseansicht).'
+                  : offlineObserverUsers.length > 0
+                  ? `Aktuell niemand eingeloggt (${offlineObserverUsers.length} Gast-Accounts offline hinterlegt).`
+                  : 'Keine Betrachter-Accounts angelegt.'}
               </p>
             </div>
           </div>
@@ -863,18 +906,20 @@ export const ResponderList: React.FC<ResponderListProps> = ({
             onClick={() => setShowObserversSection((prev) => !prev)}
             className="px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-xs font-mono font-bold transition flex items-center gap-1.5 cursor-pointer"
           >
-            <span>{showObserversSection ? 'Liste verbergen' : `Liste anzeigen (${observerUsers.length})`}</span>
+            <span>{showObserversSection ? 'Liste verbergen' : `Liste anzeigen (${activeObserverUsers.length})`}</span>
             {showObserversSection ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
         </div>
 
         {showObserversSection && (
           <div className="pt-3 border-t border-slate-300 dark:border-slate-700 space-y-3 font-mono text-xs animate-in fade-in duration-150">
-            {observerUsers.length === 0 ? (
-              <p className="text-slate-500 text-xs py-2">Keine Betrachter-Accounts angelegt.</p>
+            {activeObserverUsers.length === 0 ? (
+              <p className="text-slate-400 text-xs py-3 text-center italic bg-slate-900/60 rounded-xl border border-slate-800">
+                Aktuell ist kein Betrachter oder externer Gast eingeloggt.
+              </p>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {observerUsers.map((obs) => (
+                {activeObserverUsers.map((obs) => (
                   <div
                     key={obs.id}
                     className="p-3.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700 flex items-center justify-between gap-2 shadow-sm"

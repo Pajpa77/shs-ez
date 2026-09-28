@@ -815,6 +815,7 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     currentUserIdRef.current = currentUserId;
   }, [currentUserId]);
+  const currentOperationRef = useRef<SearchOperation | null>(null);
   const lastCloudGpsSyncRef = useRef<{ timestamp: number; lat: number; lng: number }>({
     timestamp: 0,
     lat: 0,
@@ -936,6 +937,7 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     allOperations.find((op) => !deletedOpIdsRef.current.has(op.id) && op.status === 'active') ||
     allOperations.find((op) => !deletedOpIdsRef.current.has(op.id) && op.status === 'paused') ||
     null;
+  currentOperationRef.current = currentOperation;
 
   const unreadChatCount = useMemo(() => {
     return chatMessages.filter((m) => {
@@ -956,8 +958,9 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const findings = currentOperation ? currentOperation.findings : [];
 
   const calculateDistanceToEzMeters = useCallback((lat: number, lng: number): number | null => {
-    const ez = (currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && currentOperation.headquartersLocation)
-      ? currentOperation.headquartersLocation
+    const isOpActive = Boolean(currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused'));
+    const ez = isOpActive
+      ? (currentOperation?.headquartersLocation || currentOperation?.missingPerson?.lastSeenLocation || VEREINSBUERO_LOCATION)
       : VEREINSBUERO_LOCATION;
     return calculateDistanceMeters(ez.lat, ez.lng, lat, lng);
   }, [currentOperation]);
@@ -2121,9 +2124,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         (pos) => {
           lastGpsFixTimestamp = Date.now();
           const accuracyVal = Math.round(pos.coords.accuracy || 10);
-          // Accept up to 100m for initial GPS fix, and filter out jumps > 50m once established
-          const hasExistingLocation = Boolean(myLocation);
-          const maxAllowedAccuracy = hasExistingLocation ? 50 : 100;
+          const activeOp = currentOperationRef.current;
+          const isSearchingActive = activeOp && activeOp.status === 'active';
+          // Forest / tree cover & indoors friendly: allow up to 80m during active search, and up to 150m for general location/standby/home
+          const maxAllowedAccuracy = isSearchingActive ? 80 : 150;
           if (accuracyVal > maxAllowedAccuracy) {
             console.warn('[GPS] Inaccurate GPS reading ignored (accuracy:', accuracyVal, 'm, max allowed:', maxAllowedAccuracy, 'm)');
             return;
@@ -2179,8 +2183,9 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               };
 
               // Safely handle track history: only drop the solitary initial seed mock point if present, and purge old operation tracks.
+              const activeOpId = currentOperationRef.current?.id;
               let cleanHistory = (userLoc.trackHistory || []).filter(
-                pt => !pt.operationId || pt.operationId === currentOperation?.id
+                pt => !pt.operationId || !activeOpId || pt.operationId === activeOpId
               );
               if (cleanHistory.length === 1) {
                 const pt0 = cleanHistory[0];
@@ -2195,7 +2200,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
               const isUserReady =
                 currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
-              const isOpRunning = currentOperation && currentOperation.status === 'active';
+              const isOpRunning = currentOperationRef.current && currentOperationRef.current.status === 'active';
               const isEzCommand = (currentUser.operationalRole || operationalRole) === 'ez_command';
               let nextHistory = isEzCommand ? [] : cleanHistory;
 
@@ -2210,32 +2215,40 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                   : 99999;
                 const timeDiffSec = timeSinceLastMs / 1000;
 
-                // Precision accuracy requirement: search tracks require <= 25m accuracy (<= 20m if standing/slow)
+                // Precision accuracy requirement: search tracks allow up to 45m accuracy under forest tree cover
                 const accuracy = point.accuracy || 15;
-                const isAccurate = (point.speed || 0) > 3 ? accuracy <= 28 : accuracy <= 22;
+                const isAccurate = accuracy <= 45;
 
-                // Anti-Teleport / Speed Spike filter: reject impossible jumps for on-foot searchers/dogs (> 70 km/h or > 60m in < 3s)
+                // Anti-Teleport / Speed Spike filter: allow up to 120 km/h (33 m/s) for drone / quad / boat
+                const isFastEquipment = currentUser.equipment?.some(eq => eq === 'drone' || eq === 'quad' || eq === 'boat');
+                const maxSpeedMs = isFastEquipment ? 35 : 22; // 22 m/s = 79 km/h, 35 m/s = 126 km/h
                 const isTeleportSpike = lastHistorical && (
-                  (timeDiffSec > 0 && (distMoved / timeDiffSec) > 20) || // > 20 m/s = 72 km/h
-                  (distMoved > 60 && timeDiffSec < 3)
+                  (timeDiffSec > 0 && (distMoved / timeDiffSec) > maxSpeedMs) ||
+                  (distMoved > 80 && timeDiffSec < 2)
                 );
 
                 // Signal loss gap detection: if >= 45 seconds elapsed since last recorded point, annotate as gap start
                 const isGap = lastHistorical && timeSinceLastMs >= 45000;
 
-                // Stationary detection & jitter filter:
-                // When stationary (speed < 1.2 km/h and distMoved < 1.5m), suppress GPS sensor drift jitter
-                const currentSpeedKmh = point.speed || 0;
-                const isStationaryJitter = currentSpeedKmh < 1.2 && distMoved < 1.5;
+                // Ultra-precise movement detection (Garmin / tracking watch precision):
+                // Mobile browsers often report coords.speed = null while walking slowly.
+                // Derive actual walking speed from distance and elapsed time so slow methodical search is never discarded.
+                const derivedSpeedKmh = (lastHistorical && timeDiffSec > 0)
+                  ? (distMoved / timeDiffSec) * 3.6
+                  : 0;
+                const effectiveSpeedKmh = (point.speed && point.speed > 0) ? point.speed : derivedSpeedKmh;
 
-                // Capture real movements: down to 0.8m when moving (dog zig-zag & responder steps)
-                // If stationary, suppress jitter; only record heartbeat if 45s passed AND moved >= 1.2m
+                // True stationary jitter suppression:
+                // Only suppress if standing motionless (< 0.7m and < 0.6 km/h within 15 seconds)
+                const isStationaryJitter = effectiveSpeedKmh < 0.6 && distMoved < 0.7 && timeSinceLastMs < 15000;
+
+                // Capture real movements: down to 0.7m (dog search zig-zag, walking steps)
                 const shouldAdd =
                   !lastHistorical ||
                   (!isTeleportSpike && isAccurate && !isStationaryJitter && (
-                    distMoved >= 1.5 ||
-                    (currentSpeedKmh >= 1.0 && distMoved >= 0.8) ||
-                    (timeSinceLastMs >= 45000 && distMoved >= 1.2)
+                    distMoved >= 0.7 ||
+                    (effectiveSpeedKmh >= 0.5 && distMoved >= 0.5) ||
+                    (timeSinceLastMs >= 20000 && distMoved >= 0.7)
                   ));
 
                 if (shouldAdd) {
@@ -2244,11 +2257,11 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                         ...point,
                         isGapStart: true,
                         gapDurationSec: Math.round(timeSinceLastMs / 1000),
-                        operationId: currentOperation?.id,
+                        operationId: currentOperationRef.current?.id,
                       }
                     : {
                         ...point,
-                        operationId: currentOperation?.id,
+                        operationId: currentOperationRef.current?.id,
                       };
                   nextHistory = [...cleanHistory, pointToStore].slice(-MAX_TRACK_POINTS);
                 } else {
@@ -2274,7 +2287,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
               // Decoupled Cloud Sync:
               // - Live marker (currentPosition) syncs every 8s (if moved >= 1.5m or initial fix) with tiny ~150-byte payload
-              // - Heavy trackHistory syncs every 35s or when >= 8 new points accumulated (saves bandwidth and mobile battery)
+              // - Heavy trackHistory syncs every 12s or when >= 3 new points accumulated (near real-time like tracking watches)
               const now = Date.now();
               const lastSync = lastCloudGpsSyncRef.current;
               const timeDiff = now - lastSync.timestamp;
@@ -2285,7 +2298,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 const lastTrackSync = lastCloudTrackSyncRef.current;
                 const trackTimeDiff = now - lastTrackSync.timestamp;
                 const pointsDiff = Math.abs(updatedHistory.length - lastTrackSync.pointsCount);
-                const shouldSyncHistory = trackTimeDiff >= 35000 || pointsDiff >= 8 || lastTrackSync.timestamp === 0;
+                const shouldSyncHistory = trackTimeDiff >= 12000 || pointsDiff >= 3 || lastTrackSync.timestamp === 0;
 
                 if (shouldSyncHistory) {
                   lastCloudTrackSyncRef.current = { timestamp: now, pointsCount: updatedHistory.length };
@@ -2380,8 +2393,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 const isReady =
                   currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
                 const isEzCommand = (currentUser.operationalRole || operationalRole) === 'ez_command';
+                const activeOpId = currentOperationRef.current?.id;
+                const isOpRunning = currentOperationRef.current && currentOperationRef.current.status === 'active';
                 let nextHistory = isEzCommand ? [] : ((uLoc.trackHistory || []).filter(
-                  pt => !pt.operationId || pt.operationId === currentOperation?.id
+                  pt => !pt.operationId || !activeOpId || pt.operationId === activeOpId
                 ));
                 if (isReady && isOpRunning && !isEzCommand) {
                   const lastPt = nextHistory[nextHistory.length - 1];
@@ -2391,23 +2406,28 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                   const timeSinceLastMs = lastPt
                     ? Math.abs(new Date(bgPoint.timestamp).getTime() - new Date(lastPt.timestamp).getTime())
                     : 99999;
-                  const isAccurate = !bgPoint.accuracy || bgPoint.accuracy <= 25;
+                  // Forest-friendly background accuracy threshold
+                  const isAccurate = !bgPoint.accuracy || bgPoint.accuracy <= 45;
                   const isGap = lastPt && timeSinceLastMs >= 45000;
-                  const currentSpeedKmh = bgPoint.speed || 0;
-                  const isStationaryJitter = currentSpeedKmh < 1.2 && distMoved < 1.5;
+                  const timeDiffSec = timeSinceLastMs / 1000;
+                  const derivedSpeedKmh = (lastPt && timeDiffSec > 0)
+                    ? (distMoved / timeDiffSec) * 3.6
+                    : 0;
+                  const effectiveSpeedKmh = (bgPoint.speed && bgPoint.speed > 0) ? bgPoint.speed : derivedSpeedKmh;
+                  const isStationaryJitter = effectiveSpeedKmh < 0.6 && distMoved < 0.7 && timeSinceLastMs < 15000;
 
                   const shouldAdd =
                     !lastPt ||
                     (isAccurate && !isStationaryJitter && (
-                      distMoved >= 1.5 ||
-                      (currentSpeedKmh >= 1.0 && distMoved >= 0.8) ||
-                      (timeSinceLastMs >= 45000 && distMoved >= 1.2)
+                      distMoved >= 0.7 ||
+                      (effectiveSpeedKmh >= 0.5 && distMoved >= 0.5) ||
+                      (timeSinceLastMs >= 20000 && distMoved >= 0.7)
                     ));
 
                   if (shouldAdd) {
                     const pointToStore: GpsPoint = isGap
-                      ? { ...bgPoint, isGapStart: true, gapDurationSec: Math.round(timeSinceLastMs / 1000), operationId: currentOperation?.id }
-                      : { ...bgPoint, operationId: currentOperation?.id };
+                      ? { ...bgPoint, isGapStart: true, gapDurationSec: Math.round(timeSinceLastMs / 1000), operationId: currentOperationRef.current?.id }
+                      : { ...bgPoint, operationId: currentOperationRef.current?.id };
                     nextHistory = [...nextHistory, pointToStore].slice(-MAX_TRACK_POINTS);
                   }
                 }
@@ -2420,7 +2440,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                   isLive: true,
                 };
 
-                // Decoupled Background Cloud Sync: throttled to >= 8s for live pos, >= 35s for full track
+                // Decoupled Background Cloud Sync: throttled to >= 8s for live pos, >= 12s for full track
                 const now = Date.now();
                 const lastSync = lastCloudGpsSyncRef.current;
                 const timeDiff = now - lastSync.timestamp;
@@ -2431,7 +2451,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                   const lastTrackSync = lastCloudTrackSyncRef.current;
                   const trackTimeDiff = now - lastTrackSync.timestamp;
                   const pointsDiff = Math.abs(nextHistory.length - lastTrackSync.pointsCount);
-                  const shouldSyncHistory = trackTimeDiff >= 35000 || pointsDiff >= 8 || lastTrackSync.timestamp === 0;
+                  const shouldSyncHistory = trackTimeDiff >= 12000 || pointsDiff >= 3 || lastTrackSync.timestamp === 0;
 
                   if (shouldSyncHistory) {
                     lastCloudTrackSyncRef.current = { timestamp: now, pointsCount: nextHistory.length };
@@ -2567,8 +2587,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         u.lastSeen === 'Neu erstellt' || 
         u.lastSeen === 'Gerade erstellt' || 
         u.lastSeen?.includes('Abgemeldet') ||
-        u.lastSeen === 'Abgemeldet' ||
-        (u.lastSeen === 'Online' && !u.activeSessionId && u.role === 'responder' && (!currentOperation || !currentOperation.participantIds?.includes(u.id)))
+        u.lastSeen === 'Abgemeldet'
       )
     );
     
@@ -3734,7 +3753,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     const targetOp = allOperations.find((o) => o.id === id);
     const finalSnapshot =
       snapshotUrl ||
-      (await captureTacticalMapScreenshot(targetOp, userLocations)) ||
+      (await captureTacticalMapScreenshot(targetOp, userLocations, allUsers)) ||
       targetOp?.mapSnapshotUrl;
 
     const pauseChatMsg: ChatMessage = {
@@ -3780,6 +3799,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     });
 
     const opChat = chatMessages.filter((m) => m.operationId === id);
+    const distinctTrackUsersCount = new Set(updatedArchived.map((t) => t.userId)).size;
 
     const logEntry: OperationLogEntry = {
       id: `log-${Date.now()}`,
@@ -3788,7 +3808,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       authorName: currentUser?.name || 'Einsatzleitung',
       authorRole: currentUser?.role || 'admin',
       category: 'pause',
-      text: `⏸️ EINSATZ PAUSIERT${reasonText}. Bewegungsprofile aller Einsatzkräfte (${updatedArchived.length} Suchspuren) auf Lagekarte gesichert & Screenshot im Protokoll archiviert.`,
+      text: `⏸️ EINSATZ PAUSIERT${reasonText}. Bewegungsprofile aller Einsatzkräfte (${distinctTrackUsersCount} ${distinctTrackUsersCount === 1 ? 'Suchspur' : 'Suchspuren'}) auf Lagekarte gesichert & Screenshot im Protokoll archiviert.`,
       snapshotUrl: finalSnapshot || undefined,
     };
 
@@ -3975,7 +3995,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     const targetOp = allOperations.find((o) => o.id === id);
     const finalSnapshot =
       mapSnapshotUrl ||
-      (await captureTacticalMapScreenshot(targetOp, userLocations)) ||
+      (await captureTacticalMapScreenshot(targetOp, userLocations, allUsers)) ||
       targetOp?.mapSnapshotUrl;
 
     const outcomeText =
@@ -4245,6 +4265,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     const phaseTitle = options?.phaseTitle?.trim() || `Suchphase ${(finalArchived.length > 0 ? 2 : 1)} (Fortsetzung)`;
 
     // 2. Add rich log entry
+    const distinctReactivateTrackCount = new Set((finalArchived || []).map((t) => t.userId)).size;
     const logEntry: OperationLogEntry = {
       id: `log-${Date.now()}`,
       operationId: id,
@@ -4252,7 +4273,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       authorName: currentUser?.name || 'Einsatzleitung',
       authorRole: currentUser?.role || 'admin',
       category: 'status',
-      text: `🔄 EINSATZ REAKTIVIERT: "${phaseTitle}". Suche wird mit angepasster Kräfteaufteilung fortgesetzt. Bisherige Suchspuren (${finalArchived.length}) und abgesuchte Sektoren (${op.sectors.filter((s) => s.status === 'searched').length}) bleiben als Referenz auf der Lagekarte erhalten. ${options?.notes ? `Hinweis: "${options.notes}"` : ''}`,
+      text: `🔄 EINSATZ REAKTIVIERT: "${phaseTitle}". Suche wird mit angepasster Kräfteaufteilung fortgesetzt. Bisherige Suchspuren (${distinctReactivateTrackCount}) und abgesuchte Sektoren (${op.sectors.filter((s) => s.status === 'searched').length}) bleiben als Referenz auf der Lagekarte erhalten. ${options?.notes ? `Hinweis: "${options.notes}"` : ''}`,
     };
 
     // 3. Keep searched sectors as 'searched' (green) or reset to 'open' if explicitly requested
@@ -4324,16 +4345,21 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       });
     }
 
-    // 5. Activate selected users if provided
-    if (options?.activatedUserIds && options.activatedUserIds.length > 0) {
-      const selectedIds = new Set(options.activatedUserIds);
+    // 5. Activate selected users (or current user/participants) and set arrivalStatus = 'ready' so tracking starts immediately
+    const userIdsToActivate = (options?.activatedUserIds && options.activatedUserIds.length > 0)
+      ? options.activatedUserIds
+      : currentUser ? [currentUser.id] : (op.participantIds || []);
+
+    if (userIdsToActivate.length > 0) {
+      const selectedIds = new Set(userIdsToActivate);
       setAllUsers((prev) => {
         const next = prev.map((u) => {
           if (selectedIds.has(u.id)) {
             const updatedUser: User = {
               ...u,
               isActive: true,
-              lastSeen: 'Aktiviert bei Reaktivierung',
+              arrivalStatus: 'ready',
+              lastSeen: 'Aktiviert für Folgesuche',
               updatedAt: now,
             };
             syncUserToCloud(updatedUser);
@@ -4343,6 +4369,17 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         });
         try {
           localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      setUserArrivalStatuses((prev) => {
+        const next = { ...prev };
+        userIdsToActivate.forEach((id) => {
+          next[id] = 'ready';
+        });
+        try {
+          localStorage.setItem('rescue_app_arrival_statuses_slk_v4', JSON.stringify(next));
         } catch {}
         return next;
       });

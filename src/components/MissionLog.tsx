@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { OperationLogEntry } from '../types';
 import {
@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 
 export const MissionLog: React.FC = () => {
-  const { currentOperation, updateOperation, currentUser, chatMessages, findings } = useRescue();
+  const { currentOperation, updateOperation, currentUser, chatMessages, findings, userLocations } = useRescue();
   const [manualNote, setManualNote] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,7 +47,24 @@ export const MissionLog: React.FC = () => {
       : chatMessages.filter((m) => m.operationId === currentOperation.id);
 
   const opFindings = currentOperation.findings || findings.filter((f) => f.operationId === currentOperation.id);
-  const tracksCount = currentOperation.archivedTracks?.length || 0;
+
+  // 1 User = 1 Spur (Bewegungsprofil), regardless of pauses, breaks or search phases
+  const distinctTrackUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    currentOperation.archivedTracks?.forEach((t) => {
+      if (t.userId && t.points && t.points.length > 1) ids.add(t.userId);
+    });
+    if (userLocations) {
+      Object.entries(userLocations).forEach(([uId, loc]) => {
+        const opHistory = (loc.trackHistory || []).filter(
+          (p) => !p.operationId || !currentOperation?.id || p.operationId === currentOperation.id
+        );
+        if (opHistory.length > 1) ids.add(uId);
+      });
+    }
+    return ids;
+  }, [currentOperation, userLocations]);
+  const tracksCount = distinctTrackUserIds.size;
 
   const filteredLogs = logs.filter((log) => {
     const matchesCategory = categoryFilter === 'all' || log.category === categoryFilter;

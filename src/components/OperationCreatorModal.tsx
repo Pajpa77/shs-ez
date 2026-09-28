@@ -53,6 +53,20 @@ interface OperationCreatorModalProps {
   onStartDrawingSector?: () => void;
 }
 
+function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
   isOpen,
   onClose,
@@ -318,6 +332,15 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
           setLastSeenLat(Number(lat.toFixed(6)));
           setLastSeenLng(Number(lon.toFixed(6)));
           setPlsGeocodeStatus('success');
+          // If creating a new operation and EZ is still at default Vereinsbüro Aschersleben:
+          if (mode !== 'edit') {
+            if (hqAddress === VEREINSBUERO_LOCATION.address || !hqAddress.trim()) {
+              setHqAddress(lastSeenAddress.trim() || item.display_name.split(',').slice(0, 3).join(', ').trim());
+              setHqLat(Number(lat.toFixed(6)));
+              setHqLng(Number(lon.toFixed(6)));
+              setHqDescription('EZ am Einsatzort (PLS / Bereitstellungsraum)');
+            }
+          }
         } else {
           setHqLat(Number(lat.toFixed(6)));
           setHqLng(Number(lon.toFixed(6)));
@@ -1051,6 +1074,42 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 <span>🧭 Eigener GPS-Standort</span>
               </button>
             </div>
+
+            {/* Warning if EZ is still in Aschersleben while PLS is far away */}
+            {typeof lastSeenLat === 'number' && typeof hqLat === 'number' && (
+              (() => {
+                const d = calculateDistanceMeters(lastSeenLat, (typeof lastSeenLng === 'number' ? lastSeenLng : 0), hqLat, (typeof hqLng === 'number' ? hqLng : 0));
+                const distToVereinsbuero = calculateDistanceMeters(hqLat, (typeof hqLng === 'number' ? hqLng : 0), VEREINSBUERO_LOCATION.lat, VEREINSBUERO_LOCATION.lng);
+                if (d > 2000 && distToVereinsbuero < 800) {
+                  return (
+                    <div className="p-3 bg-amber-500/20 border border-amber-500/60 rounded-xl text-amber-200 text-xs space-y-1.5 font-mono">
+                      <div className="font-bold flex items-center gap-1.5 text-amber-300">
+                        <span>⚠️ Achtung: EZ steht noch in Aschersleben!</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/30 text-amber-200 font-bold">
+                          {(d / 1000).toFixed(1)} km entfernt
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-amber-200/90 leading-tight">
+                        Der Einsatzort liegt {(d / 1000).toFixed(1)} km entfernt. Wenn Einsatzkräfte auf „Route zur EZ“ / „Navi“ tippen, werden sie aktuell nach Aschersleben geleitet!
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (lastSeenAddress) setHqAddress(lastSeenAddress);
+                          if (typeof lastSeenLat === 'number') setHqLat(lastSeenLat);
+                          if (typeof lastSeenLng === 'number') setHqLng(lastSeenLng);
+                          setHqDescription('EZ am Einsatzort (PLS / Bereitstellungsraum)');
+                        }}
+                        className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5"
+                      >
+                        <span>📍 EZ an Einsatzort ({lastSeenAddress || 'PLS'}) anpassen</span>
+                      </button>
+                    </div>
+                  );
+                }
+                return null;
+              })()
+            )}
 
             {/* Adresse & Geocoding */}
             <div>

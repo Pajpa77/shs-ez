@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { captureTacticalMapScreenshot } from '../lib/mapSnapshotHelper';
 import {
@@ -33,10 +33,11 @@ export const OperationPauseModal: React.FC<OperationPauseModalProps> = ({
   onClose,
   onSuccessNavigateToMap,
 }) => {
-  const { currentOperation, pauseOperation, currentUser, userLocations } = useRescue();
+  const { currentOperation, pauseOperation, currentUser, userLocations, allUsers, setUserArrivalStatus } = useRescue();
 
   const [reason, setReason] = useState('');
   const [includeSnapshot, setIncludeSnapshot] = useState(true);
+  const [forceDisposition, setForceDisposition] = useState<'standby' | 'dismissed'>('standby');
   const [isProcessing, setIsProcessing] = useState(false);
 
   if (!isOpen || !currentOperation) return null;
@@ -79,13 +80,25 @@ export const OperationPauseModal: React.FC<OperationPauseModalProps> = ({
     try {
       let snapshotUrl: string | undefined = undefined;
       if (includeSnapshot) {
-        const captured = await captureTacticalMapScreenshot(currentOperation, userLocations);
+        const captured = await captureTacticalMapScreenshot(currentOperation, userLocations, allUsers);
         if (captured) {
           snapshotUrl = captured;
         }
       }
 
-      await pauseOperation(currentOperation.id, reason.trim() || 'Einsatz pausiert', snapshotUrl);
+      if (forceDisposition === 'dismissed' && currentOperation.participantIds) {
+        currentOperation.participantIds.forEach((pid) => {
+          setUserArrivalStatus(pid, 'in_transit');
+        });
+      }
+
+      const finalReason = reason.trim()
+        ? `${reason.trim()}${forceDisposition === 'dismissed' ? ' (Kräfte nach Hause entlassen / abgerückt)' : ''}`
+        : forceDisposition === 'dismissed'
+        ? 'Einsatz pausiert — Kräfte nach Hause entlassen / abgerückt'
+        : 'Einsatz pausiert';
+
+      await pauseOperation(currentOperation.id, finalReason, snapshotUrl);
       setIsProcessing(false);
       onClose();
       if (onSuccessNavigateToMap) {
@@ -98,11 +111,23 @@ export const OperationPauseModal: React.FC<OperationPauseModalProps> = ({
     }
   };
 
-  const tracksCount =
-    (currentOperation.archivedTracks?.length || 0) +
-    (Object.values(userLocations) as { trackHistory?: unknown[] }[]).filter(
-      (loc) => loc.trackHistory && loc.trackHistory.length > 1
-    ).length;
+  // 1 User = 1 Spur (Bewegungsprofil)
+  const distinctTrackUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    currentOperation.archivedTracks?.forEach((t) => {
+      if (t.userId && t.points && t.points.length > 1) ids.add(t.userId);
+    });
+    if (userLocations) {
+      Object.entries(userLocations).forEach(([uId, loc]) => {
+        const opHistory = (loc.trackHistory || []).filter(
+          (p) => !p.operationId || !currentOperation?.id || p.operationId === currentOperation.id
+        );
+        if (opHistory.length > 1) ids.add(uId);
+      });
+    }
+    return ids;
+  }, [currentOperation, userLocations]);
+  const tracksCount = distinctTrackUserIds.size;
 
   return (
     <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-100 dark:bg-slate-950/85 backdrop-blur-sm font-sans animate-in fade-in duration-200">
@@ -164,6 +189,66 @@ export const OperationPauseModal: React.FC<OperationPauseModalProps> = ({
               onChange={(e) => setIncludeSnapshot(e.target.checked)}
               className="h-4 w-4 rounded bg-slate-50 dark:bg-slate-800 border-slate-400 dark:border-slate-600 text-amber-500 focus:ring-amber-500/40 cursor-pointer"
             />
+          </div>
+
+          {/* Status of Responders during Pause */}
+          <div className="bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700 rounded-xl p-3.5 space-y-2.5">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider font-mono">
+              Verbleib & Status der Einsatzkräfte:
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <label
+                className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition ${
+                  forceDisposition === 'standby'
+                    ? 'bg-amber-500/10 border-amber-500 text-amber-200'
+                    : 'bg-slate-800/40 border-slate-700 text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="forceDisposition"
+                  value="standby"
+                  checked={forceDisposition === 'standby'}
+                  onChange={() => setForceDisposition('standby')}
+                  className="mt-0.5 text-amber-500 focus:ring-amber-500/40"
+                />
+                <div className="text-xs">
+                  <div className="font-bold text-white flex items-center gap-1">
+                    <span>🏢</span>
+                    <span>In Bereitstellung (vor Ort)</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                    Kräfte bleiben an der EZ / am Sammelplatz. Marker auf Lagekarte zeigen den Pause-Standort.
+                  </div>
+                </div>
+              </label>
+
+              <label
+                className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition ${
+                  forceDisposition === 'dismissed'
+                    ? 'bg-blue-500/10 border-blue-500 text-blue-200'
+                    : 'bg-slate-800/40 border-slate-700 text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="forceDisposition"
+                  value="dismissed"
+                  checked={forceDisposition === 'dismissed'}
+                  onChange={() => setForceDisposition('dismissed')}
+                  className="mt-0.5 text-blue-500 focus:ring-blue-500/40"
+                />
+                <div className="text-xs">
+                  <div className="font-bold text-white flex items-center gap-1">
+                    <span>🏠</span>
+                    <span>Kräfte nach Hause entlassen</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                    Status wird auf 'Abgerückt' gesetzt. Verhindert Missverständnisse, wenn Kräfte bereits zuhause sind.
+                  </div>
+                </div>
+              </label>
+            </div>
           </div>
 
           {/* Reason Input */}

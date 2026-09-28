@@ -1230,19 +1230,30 @@ export const Navbar: React.FC<NavbarProps> = ({
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
                         )}
-                        <a
-                          href={`https://www.google.com/maps/dir/?api=1&destination=${
-                            (currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && currentOperation.headquartersLocation?.lat)
-                              ? `${currentOperation.headquartersLocation.lat},${currentOperation.headquartersLocation.lng}`
-                              : `${VEREINSBUERO_LOCATION.lat},${VEREINSBUERO_LOCATION.lng}`
-                          }`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold text-[10px] shrink-0 no-underline flex items-center gap-1 shadow-sm"
-                          title="Route zur EZ in Google Maps / Navi starten"
-                        >
-                          🧭 Navi
-                        </a>
+                        {(() => {
+                          const isOpActive = Boolean(currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused'));
+                          const targetLat = isOpActive
+                            ? (currentOperation?.headquartersLocation?.lat || currentOperation?.missingPerson?.lastSeenLocation?.lat || VEREINSBUERO_LOCATION.lat)
+                            : VEREINSBUERO_LOCATION.lat;
+                          const targetLng = isOpActive
+                            ? (currentOperation?.headquartersLocation?.lng || currentOperation?.missingPerson?.lastSeenLocation?.lng || VEREINSBUERO_LOCATION.lng)
+                            : VEREINSBUERO_LOCATION.lng;
+                          const targetAddr = isOpActive
+                            ? (currentOperation?.headquartersLocation?.address || currentOperation?.missingPerson?.lastSeenLocation?.address || 'Einsatzort')
+                            : VEREINSBUERO_LOCATION.address;
+
+                          return (
+                            <a
+                              href={`https://www.google.com/maps/dir/?api=1&destination=${targetLat},${targetLng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold text-[10px] shrink-0 no-underline flex items-center gap-1 shadow-sm"
+                              title={`Route zur EZ (${targetAddr}) in Google Maps / Navi starten`}
+                            >
+                              🧭 Navi
+                            </a>
+                          );
+                        })()}
                       </div>
                     </div>
 

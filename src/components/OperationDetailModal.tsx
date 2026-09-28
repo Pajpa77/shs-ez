@@ -458,20 +458,35 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
                       GPS: {(op.headquartersLocation?.lat || VEREINSBUERO_LOCATION.lat).toFixed(5)},{' '}
                       {(op.headquartersLocation?.lng || VEREINSBUERO_LOCATION.lng).toFixed(5)}
                     </span>
-                    {onNavigateToMapPoint && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleCenterOnCoordinates(
-                            op.headquartersLocation?.lat || VEREINSBUERO_LOCATION.lat,
-                            op.headquartersLocation?.lng || VEREINSBUERO_LOCATION.lng
-                          )
-                        }
-                        className="text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 cursor-pointer"
+                    <div className="flex items-center gap-3">
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${
+                          op.headquartersLocation?.lat || op.missingPerson?.lastSeenLocation?.lat || VEREINSBUERO_LOCATION.lat
+                        },${
+                          op.headquartersLocation?.lng || op.missingPerson?.lastSeenLocation?.lng || VEREINSBUERO_LOCATION.lng
+                        }`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:text-blue-400 font-bold flex items-center gap-1 cursor-pointer no-underline"
+                        title="Route zur EZ in Google Maps / Navi starten"
                       >
-                        <Navigation className="w-3 h-3" /> Auf Karte
-                      </button>
-                    )}
+                        🧭 Navi
+                      </a>
+                      {onNavigateToMapPoint && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleCenterOnCoordinates(
+                              op.headquartersLocation?.lat || VEREINSBUERO_LOCATION.lat,
+                              op.headquartersLocation?.lng || VEREINSBUERO_LOCATION.lng
+                            )
+                          }
+                          className="text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Navigation className="w-3 h-3" /> Auf Karte
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -590,7 +605,7 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
               );
               const observerUsersUnique = Array.from(
                 new Map<string, User>(
-                  allUsers.filter((u) => u.role === 'observer').map((u) => [u.id, u])
+                  allUsers.filter((u) => u.role === 'observer' && u.isActive).map((u) => [u.id, u])
                 ).values()
               );
 

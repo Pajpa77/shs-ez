@@ -5,6 +5,7 @@ import { useRescue } from '../context/RescueContext';
 import { SearchOperation, OperationLogEntry, User, EquipmentType } from '../types';
 import { TacticalMap } from './TacticalMap';
 import { exportOperationTracksAsGpx, exportSingleTrackAsGpx } from '../lib/gpxExport';
+import { captureTacticalMapScreenshot } from '../lib/mapSnapshotHelper';
 import {
   Archive,
   FileText,
@@ -76,6 +77,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
     reactivateOperation,
     updateOperation,
     endOperation,
+    userLocations,
   } = useRescue();
 
   const [selectedOpId, setSelectedOpId] = useState<string>(() => {
@@ -127,11 +129,40 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
   const [newLogCategory, setNewLogCategory] = useState<OperationLogEntry['category']>('general');
   const [showAddLogModal, setShowAddLogModal] = useState(false);
   const [snapshotPreviewModal, setSnapshotPreviewModal] = useState<string | null>(null);
+  const [isRegeneratingSnapshot, setIsRegeneratingSnapshot] = useState(false);
 
   const selectedOp = allOperations.find((op) => op.id === selectedOpId) || allOperations[0];
   const isAdmin = currentUser?.role === 'admin';
   const isEL = currentUser?.role === 'einsatzleitung';
   const canManageOps = isAdmin || isEL;
+
+  const handleRegenerateMapSnapshot = async () => {
+    if (!selectedOp) return;
+    setIsRegeneratingSnapshot(true);
+    try {
+      const dataUrl = await captureTacticalMapScreenshot(selectedOp, userLocations, allUsers);
+      if (dataUrl) {
+        const now = new Date().toISOString();
+        const existingSnaps = selectedOp.mapSnapshots || [];
+        const updatedSnaps = [
+          ...existingSnaps,
+          {
+            url: dataUrl,
+            timestamp: now,
+            label: `Lagekarte OSM & Legende (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+          },
+        ];
+        updateOperation(selectedOp.id, {
+          mapSnapshotUrl: dataUrl,
+          mapSnapshots: updatedSnaps,
+        });
+      }
+    } catch (err) {
+      console.error('Lagekarten-Snapshot konnte nicht neu generiert werden:', err);
+    } finally {
+      setIsRegeneratingSnapshot(false);
+    }
+  };
 
   if (!selectedOp && allOperations.length === 0) {
     return (
@@ -859,14 +890,35 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                 )}
 
                 {/* Gespeicherte Lagekarten-Screenshots (Galerie) */}
-                {((selectedOp.mapSnapshots && selectedOp.mapSnapshots.length > 0) || selectedOp.mapSnapshotUrl) && (
-                  <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-purple-500/40 font-mono space-y-2.5">
+                <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-purple-500/40 font-mono space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-[10px] font-bold text-purple-300 uppercase flex items-center gap-1.5">
                       <Camera className="w-4 h-4 text-purple-400" />
-                      <span>GESPEICHERTE LAGEBILDER & VERLAUFSSNAPSHOTS ({selectedOp.mapSnapshots?.length || 1}):</span>
+                      <span>GESPEICHERTE LAGEBILDER & VERLAUFSSNAPSHOTS ({selectedOp.mapSnapshots?.length || (selectedOp.mapSnapshotUrl ? 1 : 0)}):</span>
                     </div>
 
-                    {selectedOp.mapSnapshots && selectedOp.mapSnapshots.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={handleRegenerateMapSnapshot}
+                      disabled={isRegeneratingSnapshot}
+                      className="px-2.5 py-1 bg-purple-950/80 hover:bg-purple-900 border border-purple-600/70 text-purple-200 rounded-lg text-[10px] font-bold font-mono transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+                      title="Erzeugt mit OpenStreetMap eine Karte mit allen Suchspuren, Richtungspfeilen und Legende"
+                    >
+                      {isRegeneratingSnapshot ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin text-purple-300" />
+                          <span>Rendere OSM...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3 h-3 text-amber-400" />
+                          <span>Lagekarte neu generieren (OSM)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {selectedOp.mapSnapshots && selectedOp.mapSnapshots.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                         {selectedOp.mapSnapshots.map((snap, sIdx) => (
                           <div key={sIdx} className="bg-slate-100 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 p-3 rounded-xl space-y-2 flex flex-col">
@@ -908,7 +960,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                           </div>
                         ))}
                       </div>
-                    ) : (
+                    ) : selectedOp.mapSnapshotUrl ? (
                       <div className="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-xl flex flex-col md:flex-row gap-3.5 items-center">
                         <div
                           onClick={() => setSnapshotPreviewModal(selectedOp.mapSnapshotUrl || null)}
@@ -944,9 +996,21 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                           </div>
                         </div>
                       </div>
+                    ) : (
+                      <div className="bg-slate-100 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 p-4 rounded-xl text-center space-y-2">
+                        <p className="text-xs text-slate-400 font-sans">Für diesen Einsatz ist noch kein Lagekarten-Snapshot hinterlegt.</p>
+                        <button
+                          type="button"
+                          onClick={handleRegenerateMapSnapshot}
+                          disabled={isRegeneratingSnapshot}
+                          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold font-mono transition inline-flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Camera className="w-3.5 h-3.5" />
+                          <span>Jetzt Lagekarte mit Spuren & Legende generieren</span>
+                        </button>
+                      </div>
                     )}
                   </div>
-                )}
 
                 {/* Sektoren Detail-Tabelle */}
                 <div className="space-y-2">
