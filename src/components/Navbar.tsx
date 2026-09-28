@@ -208,6 +208,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     refreshData,
     operationalRole,
     toggleOperationalRole,
+    showConfirmModal,
   } = useRescue();
 
   const [showSarAdminMenu, setShowSarAdminMenu] = useState(false);
@@ -418,231 +419,220 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 {/* ── MENÜ FÜR ADMIN & EINSATZLEITUNG ── */}
                 {isAdmin ? (
-                  <div className="space-y-1.5 font-sans">
-                    {/* 0. Admin-Zentrale */}
-                    <button
-                      onClick={() => {
-                        setShowSarAdminMenu(false);
-                        setActiveTab('admin');
-                      }}
-                      className="w-full flex items-center gap-3 p-2 rounded-xl bg-amber-950/40 hover:bg-amber-900/60 text-amber-200 hover:text-white border border-amber-800/60 hover:border-amber-400 transition cursor-pointer text-left group shadow-sm font-mono"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-amber-600/30 border border-amber-500/50 text-amber-300 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition">
-                        🛡️
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-xs flex items-center justify-between">
-                          <span>Admin-Zentrale</span>
-                          <span className="text-[9px] px-1.5 py-0.2 bg-amber-900/80 text-amber-200 rounded border border-amber-600 font-bold">Leitstand</span>
+                  <div className="space-y-2.5 font-sans">
+                    {/* 1. Aktueller Einsatz & Steuerung */}
+                    {currentOperation ? (
+                      <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-2.5 space-y-2">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <div className="min-w-0">
+                            <span className="text-[10px] font-mono text-slate-400 font-bold uppercase block">
+                              Aktueller Einsatz
+                            </span>
+                            <div className="font-bold text-xs text-white truncate font-mono">
+                              {currentOperation.title}
+                            </div>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase shrink-0 border ${currentOpTheme.badge}`}>
+                            {currentOpTheme.label}
+                          </span>
                         </div>
-                        <div className="text-[10px] text-slate-300 truncate">
-                          Dashboard, Schnellzugriff, Einsatz- &amp; Systemkontrolle
-                        </div>
-                      </div>
-                    </button>
 
-                    {/* 1. Neuen Einsatz anlegen */}
-                    {onOpenCreateOperationModal && (
-                      <button
-                        onClick={() => {
-                          setShowSarAdminMenu(false);
-                          onOpenCreateOperationModal();
-                        }}
-                        className="w-full flex items-center gap-3 p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-100 hover:text-white border border-slate-700/80 hover:border-blue-500/50 transition cursor-pointer text-left group"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/40 text-blue-400 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition">
-                          ➕
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-bold text-xs flex items-center gap-1.5">
-                            <span>Neuen Einsatz anlegen</span>
-                            <span className="text-[9px] px-1.5 py-0.2 bg-blue-900/50 text-blue-300 rounded font-mono">Neu</span>
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-mono">
-                            Wohnadresse, Sichtungsort (PLS) & Vermisstenprofil
-                          </div>
-                        </div>
-                      </button>
-                    )}
+                        {/* Einsatz-Aktionen Schnellleiste */}
+                        <div className="grid grid-cols-2 gap-1.5 font-mono text-[11px]">
+                          {onOpenOperationDetailModal && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowSarAdminMenu(false);
+                                onOpenOperationDetailModal();
+                              }}
+                              className="py-1.5 px-2 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-200 border border-blue-800/80 transition flex items-center justify-center gap-1 cursor-pointer font-bold"
+                              title="Einsatzdossier und Vermisstenprofil öffnen"
+                            >
+                              <span>📋</span>
+                              <span>Dossier</span>
+                            </button>
+                          )}
 
-                    {/* 2. Aktuellen Einsatz editieren */}
-                    {onOpenEditOperationModal && currentOperation && currentOperation.status === 'active' && (
-                      <button
-                        onClick={() => {
-                          setShowSarAdminMenu(false);
-                          onOpenEditOperationModal();
-                        }}
-                        className="w-full flex items-center gap-3 p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-100 hover:text-white border border-slate-700/80 hover:border-amber-500/50 transition cursor-pointer text-left group"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition">
-                          ✏️
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-bold text-xs">Aktuellen Einsatz editieren (inkl. Sektoren & Suchgebiet)</div>
-                          <div className="text-[10px] text-slate-400 font-mono truncate">
-                            #{currentOperation.id.slice(-4).toUpperCase()} • {currentOperation.title}
-                          </div>
-                        </div>
-                      </button>
-                    )}
+                          {onOpenEditOperationModal && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowSarAdminMenu(false);
+                                onOpenEditOperationModal();
+                              }}
+                              className="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-200 border border-slate-700 transition flex items-center justify-center gap-1 cursor-pointer font-bold"
+                              title="Einsatz bearbeiten"
+                            >
+                              <span>✏️</span>
+                              <span>Editieren</span>
+                            </button>
+                          )}
 
-                    {/* 3. Einsatzdetails & Vermisstenprofil */}
-                    {currentOperation && onOpenOperationDetailModal && (
-                      <button
-                        onClick={() => {
-                          setShowSarAdminMenu(false);
-                          onOpenOperationDetailModal();
-                        }}
-                        className="w-full flex items-center gap-3 p-2 rounded-xl bg-blue-950/40 hover:bg-blue-900/60 text-blue-200 hover:text-white border border-blue-800/60 hover:border-blue-400 transition cursor-pointer text-left group shadow-sm"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-blue-600/30 border border-blue-500/50 text-blue-300 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition">
-                          📋
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-xs flex items-center justify-between">
-                            <span>Einsatzdetails & Dossier</span>
-                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-900 text-blue-200 border border-blue-700">Info</span>
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-mono truncate">
-                            {currentOperation.missingPerson?.name ? `Vermisst: ${currentOperation.missingPerson.name}` : currentOperation.title}
-                          </div>
-                        </div>
-                      </button>
-                    )}
-
-                    {/* 4. Einsatz-Steuerung: Pausieren / Fortsetzen / Beenden */}
-                    {currentOperation && (
-                      <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-2 space-y-1.5">
-                        <div className="text-[10px] font-bold text-slate-400 uppercase font-mono px-1 flex items-center justify-between">
-                          <span>Einsatz-Steuerung (ELZ)</span>
-                          <span className="text-[9px] text-blue-400">Pausieren / Beenden</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-1.5">
                           {currentOperation.status === 'planned' ? (
                             <button
+                              type="button"
                               onClick={() => {
-                                setShowOpDropdown(false);
+                                setShowSarAdminMenu(false);
                                 updateOperation(currentOperation.id, { status: 'active' });
                               }}
-                              className="py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 text-[10px] font-bold transition flex items-center justify-center gap-1 font-mono cursor-pointer uppercase"
+                              className="py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 font-bold transition flex items-center justify-center gap-1 cursor-pointer uppercase"
                               title="Geplanten Einsatz jetzt starten"
                             >
-                              🚀 Starten
+                              <span>🚀</span>
+                              <span>Starten</span>
                             </button>
                           ) : currentOperation.status === 'active' ? (
                             <button
+                              type="button"
                               onClick={() => {
                                 setShowSarAdminMenu(false);
                                 if (onOpenPauseOperationModal) {
-                                 onOpenPauseOperationModal();
+                                  onOpenPauseOperationModal();
                                 } else {
                                   pauseOperation(currentOperation.id, 'Einsatz pausiert');
                                 }
                               }}
-                              className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg bg-amber-950/50 hover:bg-amber-900/70 text-amber-200 border border-amber-800/60 transition cursor-pointer font-bold text-xs"
+                              className="py-1.5 px-2 rounded-lg bg-amber-950/60 hover:bg-amber-900 text-amber-200 border border-amber-800 transition flex items-center justify-center gap-1 cursor-pointer font-bold"
+                              title="Einsatz pausieren"
                             >
                               <span>⏸️</span>
                               <span>Pausieren</span>
                             </button>
                           ) : currentOperation.status === 'paused' ? (
                             <button
+                              type="button"
                               onClick={() => {
                                 resumeOperation(currentOperation.id);
                                 setShowSarAdminMenu(false);
                               }}
-                              className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg bg-emerald-950/50 hover:bg-emerald-900/70 text-emerald-200 border border-emerald-800/60 transition cursor-pointer font-bold text-xs"
+                              className="py-1.5 px-2 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 text-emerald-200 border border-emerald-800 transition flex items-center justify-center gap-1 cursor-pointer font-bold"
+                              title="Einsatz fortsetzen"
                             >
                               <span>▶️</span>
                               <span>Fortsetzen</span>
                             </button>
-                          ) : (
-                            <div />
-                          )}
+                          ) : null}
 
-                          {onOpenEndOperationModal && currentOperation?.status !== 'completed' && (
+                          {onOpenEndOperationModal && currentOperation.status !== 'completed' && (
                             <button
+                              type="button"
                               onClick={() => {
                                 setShowSarAdminMenu(false);
                                 onOpenEndOperationModal();
                               }}
-                              className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg bg-red-950/50 hover:bg-red-900/70 text-red-200 border border-red-800/60 transition cursor-pointer font-bold text-xs"
+                              className="py-1.5 px-2 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-800 transition flex items-center justify-center gap-1 cursor-pointer font-bold"
+                              title="Einsatz beenden"
                             >
                               <span>🛑</span>
                               <span>Beenden</span>
                             </button>
                           )}
                         </div>
+
+                        {onOpenCreateOperationModal && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowSarAdminMenu(false);
+                              onOpenCreateOperationModal();
+                            }}
+                            className="w-full py-1.5 px-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition flex items-center justify-center gap-1.5 font-mono text-[11px] cursor-pointer"
+                          >
+                            <span>➕</span>
+                            <span>Anderen / Neuen Einsatz anlegen</span>
+                          </button>
+                        )}
                       </div>
+                    ) : (
+                      onOpenCreateOperationModal && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowSarAdminMenu(false);
+                            onOpenCreateOperationModal();
+                          }}
+                          className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono font-bold text-xs shadow-lg transition cursor-pointer"
+                        >
+                          <span className="text-base">➕</span>
+                          <span>Neuen Einsatz anlegen</span>
+                        </button>
+                      )
                     )}
 
-                    {/* 5. Einsatzkräfte & Accounts verwalten */}
-                    {onOpenCreateUserModal && (
+                    {/* 2. Leitstand & Verwaltung (Kompaktes Kachel-Grid) */}
+                    <div className="grid grid-cols-2 gap-2 font-mono">
+                      {/* Admin-Zentrale */}
                       <button
+                        type="button"
                         onClick={() => {
                           setShowSarAdminMenu(false);
-                          onOpenCreateUserModal();
+                          setActiveTab('admin');
                         }}
-                        className="w-full flex items-center gap-3 p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-100 hover:text-white border border-slate-700/80 hover:border-emerald-500/50 transition cursor-pointer text-left group"
+                        className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                          activeTab === 'admin'
+                            ? 'bg-amber-950/50 border-amber-500 text-amber-200 ring-1 ring-amber-500/50'
+                            : 'bg-slate-900/90 hover:bg-slate-800 border-slate-700 text-slate-200'
+                        }`}
                       >
-                        <div className="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition">
-                          👥
+                        <div className="flex items-center justify-between w-full mb-1">
+                          <span className="text-base">🛡️</span>
+                          {activeTab === 'admin' && (
+                            <span className="text-[9px] bg-amber-500 text-slate-950 px-1 rounded font-bold">Aktiv</span>
+                          )}
                         </div>
-                        <div className="flex-1">
-                          <div className="font-bold text-xs">Accountverwaltung</div>
-                          <div className="text-[10px] text-slate-400 font-mono">
-                            Helfer anlegen, bearbeiten, Rollen & Funkrufnamen
-                          </div>
-                        </div>
+                        <div className="font-bold text-xs">Leitstand</div>
+                        <div className="text-[10px] text-slate-400">Admin-Zentrale</div>
                       </button>
-                    )}
 
-                    {/* 6. App teilen & Kräfte einladen (QR-Code) */}
-                    {onOpenShareAppModal && (
-                      <button
-                        onClick={() => {
-                          setShowSarAdminMenu(false);
-                          onOpenShareAppModal();
-                        }}
-                        className="w-full flex items-center gap-3 p-2 rounded-xl bg-blue-950/50 hover:bg-blue-900/70 text-blue-100 hover:text-white border border-blue-800/70 hover:border-blue-400 transition cursor-pointer text-left group"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-blue-600/30 border border-blue-500/50 text-blue-300 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition">
-                          📱
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-xs flex items-center justify-between">
-                            <span>App teilen & Kräfte einladen</span>
-                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-900 text-blue-200 border border-blue-700">QR-Code</span>
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-mono truncate">
-                            Direktlink & QR-Code für Helfer vor Ort
-                          </div>
-                        </div>
-                      </button>
-                    )}
+                      {/* Accountverwaltung */}
+                      {onOpenCreateUserModal && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowSarAdminMenu(false);
+                            onOpenCreateUserModal();
+                          }}
+                          className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-200 text-left transition cursor-pointer flex flex-col justify-between"
+                        >
+                          <div className="text-base mb-1">👥</div>
+                          <div className="font-bold text-xs text-white">Accounts</div>
+                          <div className="text-[10px] text-slate-400">Helfer &amp; Rollen</div>
+                        </button>
+                      )}
 
-                    {/* 7. User-Liste mit Strichcodes als PDF speichern / drucken */}
-                    {onOpenUserListPdfModal && (
-                      <button
-                        onClick={() => {
-                          setShowSarAdminMenu(false);
-                          onOpenUserListPdfModal();
-                        }}
-                        className="w-full flex items-center gap-3 p-2 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-200 hover:text-white border border-emerald-800/60 hover:border-emerald-400 transition cursor-pointer text-left group shadow-sm"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 flex items-center justify-center text-sm shrink-0 group-hover:scale-105 transition">
-                          🪪
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-bold text-xs flex items-center justify-between">
-                            <span>Strichcode-Liste (PDF)</span>
-                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-900 text-emerald-200 border border-emerald-700">Drucken</span>
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-mono truncate">
-                            Profil-Daten inkl. Strichcode aller Mitglieder
-                          </div>
-                        </div>
-                      </button>
-                    )}
+                      {/* App teilen / QR-Code */}
+                      {onOpenShareAppModal && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowSarAdminMenu(false);
+                            onOpenShareAppModal();
+                          }}
+                          className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-200 text-left transition cursor-pointer flex flex-col justify-between"
+                        >
+                          <div className="text-base mb-1">📱</div>
+                          <div className="font-bold text-xs text-white">App Teilen</div>
+                          <div className="text-[10px] text-slate-400">QR-Code Helfer</div>
+                        </button>
+                      )}
+
+                      {/* Strichcode-Liste (PDF) */}
+                      {onOpenUserListPdfModal && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowSarAdminMenu(false);
+                            onOpenUserListPdfModal();
+                          }}
+                          className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-200 text-left transition cursor-pointer flex flex-col justify-between"
+                        >
+                          <div className="text-base mb-1">🪪</div>
+                          <div className="font-bold text-xs text-white">Strichcodes</div>
+                          <div className="text-[10px] text-slate-400">Ausweise PDF</div>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   /* ── VEREINFACHTE HELFER-ANSICHT FÜR NICHT-ADMINS (SUCHER) ── */
@@ -977,12 +967,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            const confirmed = window.confirm(
-                                              `🚨 Einsatz "${op.title}" wirklich endgültig löschen?\n\nAlle Sektoren, Funde und Protokolle werden gelöscht.`
-                                            );
-                                            if (confirmed) {
+                                            showConfirmModal({
+                                            title: 'Einsatz endgültig löschen',
+                                            message: `Möchten Sie den Einsatz "${op.title}" wirklich endgültig löschen?\n\nAlle Sektoren, Funde und Protokolle werden unwiderruflich gelöscht.`,
+                                            confirmLabel: 'Endgültig löschen',
+                                            isDanger: true,
+                                            onConfirm: () => {
                                               deleteOperation(op.id);
-                                            }
+                                            },
+                                          });
                                           }}
                                           className="p-1 text-slate-400 hover:text-red-400 hover:bg-red-950/60 rounded border border-transparent hover:border-red-800 transition cursor-pointer"
                                           title="Einsatz löschen"
@@ -1072,16 +1065,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                                             type="button"
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              const confirmed = window.confirm(
-                                                `🔄 Einsatz "${op.title}" reaktivieren und neue Suchphase starten?\n\nBisherige Sektoren & GPS-Suchspuren bleiben erhalten.`
-                                              );
-                                              if (confirmed) {
+                                              showConfirmModal({
+                                              title: 'Einsatz reaktivieren',
+                                              message: `Möchten Sie den Einsatz "${op.title}" reaktivieren und eine neue Suchphase starten?\n\nBisherige Sektoren & GPS-Suchspuren bleiben erhalten.`,
+                                              confirmLabel: 'Reaktivieren',
+                                              isDanger: false,
+                                              onConfirm: () => {
                                                 reactivateOperation(op.id, {
                                                   phaseTitle: 'Suchphase 2 (Reaktiviert)',
                                                 });
                                                 setActiveTab('map');
                                                 setShowOpDropdown(false);
-                                              }
+                                              },
+                                            });
                                             }}
                                             className="p-1 text-slate-400 hover:text-emerald-400 hover:bg-emerald-950/60 rounded border border-transparent hover:border-emerald-800 transition cursor-pointer"
                                             title="Einsatz reaktivieren & neue Suchphase starten"
@@ -1092,12 +1088,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                                             type="button"
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              const confirmed = window.confirm(
-                                                `🚨 Archivierten Einsatz "${op.title}" wirklich endgültig löschen?`
-                                              );
-                                              if (confirmed) {
+                                              showConfirmModal({
+                                              title: 'Archivierten Einsatz löschen',
+                                              message: `Möchten Sie den archivierten Einsatz "${op.title}" wirklich endgültig löschen?`,
+                                              confirmLabel: 'Löschen',
+                                              isDanger: true,
+                                              onConfirm: () => {
                                                 deleteOperation(op.id);
-                                              }
+                                              },
+                                            });
                                             }}
                                             className="p-1 text-slate-400 hover:text-red-400 hover:bg-red-950/60 rounded border border-transparent hover:border-red-800 transition cursor-pointer"
                                             title="Einsatz löschen"

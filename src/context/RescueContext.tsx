@@ -466,9 +466,48 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     });
 
+    // ID-based merge for findings so offline findings are never overwritten by cloud log additions
+    const combinedFindings = [...(cloudOp.findings || []), ...(localOp.findings || [])];
+    const findingMap = new Map<string, Finding>();
+    combinedFindings.forEach((f) => {
+      const existing = findingMap.get(f.id);
+      if (!existing) {
+        findingMap.set(f.id, f);
+      } else {
+        const isExistingVerified = existing.status === 'verified';
+        const isNewVerified = f.status === 'verified';
+        if (!isExistingVerified && isNewVerified) {
+          findingMap.set(f.id, f);
+        }
+      }
+    });
+
+    // ID-based merge for sectors
+    const sectorMap = new Map<string, SearchSector>();
+    (localOp.sectors || []).forEach((s) => sectorMap.set(s.id, s));
+    (cloudOp.sectors || []).forEach((s) => {
+      const existing = sectorMap.get(s.id);
+      if (!existing) {
+        sectorMap.set(s.id, s);
+      } else {
+        sectorMap.set(s.id, cloudTime >= localTime ? s : existing);
+      }
+    });
+
+    // Preserve ezAdminIds and weather
+    const mergedEzAdminIds = Array.from(new Set([
+      ...(cloudOp.ezAdminIds || []),
+      ...(localOp.ezAdminIds || [])
+    ]));
+    const mergedWeather = cloudOp.weatherConditions || localOp.weatherConditions || '';
+
     return cleanOperation({
       ...base,
       status,
+      findings: Array.from(findingMap.values()),
+      sectors: Array.from(sectorMap.values()),
+      ezAdminIds: mergedEzAdminIds,
+      weatherConditions: mergedWeather,
       logs: mergedLogs,
       archivedTracks: Array.from(trackMap.values()),
       archivedChatMessages: Array.from(chatMap.values()),
@@ -3102,6 +3141,16 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       return;
     }
 
+    // Only First Admin (Maria) can promote to or demote from permanent System-Admin role
+    const isModifyingPermanentAdmin =
+      (updates.role === 'admin' && targetUser?.role !== 'admin') ||
+      (targetUser?.role === 'admin' && updates.role !== undefined && updates.role !== 'admin');
+    if (isModifyingPermanentAdmin && currentUser && !isFirstAdmin(currentUser)) {
+      console.warn('Blocked unauthorized attempt to modify System-Admin status:', userId);
+      alert('Aktion verweigert: Nur der First-Admin (Maria) darf System-Administratoren ernennen oder abberufen.');
+      return;
+    }
+
     setAllUsers((prev) => {
       const next = prev.map((u) => {
         if (u.id === userId) {
@@ -3383,6 +3432,12 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       return;
     }
 
+    // Only First Admin (Maria) can delete other System-Admins
+    if (targetUser?.role === 'admin' && !isFirstAdmin(currentUser)) {
+      alert('Aktion verweigert: Nur der First-Admin (Maria) darf System-Administratoren löschen.');
+      return;
+    }
+
     setAllUsers((prev) => {
       const next = prev.filter((u) => u.id !== userId);
       try {
@@ -3409,9 +3464,15 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       const next = prev.map((op) => ({
         ...op,
         participantIds: (op.participantIds || []).filter((id) => id !== userId),
+        ezAdminIds: (op.ezAdminIds || []).filter((id) => id !== userId),
         sectors: op.sectors.map((s) => ({
           ...s,
           assignedUserIds: (s.assignedUserIds || []).filter((id) => id !== userId),
+        })),
+        teams: (op.teams || []).map((t) => ({
+          ...t,
+          leaderUserId: t.leaderUserId === userId ? '' : t.leaderUserId,
+          memberUserIds: (t.memberUserIds || []).filter((id) => id !== userId),
         })),
       }));
       try {
@@ -3572,6 +3633,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         emergencyContact: '110 / Leitstelle',
       },
       sectors: data.sectors || [],
+      teams: data.teams || [],
       findings: [],
       logs: [
         {
@@ -3587,10 +3649,20 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       participantIds: Array.isArray(data.participantIds) && data.participantIds.length > 0
         ? Array.from(new Set(data.participantIds))
         : allUsers.map((u) => u.id),
+      ezAdminIds: Array.isArray(data.ezAdminIds) && data.ezAdminIds.length > 0
+        ? data.ezAdminIds
+        : (currentUser?.id ? [currentUser.id] : []),
       externalVolunteersCount: data.externalVolunteersCount || 0,
       externalVolunteersNotes: data.externalVolunteersNotes || '',
       selectedEquipment: data.selectedEquipment || [],
       customEquipmentNotes: data.customEquipmentNotes || '',
+      weatherConditions: data.weatherConditions || '',
+      searchAreaPolygon: data.searchAreaPolygon || [],
+      searchAreaHectares: data.searchAreaHectares || 0,
+      searchAreaName: data.searchAreaName || '',
+      searchAreaNotes: data.searchAreaNotes || '',
+      description: data.description || '',
+      phase: data.phase || 1,
       mapSnapshotUrl: data.mapSnapshotUrl || '',
       notes: data.notes || '',
     };
@@ -5324,24 +5396,6 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   const dismissAlertNotification = () => {
     setActiveAlertNotification(null);
   };
-
-  // Prevent accidental tab closure if actively tracking
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      const isTracking = 
-        currentUser?.isActive && 
-        (currentUser?.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready') && 
-        currentOperation?.status === 'active';
-        
-      if (isTracking) {
-        e.preventDefault();
-        e.returnValue = 'Aktiver Sucheinsatz läuft! Wenn Sie die Seite verlassen, stoppt das Tracking.';
-        return e.returnValue;
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [currentUser, userArrivalStatuses, currentOperation]);
 
   return (
     <RescueContext.Provider

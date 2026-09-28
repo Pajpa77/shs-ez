@@ -32,10 +32,46 @@ export const generateOperationPDF = async (
   
   let yPos = 65;
 
-  // Sectors
-  if (operation.sectors && operation.sectors.length > 0) {
+  // 1. Missing Person Profile
+  if (operation.missingPerson) {
+    const mp = operation.missingPerson;
     pdf.setFontSize(13);
-    pdf.text('1. Suchsektoren & Geländeflächen', 15, yPos);
+    pdf.text('1. Profil der vermissten Person', 15, yPos);
+    yPos += 6;
+    pdf.setFontSize(9);
+
+    const genderMap: Record<string, string> = { male: 'Männlich', female: 'Weiblich', diverse: 'Divers' };
+    const mpInfo = [
+      `Name: ${mp.name || 'Unbekannt'} | Alter: ${mp.age ? `${mp.age} Jahre` : 'k.A.'} | Geschlecht: ${genderMap[mp.gender] || mp.gender || 'k.A.'}`,
+      `Polizeiliches Aktenzeichen: ${mp.policeCaseId || 'Keines angegeben'} | Notfallkontakt: ${mp.emergencyContact || 'Keiner'}`,
+      `Zuletzt gesehen: ${mp.lastSeenTime ? new Date(mp.lastSeenTime).toLocaleString('de-DE') : 'k.A.'} - Ort: ${mp.lastSeenLocation?.address || 'k.A.'}`,
+      mp.homeAddress?.address ? `Wohnanschrift: ${mp.homeAddress.address}` : '',
+      `Bekleidung: ${mp.clothing || 'Keine besonderen Angaben'}`,
+      mp.medicalConditions && mp.medicalConditions.length > 0 ? `Medizinische Besonderheiten / Vorerkrankungen: ${mp.medicalConditions.join(', ')}` : '',
+      mp.specialRisks ? `Besondere Risiken / Gefahrenlage: ${mp.specialRisks}` : '',
+      mp.description ? `Personenbeschreibung / Merkmale: ${mp.description}` : '',
+    ].filter(Boolean);
+
+    mpInfo.forEach((line) => {
+      const splitLines = pdf.splitTextToSize(line, 175);
+      pdf.text(splitLines, 18, yPos);
+      yPos += (splitLines.length * 4.5) + 1.5;
+      if (yPos > 270) {
+        pdf.addPage();
+        yPos = 20;
+      }
+    });
+    yPos += 4;
+  }
+
+  // 2. Sectors
+  if (operation.sectors && operation.sectors.length > 0) {
+    if (yPos > 240) {
+      pdf.addPage();
+      yPos = 20;
+    }
+    pdf.setFontSize(13);
+    pdf.text('2. Suchsektoren & Geländeflächen', 15, yPos);
     yPos += 6;
     pdf.setFontSize(9);
     operation.sectors.forEach((s) => {
@@ -52,13 +88,13 @@ export const generateOperationPDF = async (
     yPos += 4;
   }
 
-  // Findings
+  // 3. Findings
   if (yPos > 240) {
     pdf.addPage();
     yPos = 20;
   }
   pdf.setFontSize(13);
-  pdf.text('2. Funde & Dokumentierte Sichtungen', 15, yPos);
+  pdf.text('3. Funde & Dokumentierte Sichtungen', 15, yPos);
   yPos += 6;
   pdf.setFontSize(9);
   if (!operation.findings || operation.findings.length === 0) {
@@ -79,13 +115,13 @@ export const generateOperationPDF = async (
   }
   yPos += 4;
 
-  // Participants
+  // 4. Participants
   if (yPos > 240) {
     pdf.addPage();
     yPos = 20;
   }
   pdf.setFontSize(13);
-  pdf.text('3. Eingesetzte Einsatzkräfte & Einheiten', 15, yPos);
+  pdf.text('4. Eingesetzte Einsatzkräfte & Einheiten', 15, yPos);
   yPos += 6;
   pdf.setFontSize(9);
   
@@ -106,14 +142,14 @@ export const generateOperationPDF = async (
   }
   yPos += 4;
 
-  // Operation Logs / Einsatztagebuch
+  // 5. Operation Logs / Einsatztagebuch
   if (operation.logs && operation.logs.length > 0) {
     if (yPos > 230) {
       pdf.addPage();
       yPos = 20;
     }
     pdf.setFontSize(13);
-    pdf.text('4. Lückenloses Einsatztagebuch & Protokoll', 15, yPos);
+    pdf.text('5. Lückenloses Einsatztagebuch & Protokoll', 15, yPos);
     yPos += 6;
     pdf.setFontSize(9);
     
@@ -137,13 +173,13 @@ export const generateOperationPDF = async (
     yPos += 4;
   }
 
-  // Map Snapshot
+  // 6. Map Snapshot
   try {
     const imgData = await captureTacticalMapScreenshot(operation, userLocations, allUsers);
     if (imgData) {
       pdf.addPage();
       pdf.setFontSize(14);
-      pdf.text('5. Gesamte Lagekarte (Standort & Suchspuren)', 105, 18, { align: 'center' });
+      pdf.text('6. Gesamte Lagekarte (Standort & Suchspuren)', 105, 18, { align: 'center' });
       const pdfWidth = 180;
       const pdfHeight = (750 * pdfWidth) / 1200;
       pdf.addImage(imgData, 'JPEG', 15, 25, pdfWidth, pdfHeight);

@@ -81,7 +81,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { createUser, updateUser, deleteUser, currentUser, allUsers, currentOperation, removeUserFromOperation, deactivateAllUsers } = useRescue();
+  const { createUser, updateUser, deleteUser, currentUser, allUsers, currentOperation, removeUserFromOperation, deactivateAllUsers, showConfirmModal } = useRescue();
 
   const [activeUser, setActiveUser] = useState<User | null>(userToEdit);
   const [username, setUsername] = useState('');
@@ -161,7 +161,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       setPassword(user.password || 'sucher123');
       setName(user.name);
       setRole(user.role);
-      setIsAlsoAdmin(Boolean(user.isAdmin || user.role === 'admin' || user.role === 'einsatzleitung'));
+      setIsAlsoAdmin(Boolean(user.isAdmin && user.role !== 'admin'));
       setCanLeadOperations(Boolean(user.role === 'einsatzleitung' || user.canLeadOperations));
       setCallSign(user.callSign);
       setLicensePlate(user.licensePlate || '');
@@ -303,13 +303,16 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       setStatusMessage({ type: 'error', text: 'Aktion verweigert: Der First-Admin (Owner Maria) ist unantastbar und kann nicht gelöscht werden.' });
       return;
     }
-    const confirmed = window.confirm(
-      `Möchten Sie den Account von "${activeUser.name}" (${activeUser.callSign}) wirklich unwiderruflich löschen?`
-    );
-    if (confirmed) {
-      deleteUser(activeUser.id);
-      populateForm(null);
-    }
+    showConfirmModal({
+      title: 'Account unwiderruflich löschen',
+      message: `Möchten Sie den Account von "${activeUser.name}" (${activeUser.callSign}) wirklich unwiderruflich löschen?`,
+      confirmLabel: 'Löschen',
+      isDanger: true,
+      onConfirm: () => {
+        deleteUser(activeUser.id);
+        populateForm(null);
+      },
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -325,13 +328,23 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       return;
     }
 
+    if (role === 'admin' && !isCurrentUserOwner) {
+      setStatusMessage({ type: 'error', text: 'Aktion verweigert: Nur der First-Admin (Maria) darf System-Administratoren ernennen.' });
+      return;
+    }
+
+    if (activeUser?.role === 'admin' && role !== 'admin' && !isCurrentUserOwner) {
+      setStatusMessage({ type: 'error', text: 'Aktion verweigert: Nur der First-Admin (Maria) darf System-Administratoren ihre Rolle entziehen.' });
+      return;
+    }
+
     if (!name.trim() || !username.trim()) {
       setStatusMessage({ type: 'error', text: 'Bitte füllen Sie Name und Benutzername aus.' });
       return;
     }
 
-    const effectiveIsAdmin = role === 'admin' || role === 'einsatzleitung' || isAlsoAdmin;
-    const effectiveCanLead = role === 'einsatzleitung' || (role === 'admin' && canLeadOperations);
+    const effectiveIsAdmin = role === 'admin' || isAlsoAdmin;
+    const effectiveCanLead = role === 'einsatzleitung' || (role === 'admin' && canLeadOperations) || isAlsoAdmin;
     const finalMemberId = memberId.trim() || `RT-2026-${Math.floor(100 + Math.random() * 900)}`;
 
     if (activeUser) {
@@ -602,7 +615,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 <span>Rolle & Berechtigungsstufe im System *:</span>
                 <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Admins können Rollen jederzeit vergeben & entziehen</span>
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 font-mono">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 font-mono">
                 <button
                   type="button"
                   onClick={() => {
@@ -628,8 +641,28 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 <button
                   type="button"
                   onClick={() => {
+                    setRole('group_leader');
+                    setCanLeadOperations(false);
+                  }}
+                  className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1 ${
+                    role === 'group_leader'
+                      ? 'bg-cyan-600/20 border-cyan-500 text-cyan-200 shadow-sm ring-1 ring-cyan-500/40'
+                      : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center justify-between font-bold text-xs text-cyan-300">
+                    <span>🧭 Gruppenleiter</span>
+                    {role === 'group_leader' && <span className="text-[10px] text-cyan-400">✓ Aktiv</span>}
+                  </div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
+                    Führt Suchtrupp: Kommuniziert mit der EL & verteilt Anweisungen im Team.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
                     setRole('einsatzleitung');
-                    setIsAlsoAdmin(true);
                     setCanLeadOperations(true);
                   }}
                   className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between gap-1 ${
@@ -640,16 +673,20 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 >
                   <div className="flex items-center justify-between font-bold text-xs text-emerald-300">
                     <span>📢 Einsatzleitung</span>
-                    {role === 'einsatzleitung' && <span className="text-[10px] text-emerald-400">✓ Aktiv (inkl. Admin)</span>}
+                    {role === 'einsatzleitung' && <span className="text-[10px] text-emerald-400">✓ Aktiv</span>}
                   </div>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
-                    Führungsrolle: Sektoren & Teams führen. Verfügt immer über Adminrechte.
+                    Operative Einsatzführung. Kann vorübergehend Adminrechte erhalten.
                   </span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => {
+                    if (!isCurrentUserOwner) {
+                      alert('Aktion verweigert: Nur der First-Admin (Maria) darf System-Administratoren ernennen.');
+                      return;
+                    }
                     setRole('admin');
                     setIsAlsoAdmin(true);
                   }}
@@ -657,14 +694,15 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                     role === 'admin'
                       ? 'bg-red-600/25 border-red-500 text-red-200 shadow-sm ring-1 ring-red-500/50'
                       : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:bg-slate-800'
-                  }`}
+                  } ${!isCurrentUserOwner ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  title={!isCurrentUserOwner ? 'Nur First-Admin (Maria) kann System-Admins ernennen' : undefined}
                 >
                   <div className="flex items-center justify-between font-bold text-xs text-red-300">
                     <span>🛡️ System-Admin</span>
                     {role === 'admin' && <span className="text-[10px] text-red-400">👑 Admin</span>}
                   </div>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
-                    Volle Rechte: Accounts & System-Logs. EL-Funktion optional zuschaltbar.
+                    Volle Rechte. Nur vom First-Admin vergebbar.
                   </span>
                 </button>
 
@@ -728,39 +766,24 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 </div>
               )}
 
-              {role === 'einsatzleitung' && (
-                <div className="mt-3 p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/50 flex items-center gap-3">
-                  <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
-                    <Shield className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-emerald-300 block">
-                      Einsatzleitung verfügt immer über volle Administratorrechte
-                    </span>
-                    <span className="text-[11px] text-emerald-200/80 leading-relaxed block mt-0.5">
-                      Einsatzleiter haben automatisch System- und Verwaltungsrechte, um Einsätze, Kräfte und Accounts uneingeschränkt steuern zu können.
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {role === 'responder' && (
+              {/* Temporary Admin Rights Toggle for Einsatzleitung, Gruppenleiter & Responders */}
+              {role !== 'admin' && role !== 'observer' && (
                 <div className="mt-3 p-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 flex items-start justify-between gap-3">
                   <div className="flex items-start gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-amber-500/10 text-amber-400 border border-amber-500/30 shrink-0 mt-0.5">
+                    <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30 shrink-0 mt-0.5">
                       <Shield className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="text-xs font-bold text-slate-900 dark:text-slate-200 flex items-center gap-2 flex-wrap">
-                        <span>Zusätzliche Administrator-Rechte gewähren</span>
+                        <span>Vorübergehende Adminrechte gewähren (`isAdmin`)</span>
                         {isAlsoAdmin && (
                           <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-full">
-                            Sucher mit Admin-Rechten
+                            Vorübergehend Admin aktiv
                           </span>
                         )}
                       </div>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                        Erlaubt dieser Suchkraft zusätzlich Benutzerkonten anzulegen, Rollen zu verwalten und System-Logs einzusehen.
+                        Ermöglicht der Einsatzkraft für diesen Einsatz das Anlegen/Bearbeiten von Sektoren, Teams und Accounts ohne Anwesenheit eines zweiten Admins. Kann nach dem Einsatz jederzeit wieder entzogen werden.
                       </p>
                     </div>
                   </div>
@@ -1073,7 +1096,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 Alle abmelden
               </button>
 
-              {activeUser && currentUser?.role === 'admin' && activeUser.id !== currentUser.id && !isFirstAdmin(activeUser) && (
+              {activeUser && isUserAdmin(currentUser) && activeUser.id !== currentUser.id && !isFirstAdmin(activeUser) && (
                 <>
                   {(currentOperation?.participantIds?.includes(activeUser.id) || activeUser.isActive) && (
                     <button

@@ -189,14 +189,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             {currentOperation ? (
               <div className="space-y-3 font-mono">
-                <div>
-                  <h3 className="text-base font-bold text-white leading-snug">
-                    {currentOperation.title}
-                  </h3>
-                  {currentOperation.missingPerson?.name && (
-                    <p className="text-xs text-amber-300 mt-0.5 font-bold">
-                      👤 Vermisste Person: {currentOperation.missingPerson.name} ({currentOperation.missingPerson.age || 'k.A.'} Jahre)
-                    </p>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="text-base font-bold text-white leading-snug">
+                      {currentOperation.title}
+                    </h3>
+                    {currentOperation.missingPerson?.name && (
+                      <p className="text-xs text-amber-300 mt-0.5 font-bold">
+                        👤 Vermisste Person: {currentOperation.missingPerson.name} ({currentOperation.missingPerson.age || 'k.A.'} Jahre)
+                      </p>
+                    )}
+                  </div>
+                  {onOpenOperationDetail && (
+                    <button
+                      type="button"
+                      onClick={onOpenOperationDetail}
+                      className="px-2.5 py-1.5 rounded-lg bg-blue-950/90 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/80 text-xs font-bold shrink-0 transition flex items-center gap-1 cursor-pointer shadow"
+                      title="Einsatzdossier & Vermisstenprofil öffnen"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Dossier</span>
+                    </button>
                   )}
                 </div>
 
@@ -227,7 +240,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           {/* Operation Control Buttons */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-700/80 font-mono">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-700/80 font-mono">
             <button
               type="button"
               onClick={onOpenCreateOperation}
@@ -252,7 +265,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <button
                 type="button"
                 onClick={onOpenPauseOperation}
-                className="py-2.5 px-3 bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-700 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow col-span-2 sm:col-span-1"
+                className="py-2.5 px-3 bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-700 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow"
               >
                 <Pause className="w-4 h-4" />
                 <span>Pausieren</span>
@@ -263,10 +276,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <button
                 type="button"
                 onClick={() => resumeOperation(currentOperation.id)}
-                className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow col-span-2 sm:col-span-1"
+                className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow"
               >
                 <Play className="w-4 h-4" />
                 <span>Fortsetzen</span>
+              </button>
+            )}
+
+            {currentOperation && currentOperation.status !== 'completed' && (
+              <button
+                type="button"
+                onClick={onOpenEndOperation}
+                className="py-2.5 px-3 bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-700 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow col-span-2 sm:col-span-1"
+              >
+                <Square className="w-4 h-4 fill-current" />
+                <span>Beenden</span>
               </button>
             )}
           </div>
@@ -282,22 +306,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={onOpenCreateUser}
-              className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/60 transition cursor-pointer text-left space-y-1 group shadow"
+              onClick={onNavigateToMap}
+              className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/60 transition cursor-pointer text-left space-y-1 group shadow"
             >
-              <div className="w-7 h-7 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-sm font-bold group-hover:scale-105 transition">
-                👥
+              <div className="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/40 flex items-center justify-center text-sm font-bold group-hover:scale-105 transition">
+                🗺️
               </div>
-              <div className="font-bold text-xs text-white">Accountverwaltung</div>
-              <div className="text-[10px] text-slate-400">Helfer &amp; Rollen verwalten</div>
+              <div className="font-bold text-xs text-white">Lagekarte</div>
+              <div className="text-[10px] text-slate-400">Live-Ortung &amp; Lagebild</div>
             </button>
 
             <button
               type="button"
               onClick={onNavigateToSectors}
-              className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/60 transition cursor-pointer text-left space-y-1 group shadow"
+              className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/60 transition cursor-pointer text-left space-y-1 group shadow"
             >
-              <div className="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/40 flex items-center justify-center text-sm font-bold group-hover:scale-105 transition">
+              <div className="w-7 h-7 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-sm font-bold group-hover:scale-105 transition">
                 🎯
               </div>
               <div className="font-bold text-xs text-white">Suchsektoren</div>
@@ -306,10 +330,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <button
               type="button"
-              onClick={onNavigateToReports}
+              onClick={onOpenCreateUser}
               className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-cyan-500/60 transition cursor-pointer text-left space-y-1 group shadow"
             >
               <div className="w-7 h-7 rounded-lg bg-cyan-600/20 text-cyan-400 border border-cyan-500/40 flex items-center justify-center text-sm font-bold group-hover:scale-105 transition">
+                👥
+              </div>
+              <div className="font-bold text-xs text-white">Accountverwaltung</div>
+              <div className="text-[10px] text-slate-400">Helfer &amp; Rollen verwalten</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={onNavigateToReports}
+              className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-500/60 transition cursor-pointer text-left space-y-1 group shadow"
+            >
+              <div className="w-7 h-7 rounded-lg bg-amber-600/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-sm font-bold group-hover:scale-105 transition">
                 📋
               </div>
               <div className="font-bold text-xs text-white">Einsatzbericht PDF</div>
@@ -319,9 +355,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <button
               type="button"
               onClick={onOpenShareApp}
-              className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-500/60 transition cursor-pointer text-left space-y-1 group shadow"
+              className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-purple-500/60 transition cursor-pointer text-left space-y-1 group shadow"
             >
-              <div className="w-7 h-7 rounded-lg bg-amber-600/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-sm font-bold group-hover:scale-105 transition">
+              <div className="w-7 h-7 rounded-lg bg-purple-600/20 text-purple-400 border border-purple-500/40 flex items-center justify-center text-sm font-bold group-hover:scale-105 transition">
                 📱
               </div>
               <div className="font-bold text-xs text-white">App Teilen / QR</div>
@@ -332,7 +368,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <button
                 type="button"
                 onClick={onOpenUserListPdf}
-                className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/60 transition cursor-pointer text-left space-y-1 group shadow col-span-2 sm:col-span-1"
+                className="p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/60 transition cursor-pointer text-left space-y-1 group shadow"
               >
                 <div className="w-7 h-7 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-sm font-bold group-hover:scale-105 transition">
                   🪪

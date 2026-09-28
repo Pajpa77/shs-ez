@@ -9,7 +9,7 @@ interface SearchTeamsModalProps {
 }
 
 export const SearchTeamsModal: React.FC<SearchTeamsModalProps> = ({ isOpen, onClose }) => {
-  const { currentOperation, updateOperation, allUsers, currentUser } = useRescue();
+  const { currentOperation, updateOperation, allUsers, currentUser, showConfirmModal } = useRescue();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
@@ -113,25 +113,31 @@ export const SearchTeamsModal: React.FC<SearchTeamsModalProps> = ({ isOpen, onCl
   };
 
   const handleDeleteTeam = (teamId: string) => {
-    if (!window.confirm('Möchten Sie diesen Suchtrupp wirklich auflösen?')) return;
     const teamToDelete = teams.find((t) => t.id === teamId);
-    const updatedTeams = teams.filter((t) => t.id !== teamId);
+    showConfirmModal({
+      title: 'Suchtrupp auflösen',
+      message: `Möchten Sie den Suchtrupp "${teamToDelete?.name || 'Gruppe'}" wirklich auflösen? Zugewiesene Sektoren werden freigegeben.`,
+      confirmLabel: 'Auflösen',
+      isDanger: true,
+      onConfirm: () => {
+        const updatedTeams = teams.filter((t) => t.id !== teamId);
+        const teamUserIds = teamToDelete ? [teamToDelete.leaderUserId, ...(teamToDelete.memberUserIds || [])] : [];
+        const updatedSectors = sectors.map((sec) => {
+          if (teamToDelete?.sectorIds?.includes(sec.id)) {
+            return {
+              ...sec,
+              assignedGroupName: sec.assignedGroupName === teamToDelete.name ? undefined : sec.assignedGroupName,
+              assignedUserIds: (sec.assignedUserIds || []).filter((id) => !teamUserIds.includes(id)),
+            };
+          }
+          return sec;
+        });
 
-    const teamUserIds = teamToDelete ? [teamToDelete.leaderUserId, ...(teamToDelete.memberUserIds || [])] : [];
-    const updatedSectors = sectors.map((sec) => {
-      if (teamToDelete?.sectorIds?.includes(sec.id)) {
-        return {
-          ...sec,
-          assignedGroupName: sec.assignedGroupName === teamToDelete.name ? undefined : sec.assignedGroupName,
-          assignedUserIds: (sec.assignedUserIds || []).filter((id) => !teamUserIds.includes(id)),
-        };
-      }
-      return sec;
-    });
-
-    updateOperation(currentOperation.id, {
-      teams: updatedTeams,
-      sectors: updatedSectors,
+        updateOperation(currentOperation.id, {
+          teams: updatedTeams,
+          sectors: updatedSectors,
+        });
+      },
     });
   };
 

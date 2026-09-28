@@ -50,7 +50,7 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
   onFocusSectorOnMap,
   onOpenSearchTeams,
 }) => {
-  const { currentOperation, allUsers, setSectorStatus, deleteSector, currentUser } = useRescue();
+  const { currentOperation, allUsers, setSectorStatus, deleteSector, currentUser, showConfirmModal } = useRescue();
 
   if (!currentOperation) {
     return (
@@ -317,9 +317,13 @@ export const SectorOverview: React.FC<SectorOverviewProps> = ({
                     </button>
                     <button
                       onClick={() => {
-                        if (window.confirm(`🚨 Sektor "${sec.name}" wirklich endgültig löschen?`)) {
-                          deleteSector(sec.id);
-                        }
+                        showConfirmModal({
+                          title: 'Sektor löschen',
+                          message: `Möchten Sie den Sektor "${sec.name}" wirklich unwiderruflich löschen?`,
+                          confirmLabel: 'Löschen',
+                          isDanger: true,
+                          onConfirm: () => deleteSector(sec.id),
+                        });
                       }}
                       className="p-2 rounded-xl bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800/80 transition cursor-pointer"
                       title="Sektor löschen"

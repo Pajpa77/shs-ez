@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { FindingCategory, FindingUrgency, GpsPoint } from '../types';
 import { VEREINSBUERO_LOCATION } from '../mockData';
+import { compressImageFile } from '../lib/imageUtils';
 import {
   AlertTriangle,
   Camera,
@@ -123,23 +124,37 @@ export const FindingModal: React.FC<FindingModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.type.startsWith('video/')) {
       setMediaType('video');
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setMediaUrl(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
     } else {
       setMediaType('image');
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setMediaUrl(event.target.result as string);
+      try {
+        // Automatically compress to max 800px, 80% quality (ca. 40-70 KB)
+        // This ensures reliable Firestore sync (< 1MB) and prevents localStorage exhaustion
+        const compressedDataUrl = await compressImageFile(file, 800, 0.8);
+        setMediaUrl(compressedDataUrl);
+      } catch (err) {
+        console.warn('Image compression fallback:', err);
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            setMediaUrl(event.target.result as string);
+          }
+        };
+        reader.readAsDataURL(file);
       }
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   const handleApplyPreset = (preset: (typeof SAMPLE_MEDIA_PRESETS)[0]) => {

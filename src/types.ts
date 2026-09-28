@@ -77,31 +77,40 @@ export const isFirstAdmin = (user: User | null | undefined): boolean => {
 
 export const isOwner = isFirstAdmin;
 
-// Einsatzleitung verfügt IMMER über Admin-Rechte
+// Ein Benutzer verfügt über Admin-Rechte, wenn er First-Admin, System-Admin oder temporär mit isAdmin ausgestattet ist
 export const isUserAdmin = (user: User | null | undefined): boolean => {
   return Boolean(
     user && (
+      isFirstAdmin(user) ||
       user.role === 'admin' ||
-      user.role === 'einsatzleitung' ||
-      user.isAdmin === true ||
-      isFirstAdmin(user)
+      user.isAdmin === true
     )
   );
 };
 
-// Nicht jeder Admin ist automatisch Einsatzleiter (nur mit canLeadOperations oder FirstAdmin)
+// Einsatzleiter: Darf Einsätze operativ führen (entweder Rolle EL, canLeadOperations oder First-Admin)
 export const isUserEL = (user: User | null | undefined): boolean => {
   return Boolean(
     user && (
+      isFirstAdmin(user) ||
       user.role === 'einsatzleitung' ||
-      user.canLeadOperations === true ||
-      isFirstAdmin(user)
+      user.canLeadOperations === true
     )
   );
 };
 
 export const isUserAdminOrEL = (user: User | null | undefined): boolean => {
   return isUserAdmin(user) || isUserEL(user);
+};
+
+// Nur der First-Admin (Maria / Owner) darf System-Admins ernennen, abberufen oder löschen
+export const canManageSystemAdmins = (operator: User | null | undefined): boolean => {
+  return isFirstAdmin(operator);
+};
+
+// Admins und First-Admin dürfen Einsatzleitern oder Helfern vorübergehend Adminrechte geben/entziehen
+export const canGrantTemporaryAdmin = (operator: User | null | undefined): boolean => {
+  return isUserAdmin(operator);
 };
 
 export type ConnectionStatus = 'active' | 'stale' | 'offline';

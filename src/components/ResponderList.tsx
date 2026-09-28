@@ -90,8 +90,8 @@ export const ResponderList: React.FC<ResponderListProps> = ({
     calculateDistanceToEzMeters,
     setSelectedUser,
   } = useRescue();
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'einsatzleitung' | 'group_leader' | 'responder' | 'observer'>('all');
   const [filterQuery, setFilterQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'einsatzleitung' | 'responder' | 'observer'>('all');
   const [showObserversSection, setShowObserversSection] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [cardUser, setCardUser] = useState<User | null>(null);
@@ -120,17 +120,20 @@ export const ResponderList: React.FC<ResponderListProps> = ({
       alert('Der First-Admin Account von Maria (App-Owner) ist unantastbar und kann nicht geändert werden.');
       return;
     }
+    // Only First Admin (Maria) can manage permanent System-Admins
     if (targetUser.role === 'admin') {
-      // Toggle operational EL function for admin
+      if (!isFirstAdmin(currentUser)) {
+        alert('Aktion verweigert: Nur der First-Admin (Maria) darf System-Administratoren verwalten.');
+        return;
+      }
       const nextCanLead = !targetUser.canLeadOperations;
       updateUser(targetUser.id, { canLeadOperations: nextCanLead });
-    } else if (targetUser.role === 'einsatzleitung') {
-      // Demote einsatzleitung to responder
-      updateUser(targetUser.id, { role: 'responder', isAdmin: false, canLeadOperations: false });
-    } else {
-      // Promote responder to Einsatzleitung (immer mit Admin-Rechten)
-      updateUser(targetUser.id, { role: 'einsatzleitung', isAdmin: true, canLeadOperations: true });
+      return;
     }
+
+    // For Einsatzleitung, Gruppenleiter & Sucher: Toggle temporary Admin rights (isAdmin)
+    const nextAdmin = !targetUser.isAdmin;
+    updateUser(targetUser.id, { isAdmin: nextAdmin });
   };
 
   const filteredUsers = currentOperationUsers
@@ -516,7 +519,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
         />
 
         <div className="flex gap-1.5 w-full sm:w-auto flex-wrap">
-          {(['all', 'admin', 'einsatzleitung', 'responder', 'observer'] as const).map((r) => (
+          {(['all', 'admin', 'einsatzleitung', 'group_leader', 'responder', 'observer'] as const).map((r) => (
             <button
               key={r}
               onClick={() => setRoleFilter(r)}
@@ -532,6 +535,8 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                 ? '🛡️ Admin'
                 : r === 'einsatzleitung'
                 ? '📋 EL'
+                : r === 'group_leader'
+                ? '🧭 GL'
                 : r === 'responder'
                 ? '🚶 Sucher'
                 : `👁️ Betrachter (${observerUsers.length})`}

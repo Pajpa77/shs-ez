@@ -222,6 +222,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     playAlertSound,
     addMultipleSectors,
     reportFinding,
+    showConfirmModal,
   } = useRescue();
 
   const currentOperation = propOperation !== undefined ? propOperation : globalOperation;
@@ -4011,10 +4012,16 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 {isAdminOrEL && (
                   <button
                     onClick={() => {
-                      if (window.confirm(`🚨 Sektor "${selectedSector.name}" wirklich endgültig löschen?`)) {
-                        deleteSector(selectedSector.id);
-                        setSelectedSector(null);
-                      }
+                      showConfirmModal({
+                        title: 'Sektor löschen',
+                        message: `Möchten Sie den Sektor "${selectedSector.name}" wirklich unwiderruflich löschen?`,
+                        confirmLabel: 'Löschen',
+                        isDanger: true,
+                        onConfirm: () => {
+                          deleteSector(selectedSector.id);
+                          setSelectedSector(null);
+                        },
+                      });
                     }}
                     className="px-3 py-2.5 bg-red-950/80 hover:bg-red-900 text-red-300 hover:text-white rounded-xl text-xs font-semibold cursor-pointer border border-red-800/80 font-mono transition"
                     title="Sektor löschen"

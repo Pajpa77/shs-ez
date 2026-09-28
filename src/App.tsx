@@ -77,6 +77,8 @@ const MainApp: React.FC = () => {
     uiScale,
     setUiScale,
     activeTrackingTest,
+    confirmModalState,
+    dismissConfirmModal,
   } = useRescue();
 
   // Initialize push notifications & vibration alerts
@@ -789,6 +791,57 @@ const MainApp: React.FC = () => {
       />
       {showDroneFeed && isAdmin && (
         <DroneFeedWidget onClose={() => setShowDroneFeed(false)} />
+      )}
+
+      {/* Global In-App Confirm Modal (Replaces browser window.confirm) */}
+      {confirmModalState && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl max-w-md w-full p-5 shadow-2xl text-slate-100 font-sans space-y-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 ${
+                confirmModalState.isDanger
+                  ? 'bg-rose-950/80 text-rose-400 border border-rose-500/50'
+                  : 'bg-amber-950/80 text-amber-400 border border-amber-500/50'
+              }`}>
+                {confirmModalState.isDanger ? '⚠️' : '❓'}
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base font-bold text-white font-mono leading-tight">
+                  {confirmModalState.title}
+                </h3>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed font-sans whitespace-pre-wrap">
+              {confirmModalState.message}
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-700/80 font-mono text-xs">
+              <button
+                type="button"
+                onClick={dismissConfirmModal}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition cursor-pointer border border-slate-700"
+              >
+                {confirmModalState.cancelLabel || 'Abbrechen'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const onConf = confirmModalState.onConfirm;
+                  dismissConfirmModal();
+                  onConf();
+                }}
+                className={`px-4 py-2 rounded-xl font-bold transition cursor-pointer text-white shadow ${
+                  confirmModalState.isDanger
+                    ? 'bg-rose-600 hover:bg-rose-500 border border-rose-400'
+                    : 'bg-blue-600 hover:bg-blue-500 border border-blue-400'
+                }`}
+              >
+                {confirmModalState.confirmLabel || 'Bestätigen'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       </Suspense>
     </div>
