@@ -1,4 +1,4 @@
-﻿export type UserRole = 'admin' | 'einsatzleitung' | 'responder' | 'observer' | 'group_leader';
+export type UserRole = 'admin' | 'einsatzleitung' | 'responder' | 'observer' | 'group_leader';
 
 export type EquipmentType =
   | 'drone'

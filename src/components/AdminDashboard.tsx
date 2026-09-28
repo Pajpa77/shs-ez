@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { useRescue } from '../context/RescueContext';
 import { isUserAdmin, isUserEL, isFirstAdmin } from '../types';
 import { getOpTheme } from './Navbar';

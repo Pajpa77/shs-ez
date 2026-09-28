@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { User, EquipmentType, UserRole, isUserAdmin, isUserEL, isUserAdminOrEL, isFirstAdmin } from '../types';
 import { getOpTheme } from './Navbar';

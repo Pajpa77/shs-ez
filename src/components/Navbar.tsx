@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { User, isFirstAdmin, isUserAdmin, isUserEL, isUserAdminOrEL } from '../types';
 import { VEREINSBUERO_LOCATION } from '../mockData';
