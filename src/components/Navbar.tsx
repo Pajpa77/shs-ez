@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { User, isFirstAdmin, isUserAdmin, isUserEL, isUserAdminOrEL } from '../types';
 import { VEREINSBUERO_LOCATION } from '../mockData';
@@ -1260,8 +1260,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                         if (isOnline) {
                           if (status === 'ready') {
                             statusBadge = { label: 'Vor Ort / Im Einsatz', color: 'bg-emerald-950 text-emerald-300 border-emerald-700', icon: '🟢' };
-                          } else if (status === 'ez_reached') { statusBadge = { label: 'EZ erreicht', color: 'bg-amber-500/20 text-amber-300 border-amber-500/50', icon: '📍' }; } else if (status === 'near_ez') { statusBadge = { label: 'Im Einsatzbereich (< 0.5km)', color: 'bg-amber-500 text-white border-amber-600', icon: '📍' }; };
-                          } else {
+                          } else if (status === 'ez_reached') { statusBadge = { label: 'EZ erreicht', color: 'bg-amber-500/20 text-amber-300 border-amber-500/50', icon: '📍' }; } else if (status === 'near_ez') { statusBadge = { label: 'Im Einsatzbereich (< 0.5km)', color: 'bg-amber-500 text-white border-amber-600', icon: '📍' }; }
+                          else {
                             // in_transit
                             statusBadge = { label: 'Auf Anfahrt', color: 'bg-red-950/60 text-red-300 border-red-700', icon: '🔴' };
                           }
@@ -1607,3 +1607,4 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+
