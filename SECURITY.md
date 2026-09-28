@@ -4,8 +4,8 @@
 
 | Version | Supported          | Status |
 | ------- | ------------------ | ------ |
-| 3.7.x   | :white_check_mark: | Active Production Release |
-| < 3.7   | :x:                | Deprecated |
+| 4.0.x   | :white_check_mark: | Active Production Release |
+| < 4.0   | :x:                | Deprecated |
 
 ## Architecture & Authentication Model
 
