@@ -506,16 +506,6 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                     : undefined,
                 };
               }
-              if (
-                cleanedOp.headquartersLocation &&
-                Math.abs(cleanedOp.headquartersLocation.lat - 51.845) < 0.01 &&
-                Math.abs(cleanedOp.headquartersLocation.lng - 11.635) < 0.01
-              ) {
-                return {
-                  ...cleanedOp,
-                  headquartersLocation: VEREINSBUERO_LOCATION,
-                };
-              }
               return cleanedOp;
             });
         }
@@ -1444,12 +1434,6 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                       op.missingPerson.lastSeenLocation = VEREINSBUERO_LOCATION;
                       op.missingPerson.homeAddress = VEREINSBUERO_LOCATION;
                     }
-                  } else if (
-                    op.headquartersLocation &&
-                    Math.abs(op.headquartersLocation.lat - 51.845) < 0.01 &&
-                    Math.abs(op.headquartersLocation.lng - 11.635) < 0.01
-                  ) {
-                    op.headquartersLocation = VEREINSBUERO_LOCATION;
                   }
                   cloudOps.push(op);
                 }
@@ -1893,12 +1877,6 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                   op.missingPerson.lastSeenLocation = VEREINSBUERO_LOCATION;
                   op.missingPerson.homeAddress = VEREINSBUERO_LOCATION;
                 }
-              } else if (
-                op.headquartersLocation &&
-                Math.abs(op.headquartersLocation.lat - 51.845) < 0.01 &&
-                Math.abs(op.headquartersLocation.lng - 11.635) < 0.01
-              ) {
-                op.headquartersLocation = VEREINSBUERO_LOCATION;
               }
               cloudOps.push(op);
             }

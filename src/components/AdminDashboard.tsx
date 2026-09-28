@@ -107,7 +107,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const activeOps = allOperations.filter((o) => o.status === 'active' || o.status === 'paused');
   const activeResponders = allUsers.filter((u) => u.isActive);
   const inTransitResponders = activeResponders.filter((u) => u.arrivalStatus === 'in_transit');
-  const ezReachedResponders = activeResponders.filter((u) => u.arrivalStatus === 'ez_reached' || u.operationalRole === 'ez_command');
+  const ezReachedResponders = activeResponders.filter((u) => u.arrivalStatus === 'ez_reached');
   const readyResponders = activeResponders.filter((u) => u.arrivalStatus === 'ready');
 
   const currentTheme = getOpTheme(currentOperation, allOperations);
