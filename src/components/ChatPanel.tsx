@@ -25,6 +25,7 @@ import {
   Phone,
   Car,
   Award,
+  Wifi,
 } from 'lucide-react';
 
 interface ChatPanelProps {
@@ -142,7 +143,7 @@ const VoiceMessagePlayer: React.FC<{ audioUrl: string; duration?: number; isMe?:
           <div className="flex items-center justify-between text-[10px] font-mono opacity-80">
             <span className="flex items-center gap-1 font-bold">
               <Radio className="w-3 h-3 text-amber-400 animate-pulse" />
-              CB-Funk Audio
+              Funkspruch (PTT)
             </span>
             <span>
               {formatSec(currentTime)} / {formatSec(effectiveDuration)}
@@ -476,6 +477,40 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     }
   };
 
+  // Keyboard Push-To-Talk shortcut for laptops/dispatchers (Press & hold Spacebar when not typing)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput = activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA' || (activeEl as HTMLElement)?.isContentEditable;
+      if (isInput) return;
+
+      if (e.code === 'Space' && !e.repeat && !isRecording) {
+        e.preventDefault();
+        pttPressStartTimeRef.current = Date.now();
+        isHoldModeRef.current = true;
+        startRecording();
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput = activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA' || (activeEl as HTMLElement)?.isContentEditable;
+      if (isInput) return;
+
+      if (e.code === 'Space' && isRecording) {
+        e.preventDefault();
+        stopAndSendRecording();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isRecording]);
+
   const effectiveOperation = allOperations.find((o) => o.id === selectedOpId) || currentOperation || null;
 
   // Split messages by type according to user requirements:
@@ -604,44 +639,50 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     >
       {/* Top Action & Navigation Header Bar */}
       <div className="bg-[#1E293B] border border-slate-700/80 rounded-2xl p-2.5 sm:p-3 mb-3 flex flex-wrap items-center justify-between gap-2 shadow-xl shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
-            <Radio className="w-4 h-4 animate-pulse" />
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+            <Radio className="w-5 h-5 animate-pulse" />
           </div>
           <div>
-            <h2 className="font-extrabold text-xs sm:text-sm uppercase tracking-wider text-white flex items-center gap-1.5">
-              <span>Einsatzfunk & Communication Hub</span>
-            </h2>
-            <p className="text-[10px] text-slate-400 font-mono">
+            <div className="flex items-center gap-2">
+              <h2 className="font-extrabold text-sm sm:text-base tracking-wide text-white">
+                Einsatzfunk
+              </h2>
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                Live Funk (SIM &amp; Zentrale)
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 truncate max-w-[200px] sm:max-w-md">
               {activeScope === 'operation' && effectiveOperation
-                ? `Einsatz: #${effectiveOperation.id.slice(-4).toUpperCase()} ${effectiveOperation.title}`
-                : 'Allgemeiner Vereinsfunk'}
+                ? `${effectiveOperation.title}`
+                : 'Allgemeiner Funk'}
             </p>
           </div>
         </div>
 
         {/* Action Buttons to open Modals (Chatverlauf, Logbuch, Alarme & Funde) as requested by user */}
-        <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
-          {/* Button: 📜 Chatverlauf */}
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          {/* Button: Verlauf */}
           <button
             type="button"
             onClick={() => setShowHistoryModal(true)}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-blue-300 font-bold flex items-center gap-1.5 transition cursor-pointer"
-            title="Vollständigen Chatverlauf durchsuchen & einsehen"
+            className="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-blue-300 font-semibold flex items-center gap-1.5 transition cursor-pointer"
+            title="Vollständigen Chatverlauf einsehen"
           >
             <MessageSquare className="w-3.5 h-3.5 text-blue-400" />
-            <span>📜 Chatverlauf</span>
+            <span>Verlauf</span>
           </button>
 
-          {/* Button: 📋 Logbuch */}
+          {/* Button: Logbuch */}
           <button
             type="button"
             onClick={() => setShowLogbookModal(true)}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold flex items-center gap-1.5 transition cursor-pointer relative"
-            title="System-Logbuch (Ein- und Ausloggen der Einsatzkräfte)"
+            className="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold flex items-center gap-1.5 transition cursor-pointer relative"
+            title="System-Logbuch (Ein- und Ausloggen)"
           >
             <FileText className="w-3.5 h-3.5 text-slate-400" />
-            <span>📋 Logbuch</span>
+            <span>Logbuch</span>
             {logbookMessages.length > 0 && (
               <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[9px] font-bold">
                 {logbookMessages.length}
@@ -649,15 +690,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
             )}
           </button>
 
-          {/* Button: 🚨 Alarme */}
+          {/* Button: Alarme */}
           <button
             type="button"
             onClick={() => setShowAlertsModal(true)}
-            className="px-2.5 py-1.5 rounded-xl bg-red-950/80 hover:bg-red-900 border border-red-700/80 text-red-200 font-bold flex items-center gap-1.5 transition cursor-pointer relative"
+            className="px-2.5 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-200 font-semibold flex items-center gap-1.5 transition cursor-pointer relative"
             title="Alarme & Statusänderungen"
           >
             <AlertTriangle className="w-3.5 h-3.5 text-red-400 animate-pulse" />
-            <span>🚨 Alarme</span>
+            <span>Alarme</span>
             {alertMessages.length > 0 && (
               <span className="px-1.5 py-0.2 rounded-full bg-red-600 text-white text-[9px] font-bold">
                 {alertMessages.length}
@@ -695,34 +736,34 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         </div>
       </div>
 
-      {/* Main 2-Tab Navigation Bar: Funkkanäle & Kommunikation vs Fundmeldungen mit Infos */}
-      <div className="grid grid-cols-2 gap-2 p-1 bg-[#1E293B] border border-slate-700/80 rounded-xl mb-3 shrink-0 font-mono text-xs">
+      {/* Main 2-Tab Navigation Bar: Funkkanäle vs Fundmeldungen */}
+      <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#1E293B] border border-slate-700/80 rounded-xl mb-3 shrink-0 text-xs font-semibold">
         <button
           type="button"
           onClick={() => {
             setMainTab('channels');
           }}
-          className={`py-2 px-3 rounded-lg font-extrabold transition flex items-center justify-center gap-2 cursor-pointer ${
+          className={`py-2 px-3 rounded-lg transition flex items-center justify-center gap-2 cursor-pointer ${
             mainTab === 'channels'
-              ? 'bg-blue-600 text-white shadow-lg ring-1 ring-blue-400/50'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-blue-600 text-white shadow ring-1 ring-blue-400/50'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
           }`}
         >
-          <Radio className="w-4 h-4" />
-          <span>📻 Funkkanäle &amp; Kommunikation</span>
+          <Radio className="w-4 h-4 text-amber-400" />
+          <span>Funkkanäle</span>
         </button>
 
         <button
           type="button"
           onClick={() => setMainTab('findings')}
-          className={`py-2 px-3 rounded-lg font-extrabold transition flex items-center justify-center gap-2 cursor-pointer relative ${
+          className={`py-2 px-3 rounded-lg transition flex items-center justify-center gap-2 cursor-pointer relative ${
             mainTab === 'findings'
-              ? 'bg-amber-600 text-white shadow-lg ring-1 ring-amber-400/50'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-amber-600 text-white shadow ring-1 ring-amber-400/50'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
           }`}
         >
           <AlertTriangle className="w-4 h-4 text-amber-300" />
-          <span>🔍 Fundmeldungen mit Infos</span>
+          <span>Fundmeldungen</span>
           {findings && findings.length > 0 && (
             <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[10px] font-bold">
               {findings.length}
@@ -815,31 +856,33 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           <div className={`w-full lg:w-80 bg-[#1E293B] border border-slate-700/80 rounded-2xl p-3 flex-col justify-between shadow-xl shrink-0 overflow-hidden min-h-0 ${isMobileSidebarOpen ? 'flex max-h-[30vh]' : 'hidden lg:flex lg:max-h-none'}`}>
             <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-0 font-mono text-xs" style={{ WebkitOverflowScrolling: 'touch' }}>
               {/* Scope Switcher: 2 Options (Einsatz & Kräfte) */}
-              <div className="grid grid-cols-2 gap-1 p-1 bg-slate-900 border border-slate-700 rounded-xl text-[10px] font-bold">
+              <div className="grid grid-cols-2 gap-1 p-1 bg-slate-900 border border-slate-700/80 rounded-xl text-xs font-semibold">
                 <button
                   type="button"
                   onClick={() => {
                     setActiveScope('operation');
                     setActiveChannel('all');
                   }}
-                  className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer truncate ${
+                  className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer truncate ${
                     activeScope === 'operation' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
                   }`}
                   title="Einsatzbezogene Funkkanäle & Gruppen"
                 >
-                  <span>🚨 Einsatzfunk</span>
+                  <Radio className="w-3.5 h-3.5" />
+                  <span>Funkkanäle</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setActiveScope('responders');
                   }}
-                  className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer truncate ${
+                  className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer truncate ${
                     activeScope === 'responders' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
                   }`}
                   title="Liste aller Suchkräfte & 1:1 Direktchat"
                 >
-                  <span>👥 Einsatzkräfte</span>
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Einsatzkräfte</span>
                 </button>
               </div>
 
@@ -1311,8 +1354,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 <MapPin className="w-4 h-4" />
                 <span>GPS-Standort anhängen</span>
               </button>
-              <div className="text-[11px] text-slate-400 font-medium hidden sm:block bg-slate-900/50 px-2 py-1 rounded">
-                Sprechtaste halten zum Senden (oder tippen)
+              <div className="text-[11px] text-slate-400 font-medium hidden sm:flex items-center gap-1.5 bg-slate-800/60 px-2.5 py-1 rounded-md border border-slate-700/60">
+                <span>🎙️ Funk: Sprechtaste gedrückt halten</span>
+                <span className="text-slate-500">•</span>
+                <span>Laptop: <kbd className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] text-amber-300 font-mono">Leertaste</kbd></span>
               </div>
             </div>
 
@@ -1324,7 +1369,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 onPointerCancel={handlePttPointerCancel}
                 onClick={handlePttButtonClick}
                 onContextMenu={(e) => e.preventDefault()}
-                title={isRecording ? 'Klicken zum Beenden und Senden' : 'Gedrückt halten zum Sprechen'}
+                title={isRecording ? 'Klicken zum Beenden und Senden' : 'Gedrückt halten zum Sprechen (oder Leertaste am Laptop)'}
                 className={`h-11 px-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition cursor-pointer shrink-0 border select-none touch-none ${
                   isRecording
                     ? 'bg-red-600 text-white border-red-500 animate-pulse shadow-lg ring-2 ring-red-500/50'
@@ -1332,8 +1377,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 }`}
               >
                 <Mic className="w-5 h-5" />
-                <span className="hidden sm:inline font-sans uppercase tracking-wide">
-                  {isRecording ? 'Senden' : 'CB-Funk'}
+                <span className="font-sans font-bold tracking-wide">
+                  {isRecording ? 'Senden...' : 'PTT Funk'}
                 </span>
               </button>
 
