@@ -26,6 +26,9 @@ import {
   Car,
   Award,
   Wifi,
+  ChevronDown,
+  ChevronLeft,
+  Hash,
 } from 'lucide-react';
 
 interface ChatPanelProps {
@@ -215,6 +218,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
   // Primary navigation tab: 'channels' (Kanäle & Gruppen) vs 'findings' (Fundmeldungen mit Infos)
   const [mainTab, setMainTab] = useState<'channels' | 'findings'>('channels');
 
+  // Mobile view: 'chat' shows chat, 'channels' shows channel list
+  const [mobileView, setMobileView] = useState<'chat' | 'channels'>('chat');
+
   // Active channel/user ID
   const [activeChannel, setActiveChannel] = useState<string>('all'); // 'all', 'admins', sectorId, or userId
   const [activeScope, setActiveScope] = useState<'operation' | 'responders'>('operation');
@@ -234,7 +240,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
   const [historySearchQuery, setHistorySearchQuery] = useState('');
   const [autoPlayAudio, setAutoPlayAudio] = useState(true);
   const [isMaximized, setIsMaximized] = useState(false);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Push-To-Talk Voice Recording State
   const [isRecording, setIsRecording] = useState(false);
@@ -629,121 +634,625 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       return a.name.localeCompare(b.name);
     });
 
+  // Get a label for the active channel (used in mobile header)
+  const activeChannelLabel =
+    activeChannel === 'all'
+      ? '📢 Einsatzfunk'
+      : activeChannel === 'admins'
+      ? '🛡️ Führungskanal'
+      : activeTeam
+      ? `👥 ${activeTeam.name}`
+      : activeSector
+      ? `🧭 ${activeSector.name}`
+      : activeTargetUser
+      ? `👤 ${activeTargetUser.callSign || activeTargetUser.name}`
+      : '💬 Kanal';
+
+  // Helper: switch channel and go to chat view on mobile
+  const selectChannel = (channelId: string) => {
+    setActiveChannel(channelId);
+    setMobileView('chat');
+  };
+
+  // ─── Channel Sidebar Content ──────────────────────────────────────────────
+  const ChannelSidebarContent = () => (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Scope Toggle */}
+      <div className="grid grid-cols-2 gap-1 p-1 bg-slate-900 border border-slate-700/80 rounded-xl text-xs font-semibold mb-3 shrink-0">
+        <button
+          type="button"
+          onClick={() => { setActiveScope('operation'); setActiveChannel('all'); }}
+          className={`py-2 px-1 rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
+            activeScope === 'operation' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+          }`}
+          title="Einsatzbezogene Funkkanäle & Gruppen"
+        >
+          <Radio className="w-3.5 h-3.5" />
+          <span>Funkkanäle</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveScope('responders')}
+          className={`py-2 px-1 rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer ${
+            activeScope === 'responders' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+          }`}
+          title="Liste aller Suchkräfte & 1:1 Direktchat"
+        >
+          <Users className="w-3.5 h-3.5" />
+          <span>Einsatzkräfte</span>
+        </button>
+      </div>
+
+      {/* Channel List (scrollable) */}
+      <div className="flex-1 overflow-y-auto space-y-1 pr-0.5 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
+        {activeScope === 'operation' ? (
+          <div className="space-y-3 font-mono text-xs">
+            {/* Main Channels */}
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
+                HAUPTKANÄLE:
+              </span>
+              <button
+                type="button"
+                onClick={() => selectChannel('all')}
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition cursor-pointer text-left ${
+                  activeChannel === 'all'
+                    ? 'bg-blue-600 text-white font-bold shadow ring-1 ring-blue-400'
+                    : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <span className="text-lg shrink-0">📢</span>
+                  <div className="truncate">
+                    <div className="font-bold leading-tight uppercase text-sm">Gesamter Einsatzfunk</div>
+                    <div className="text-[10px] opacity-75 mt-0.5">{activeUsersCount} Einheiten online</div>
+                  </div>
+                </div>
+                {activeChannel === 'all' && <ChevronRight className="w-4 h-4 shrink-0 opacity-70" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => selectChannel('admins')}
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition cursor-pointer text-left ${
+                  activeChannel === 'admins'
+                    ? 'bg-red-700 text-white font-bold shadow ring-1 ring-red-400'
+                    : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <span className="text-lg shrink-0">🛡️</span>
+                  <div className="truncate">
+                    <div className="font-bold leading-tight uppercase text-sm">Führungskanal EL</div>
+                    <div className="text-[10px] opacity-75 mt-0.5">Geschützter Chat Einsatzleitung</div>
+                  </div>
+                </div>
+                {activeChannel === 'admins' && <ChevronRight className="w-4 h-4 shrink-0 opacity-70" />}
+              </button>
+            </div>
+
+            {/* Sector & Team Channels */}
+            <div className="space-y-1 pt-2 border-t border-slate-700">
+              <div className="flex items-center justify-between px-1 mb-1">
+                <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">
+                  🧭 SEKTOR- & SUCHTRUPPFUNK ({effectiveOperation?.sectors?.length || 0})
+                </span>
+              </div>
+
+              {effectiveOperation?.sectors && effectiveOperation.sectors.length > 0 ? (
+                effectiveOperation.sectors.map((sec) => {
+                  const isSelected = activeChannel === sec.id;
+                  const isSearched = sec.status === 'searched';
+                  const isInProgress = sec.status === 'in_progress';
+                  const isSuspicious = sec.status === 'suspicious';
+
+                  const statusBadge = isSearched
+                    ? '✅'
+                    : isInProgress
+                    ? '⏳'
+                    : isSuspicious
+                    ? '⚠️'
+                    : '🎯';
+
+                  const assignedUsers = allUsers.filter(
+                    (u) => sec.assignedUserIds?.includes(u.id) || u.assignedSectorId === sec.id
+                  );
+                  const assignedTeams = effectiveOperation.teams?.filter(
+                    (t) => t.sectorIds?.includes(sec.id)
+                  ) || [];
+
+                  const teamNames = assignedTeams.map((t) => t.name).join(', ');
+
+                  return (
+                    <button
+                      type="button"
+                      key={sec.id}
+                      onClick={() => selectChannel(sec.id)}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl transition cursor-pointer text-left ${
+                        isSelected
+                          ? 'bg-amber-600 border border-amber-400 text-white font-bold shadow ring-1 ring-amber-300'
+                          : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 truncate min-w-0">
+                        <span className="text-base shrink-0">{statusBadge}</span>
+                        <div className="truncate min-w-0">
+                          <div className="font-bold truncate leading-tight text-sm">{sec.name}</div>
+                          <div className="text-[10px] opacity-75 truncate mt-0.5">
+                            {teamNames || `${assignedUsers.length} Kräfte`}
+                          </div>
+                        </div>
+                      </div>
+                      {isSelected && <ChevronRight className="w-4 h-4 shrink-0 opacity-70" />}
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="text-[10px] text-slate-500 italic px-2 py-2">
+                  Keine Sektoren im aktuellen Einsatz angelegt.
+                </div>
+              )}
+
+              {/* Teams without sectors */}
+              {effectiveOperation?.teams &&
+                effectiveOperation.teams.filter((t) => !t.sectorIds || t.sectorIds.length === 0).length > 0 && (
+                  <div className="pt-2 border-t border-slate-700/60 space-y-1">
+                    <span className="text-[9px] font-bold text-blue-400 uppercase tracking-wider px-1 block">
+                      👥 WEITERE GRUPPEN:
+                    </span>
+                    {effectiveOperation.teams
+                      .filter((t) => !t.sectorIds || t.sectorIds.length === 0)
+                      .map((team) => (
+                        <button
+                          type="button"
+                          key={team.id}
+                          onClick={() => selectChannel(team.id)}
+                          className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
+                            activeChannel === team.id
+                              ? 'bg-blue-700 border border-blue-400 text-white font-bold'
+                              : 'bg-slate-800/60 hover:bg-slate-700/60 text-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="text-sm shrink-0">👥</span>
+                            <div className="truncate">
+                              <div className="font-bold truncate text-amber-300 text-xs">{team.name}</div>
+                              <div className="text-[10px] text-slate-400 truncate">
+                                {(team.memberUserIds?.length || 0)} Mitglieder
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                )}
+            </div>
+          </div>
+        ) : (
+          /* Responders / Direktchat */
+          <div className="space-y-3 font-mono text-xs">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+              <input
+                type="text"
+                value={userSearchQuery}
+                onChange={(e) => setUserSearchQuery(e.target.value)}
+                placeholder="Sucher / Funkname suchen..."
+                className="w-full pl-8 pr-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider px-1 block">
+                DIREKTCHAT ({filteredResponders.length}):
+              </span>
+
+              {filteredResponders.map((user) => {
+                const isLive = userLocations[user.id]?.isLive ?? user.isActive;
+                const isSelected = activeChannel === user.id;
+
+                return (
+                  <button
+                    type="button"
+                    key={user.id}
+                    onClick={() => selectChannel(user.id)}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
+                      isSelected
+                        ? 'bg-blue-600 text-white font-bold shadow'
+                        : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <div className="relative h-8 w-8 rounded-lg overflow-hidden bg-slate-900 shrink-0 border border-slate-700 flex items-center justify-center font-bold text-white text-xs">
+                        {user.photoUrl ? (
+                          <img src={user.photoUrl} alt={user.name} className="h-full w-full object-cover" />
+                        ) : (
+                          user.name.charAt(0)
+                        )}
+                        <span
+                          className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-slate-900 ${
+                            isLive ? 'bg-emerald-500' : 'bg-slate-500'
+                          }`}
+                        />
+                      </div>
+                      <div className="truncate">
+                        <div className="font-bold truncate leading-tight flex items-center gap-1 text-sm">
+                          <span className="truncate">{user.name}</span>
+                          {user.role === 'admin' && (
+                            <span className="text-[8px] px-1 rounded bg-red-950 text-red-300 font-mono shrink-0">EL</span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-blue-300 font-mono truncate">
+                          {user.callSign} {user.licensePlate ? `• ${user.licensePlate}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    {isSelected && <ChevronRight className="w-4 h-4 shrink-0 opacity-70" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // ─── Chat Area Content ────────────────────────────────────────────────────
+  const ChatAreaContent = () => (
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      {/* Channel Header */}
+      <div className="bg-slate-800/90 px-4 py-3 border-b border-slate-700/80 flex items-center gap-3 shrink-0 shadow-sm">
+        {/* Mobile back button */}
+        <button
+          type="button"
+          onClick={() => setMobileView('channels')}
+          className="lg:hidden p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 active:scale-95 transition shrink-0"
+          title="Kanalauswahl"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+
+        {/* Channel icon */}
+        {activeTargetUser ? (
+          <div className="relative h-9 w-9 rounded-full overflow-hidden bg-slate-700 border border-slate-500 shadow-inner flex items-center justify-center font-bold text-white shrink-0">
+            {activeTargetUser.photoUrl ? (
+              <img src={activeTargetUser.photoUrl} alt={activeTargetUser.name} className="h-full w-full object-cover" />
+            ) : (
+              activeTargetUser.name.charAt(0)
+            )}
+          </div>
+        ) : (
+          <div className="h-9 w-9 rounded-xl bg-slate-900 border border-slate-600 text-blue-400 flex items-center justify-center text-lg shrink-0">
+            {activeChannel === 'all' ? '📢' : activeChannel === 'admins' ? '🛡️' : activeTeam ? '👥' : activeSector ? '🧭' : '💬'}
+          </div>
+        )}
+
+        {/* Channel info */}
+        <div className="truncate flex-1 min-w-0">
+          <h3 className="font-extrabold text-sm text-white truncate uppercase">
+            {activeChannel === 'all'
+              ? 'Gesamter Einsatzfunk'
+              : activeChannel === 'admins'
+              ? 'Führungskanal EL'
+              : activeTeam
+              ? `Gruppenfunk: ${activeTeam.name}`
+              : activeSector
+              ? `Sektor: ${activeSector.name}`
+              : activeTargetUser
+              ? activeTargetUser.name
+              : ''}
+          </h3>
+          <p className="text-[11px] text-slate-400 truncate">
+            {activeTargetUser ? (
+              <span className={userLocations[activeTargetUser.id]?.isLive || activeTargetUser.isActive ? 'text-emerald-400' : 'text-slate-400'}>
+                {userLocations[activeTargetUser.id]?.isLive || activeTargetUser.isActive ? '● Online' : '● Offline'}
+                {activeTargetUser.licensePlate && ` • KFZ: ${activeTargetUser.licensePlate}`}
+              </span>
+            ) : (
+              activeChannel === 'all'
+                ? `${activeUsersCount} Einsatzkräfte online`
+                : activeChannel === 'admins'
+                ? 'Geschützter Führungskanal der Einsatzleitung'
+                : activeTeam
+                ? `${(activeTeam.memberUserIds?.length || 0) + (activeTeam.externalVolunteersCount || 0)} Kräfte`
+                : activeSector
+                ? `${secAssignedCount(activeSector, allUsers)} online`
+                : ''
+            )}
+          </p>
+        </div>
+
+        {activeTargetUser && (
+          <span className="text-[10px] text-blue-300 font-mono font-semibold shrink-0 bg-blue-900/40 px-2 py-0.5 rounded-full border border-blue-700/50 hidden sm:inline">
+            {activeTargetUser.callSign}
+          </span>
+        )}
+      </div>
+
+      {/* Messages Feed */}
+      <div
+        className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-3 bg-slate-950/40 touch-pan-y"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        {activeChannelMessages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-slate-500 text-sm space-y-3 font-sans py-12">
+            <Radio className="w-10 h-10 opacity-30 text-blue-400 animate-pulse" />
+            <span className="text-center">Keine Funksprüche im aktiven Kanal</span>
+          </div>
+        ) : (
+          activeChannelMessages.map((msg, index) => {
+            const isMe = msg.senderId === currentUser.id;
+            const prevMsg = activeChannelMessages[index - 1];
+            const isSameSender = prevMsg && prevMsg.senderId === msg.senderId;
+
+            return (
+              <div
+                key={msg.id}
+                className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} ${isSameSender ? 'mt-1' : 'mt-4'}`}
+              >
+                {!isSameSender && (
+                  <div className={`flex items-center gap-2 px-1 mb-1.5 text-xs text-slate-400 ${isMe ? 'flex-row-reverse' : ''}`}>
+                    <span className="font-bold text-slate-200">{isMe ? 'Du' : msg.senderName}</span>
+                    <span className="text-[10px] text-blue-300 font-mono font-semibold">({msg.senderCallSign})</span>
+                    {msg.senderRole === 'admin' && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-600 text-white font-mono font-bold shadow-sm">
+                        EL
+                      </span>
+                    )}
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                )}
+
+                <div
+                  className={`max-w-[88%] sm:max-w-[72%] px-4 py-3 rounded-2xl text-sm space-y-2 shadow-md transition ${
+                    isMe
+                      ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-br-sm border border-blue-500/50'
+                      : 'bg-[#1E293B] text-slate-100 rounded-bl-sm border border-slate-700/80'
+                  }`}
+                >
+                  {msg.text && <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
+
+                  {msg.isVoiceMessage && msg.audioUrl && (
+                    <VoiceMessagePlayer audioUrl={msg.audioUrl} duration={msg.audioDuration} isMe={isMe} />
+                  )}
+
+                  {msg.location && (
+                    <div className="mt-2 pt-2 border-t border-white/20 flex items-center justify-between text-[11px]">
+                      <span className="flex items-center gap-1 font-mono font-medium">
+                        <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                        GPS: {msg.location.lat.toFixed(5)}, {msg.location.lng.toFixed(5)}
+                      </span>
+                      <a
+                        href={`https://www.google.com/maps?q=${msg.location.lat},${msg.location.lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2 py-0.5 rounded bg-black/30 text-white font-mono text-[10px] underline"
+                      >
+                        Maps
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Recording Overlay */}
+      {isRecording && (
+        <div className="bg-amber-950/95 border-t border-amber-500/50 px-4 py-3 flex items-center justify-between text-amber-200 text-xs font-mono shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-3.5 h-3.5 rounded-full bg-red-500 animate-ping shrink-0" />
+            <span className="font-bold tracking-wider">🎙️ CB-Funk überträgt...</span>
+            <span className="px-2 py-0.5 rounded bg-amber-900 border border-amber-600 font-bold tabular-nums">
+              0:{recordingTime < 10 ? `0${recordingTime}` : recordingTime} / 0:30s
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={cancelRecording}
+              className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 font-bold text-xs cursor-pointer active:scale-95"
+            >
+              ✕
+            </button>
+            <button
+              type="button"
+              onClick={stopAndSendRecording}
+              className="px-4 py-1.5 rounded-lg bg-emerald-600 text-white font-bold text-xs shadow-lg cursor-pointer active:scale-95"
+            >
+              Roger! ✓
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Input Bar */}
+      <form onSubmit={handleSend} className="bg-slate-900 border-t border-slate-700/80 p-3 space-y-2.5 shrink-0">
+        {/* GPS toggle row */}
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setIncludeLocation(!includeLocation)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+              includeLocation
+                ? 'bg-blue-500/20 text-blue-300 border-blue-500'
+                : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-700'
+            }`}
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            <span>GPS</span>
+          </button>
+
+          <div className="text-[10px] text-slate-500 font-mono hidden sm:flex items-center gap-1 bg-slate-800/60 px-2 py-1 rounded border border-slate-700/60">
+            <span>🎙️ Halten = Funk</span>
+            <span className="text-slate-600">•</span>
+            <kbd className="px-1 py-0.5 rounded bg-slate-900 border border-slate-700 text-amber-300 font-mono">Leertaste</kbd>
+          </div>
+        </div>
+
+        {/* Text + PTT + Send */}
+        <div className="flex items-center gap-2">
+          {/* PTT Button */}
+          <button
+            type="button"
+            onPointerDown={handlePttPointerDown}
+            onPointerUp={handlePttPointerUp}
+            onPointerCancel={handlePttPointerCancel}
+            onClick={handlePttButtonClick}
+            onContextMenu={(e) => e.preventDefault()}
+            title={isRecording ? 'Klicken zum Beenden und Senden' : 'Gedrückt halten zum Sprechen'}
+            className={`h-12 w-14 rounded-xl flex flex-col items-center justify-center gap-0.5 font-bold transition cursor-pointer shrink-0 border select-none touch-none ${
+              isRecording
+                ? 'bg-red-600 text-white border-red-500 animate-pulse shadow-lg ring-2 ring-red-400/60'
+                : 'bg-amber-500 hover:bg-amber-400 text-slate-900 border-amber-400 shadow active:scale-95'
+            }`}
+          >
+            <Mic className="w-5 h-5" />
+            <span className="text-[9px] font-bold tracking-wide">{isRecording ? 'SENDEN' : 'PTT'}</span>
+          </button>
+
+          {/* Text input */}
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder={`An ${
+              activeChannel === 'all'
+                ? 'alle Einheiten'
+                : activeChannel === 'admins'
+                ? 'Einsatzleitung'
+                : activeSector
+                ? `Sektor ${activeSector.name}`
+                : activeTargetUser?.callSign || 'Kanal'
+            }...`}
+            className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-slate-50 text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/50 placeholder-slate-500 shadow-inner"
+          />
+
+          {/* Send Button */}
+          <button
+            type="submit"
+            disabled={!inputText.trim() && !includeLocation}
+            className="h-12 w-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg disabled:opacity-40 transition cursor-pointer flex items-center justify-center shrink-0 active:scale-95"
+          >
+            <Send className="w-5 h-5" />
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+
   return (
     <div
       className={`w-full text-slate-100 font-sans flex flex-col ${
         isMaximized
-          ? 'fixed inset-0 z-[9999] bg-[#0F172A] p-2 sm:p-4 h-full w-full overflow-hidden'
-          : 'max-w-7xl mx-auto p-1.5 sm:p-3 flex-1 h-full min-h-0 overflow-hidden'
+          ? 'fixed inset-0 z-[9999] bg-[#0A1628] h-full w-full overflow-hidden'
+          : 'max-w-7xl mx-auto flex-1 h-full min-h-0 overflow-hidden'
       }`}
     >
-      {/* Top Action & Navigation Header Bar */}
-      <div className="bg-[#1E293B] border border-slate-700/80 rounded-2xl p-2.5 sm:p-3 mb-3 flex flex-wrap items-center justify-between gap-2 shadow-xl shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
-            <Radio className="w-5 h-5 animate-pulse" />
+      {/* ── TOP HEADER BAR ───────────────────────────────────────────────── */}
+      <div className="bg-[#1E293B] border-b border-slate-700/80 px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2 shrink-0 shadow-lg">
+        {/* Left: Logo + Title */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+            <Radio className="w-4 h-4 animate-pulse" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="font-extrabold text-sm sm:text-base tracking-wide text-white">
-                Einsatzfunk
-              </h2>
-              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+              <h2 className="font-extrabold text-sm tracking-wide text-white whitespace-nowrap">Einsatzfunk</h2>
+              <span className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 whitespace-nowrap">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                Live Funk (SIM &amp; Zentrale)
+                Live
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 truncate max-w-[200px] sm:max-w-md">
-              {activeScope === 'operation' && effectiveOperation
-                ? `${effectiveOperation.title}`
-                : 'Allgemeiner Funk'}
+            <p className="text-[10px] text-slate-400 truncate max-w-[160px] sm:max-w-xs">
+              {effectiveOperation ? effectiveOperation.title : 'Allgemeiner Funk'}
             </p>
           </div>
         </div>
 
-        {/* Action Buttons to open Modals (Chatverlauf, Logbuch, Alarme & Funde) as requested by user */}
-        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          {/* Button: Verlauf */}
+        {/* Right: Action Buttons */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Verlauf */}
           <button
             type="button"
             onClick={() => setShowHistoryModal(true)}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-blue-300 font-semibold flex items-center gap-1.5 transition cursor-pointer"
+            className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-blue-300 transition cursor-pointer flex items-center gap-1.5"
             title="Vollständigen Chatverlauf einsehen"
           >
-            <MessageSquare className="w-3.5 h-3.5 text-blue-400" />
-            <span>Verlauf</span>
+            <MessageSquare className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs font-semibold">Verlauf</span>
           </button>
 
-          {/* Button: Logbuch */}
+          {/* Logbuch */}
           <button
             type="button"
             onClick={() => setShowLogbookModal(true)}
-            className="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold flex items-center gap-1.5 transition cursor-pointer relative"
-            title="System-Logbuch (Ein- und Ausloggen)"
+            className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition cursor-pointer flex items-center gap-1.5 relative"
+            title="System-Logbuch"
           >
-            <FileText className="w-3.5 h-3.5 text-slate-400" />
-            <span>Logbuch</span>
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline text-xs font-semibold">Logbuch</span>
             {logbookMessages.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[9px] font-bold">
-                {logbookMessages.length}
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white text-[8px] font-bold flex items-center justify-center">
+                {logbookMessages.length > 9 ? '9+' : logbookMessages.length}
               </span>
             )}
           </button>
 
-          {/* Button: Alarme */}
+          {/* Alarme */}
           <button
             type="button"
             onClick={() => setShowAlertsModal(true)}
-            className="px-2.5 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-200 font-semibold flex items-center gap-1.5 transition cursor-pointer relative"
+            className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-200 transition cursor-pointer flex items-center gap-1.5 relative"
             title="Alarme & Statusänderungen"
           >
-            <AlertTriangle className="w-3.5 h-3.5 text-red-400 animate-pulse" />
-            <span>Alarme</span>
+            <AlertTriangle className="w-4 h-4 text-red-400" />
+            <span className="hidden sm:inline text-xs font-semibold">Alarme</span>
             {alertMessages.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-red-600 text-white text-[9px] font-bold">
-                {alertMessages.length}
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-600 text-white text-[8px] font-bold flex items-center justify-center">
+                {alertMessages.length > 9 ? '9+' : alertMessages.length}
               </span>
             )}
           </button>
 
-          {/* Button: CB-Funk AutoPlay */}
+          {/* CB AutoPlay */}
           <button
             type="button"
-            onClick={() => {
-              playAlertSound('notification');
-              setAutoPlayAudio(!autoPlayAudio);
-            }}
-            title={autoPlayAudio ? 'CB-Lautsprecher aktiv (Auto-Play)' : 'CB-Lautsprecher stumm'}
-            className={`px-2.5 py-1.5 rounded-xl font-bold flex items-center gap-1 border transition cursor-pointer ${
+            onClick={() => { playAlertSound('notification'); setAutoPlayAudio(!autoPlayAudio); }}
+            title={autoPlayAudio ? 'CB-Lautsprecher aktiv' : 'CB-Lautsprecher stumm'}
+            className={`p-2 rounded-xl border transition cursor-pointer ${
               autoPlayAudio
                 ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
                 : 'bg-slate-800 border-slate-700 text-slate-400'
             }`}
           >
-            {autoPlayAudio ? <Volume2 className="w-3.5 h-3.5 text-amber-400" /> : <VolumeX className="w-3.5 h-3.5" />}
-            <span>{autoPlayAudio ? '📻 CB-ON' : '🔇 OFF'}</span>
+            {autoPlayAudio ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
 
-          {/* Button: Vollbild / Großansicht */}
+          {/* Vollbild */}
           <button
             type="button"
             onClick={() => setIsMaximized(!isMaximized)}
-            className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-amber-400 transition cursor-pointer"
-            title={isMaximized ? 'Normalfenster' : 'Großansicht / Vollbild'}
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-amber-400 transition cursor-pointer hidden sm:flex"
+            title={isMaximized ? 'Normalfenster' : 'Vollbild'}
           >
             {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         </div>
       </div>
 
-      {/* Main 2-Tab Navigation Bar: Funkkanäle vs Fundmeldungen */}
-      <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#1E293B] border border-slate-700/80 rounded-xl mb-3 shrink-0 text-xs font-semibold">
+      {/* ── MAIN TAB BAR (Funkkanäle / Fundmeldungen) ───────────────────── */}
+      <div className="grid grid-cols-2 gap-1 p-1.5 bg-[#1E293B] border-b border-slate-700/80 shrink-0">
         <button
           type="button"
-          onClick={() => {
-            setMainTab('channels');
-          }}
-          className={`py-2 px-3 rounded-lg transition flex items-center justify-center gap-2 cursor-pointer ${
+          onClick={() => setMainTab('channels')}
+          className={`py-2.5 px-3 rounded-lg transition flex items-center justify-center gap-2 cursor-pointer text-sm font-semibold ${
             mainTab === 'channels'
               ? 'bg-blue-600 text-white shadow ring-1 ring-blue-400/50'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
@@ -756,7 +1265,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         <button
           type="button"
           onClick={() => setMainTab('findings')}
-          className={`py-2 px-3 rounded-lg transition flex items-center justify-center gap-2 cursor-pointer relative ${
+          className={`py-2.5 px-3 rounded-lg transition flex items-center justify-center gap-2 cursor-pointer relative text-sm font-semibold ${
             mainTab === 'findings'
               ? 'bg-amber-600 text-white shadow ring-1 ring-amber-400/50'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
@@ -765,69 +1274,67 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           <AlertTriangle className="w-4 h-4 text-amber-300" />
           <span>Fundmeldungen</span>
           {findings && findings.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[10px] font-bold">
+            <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-bold">
               {findings.length}
             </span>
           )}
         </button>
       </div>
 
-      {/* Body Area */}
+      {/* ── BODY ─────────────────────────────────────────────────────────── */}
       {mainTab === 'findings' ? (
-        /* Dedicated Fundmeldungen mit Infos View */
-        <div className="flex-1 bg-[#1E293B] border border-slate-700/80 rounded-2xl p-4 sm:p-6 shadow-xl overflow-y-auto space-y-4 font-mono text-xs">
-          <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+        /* Fundmeldungen View */
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#0F172A]">
+          <div className="flex items-center justify-between border-b border-slate-700 pb-3 mb-2">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-amber-400 animate-pulse" />
               <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                Dokumentierte Fundmeldungen &amp; Fundstücke ({findings?.length || 0})
+                Fundmeldungen ({findings?.length || 0})
               </h3>
             </div>
-            <span className="text-[10px] text-slate-400">Chronologische Aufzeichnung mit GPS &amp; Fotos</span>
+            <span className="text-[10px] text-slate-400 hidden sm:block">Chronologisch mit GPS</span>
           </div>
 
           {(!findings || findings.length === 0) ? (
-            <div className="p-12 text-center text-slate-500 space-y-2">
-              <div className="text-3xl">🔍</div>
-              <div className="font-bold text-white">Bisher keine Fundmeldungen dokumentiert</div>
-              <p className="text-slate-400 text-[11px]">
-                Nutzen Sie die rote Schaltfläche "FUND!" auf der Lagekarte, um relevante Funde mit GPS-Koordinaten zu melden.
+            <div className="py-16 text-center text-slate-500 space-y-3">
+              <div className="text-4xl">🔍</div>
+              <div className="font-bold text-white text-sm">Keine Fundmeldungen dokumentiert</div>
+              <p className="text-slate-400 text-xs max-w-xs mx-auto">
+                Nutzen Sie die rote «FUND!»-Schaltfläche auf der Lagekarte.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {findings.map((f) => (
-                <div key={f.id} className="bg-slate-900/90 border border-slate-700 p-4 rounded-xl space-y-3 shadow-lg">
-                  <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-2">
+                <div key={f.id} className="bg-slate-800/90 border border-slate-700 p-4 rounded-2xl space-y-3 shadow-lg">
+                  <div className="flex items-start justify-between gap-2">
                     <div>
                       <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 text-[10px] font-bold uppercase border border-amber-600/50">
                         {f.category || 'Fundstück'}
                       </span>
                       <h4 className="text-sm font-bold text-white mt-1">{f.title}</h4>
                     </div>
-                    <span className="text-[10px] text-slate-400 shrink-0">
+                    <span className="text-[10px] text-slate-400 shrink-0 font-mono">
                       {new Date(f.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
 
                   {f.mediaUrl && (
-                    <div className="h-40 rounded-lg overflow-hidden bg-slate-950 border border-slate-800">
+                    <div className="h-40 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
                       <img src={f.mediaUrl} alt={f.title} className="w-full h-full object-cover" />
                     </div>
                   )}
 
-                  <p className="text-slate-200 text-xs font-sans leading-relaxed">{f.description || 'Keine nähere Beschreibung angegeben.'}</p>
+                  <p className="text-slate-200 text-xs leading-relaxed">{f.description || 'Keine Beschreibung.'}</p>
 
-                  <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
-                    <div>
-                      Gemeldet von: <strong className="text-white">{f.userName}</strong>
-                    </div>
+                  <div className="pt-2 border-t border-slate-700 flex items-center justify-between text-[10px] text-slate-400">
+                    <div>Gemeldet von: <strong className="text-white">{f.userName}</strong></div>
                     {f.location && (
                       <a
                         href={`https://www.google.com/maps?q=${f.location.lat},${f.location.lng}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-2.5 py-1 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 font-bold flex items-center gap-1 transition"
+                        className="px-2.5 py-1 rounded-lg bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 font-bold flex items-center gap-1 transition"
                       >
                         <MapPin className="w-3 h-3 text-amber-400" />
                         <span>GPS Karte</span>
@@ -840,624 +1347,83 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           )}
         </div>
       ) : (
-        <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 h-full overflow-hidden">
-          {/* Mobile Toggle Button for Sidebar */}
-          <div className="lg:hidden shrink-0">
-            <button
-              onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-              className="w-full py-2 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-600 text-xs font-bold text-blue-300 flex items-center justify-center gap-2 shadow transition"
-            >
-              <span>{isMobileSidebarOpen ? '🔽' : '▶️'}</span>
-              <span>{isMobileSidebarOpen ? 'Kanäle & Kontakte ausblenden' : 'Kanäle & Kontakte einblenden'}</span>
-            </button>
+        /* Channels View */
+        <div className="flex-1 min-h-0 flex overflow-hidden">
+
+          {/* ── DESKTOP: Left Sidebar ─────────────────────────────────────── */}
+          <div className="hidden lg:flex w-72 xl:w-80 flex-col bg-[#1E293B] border-r border-slate-700/80 p-3 shrink-0 overflow-hidden">
+            <ChannelSidebarContent />
           </div>
 
-          {/* Left Selector Drawer: 3-Way Scope Switcher (Einsatzfunk, Einsatzkräfte, Vereinsfunk) */}
-          <div className={`w-full lg:w-80 bg-[#1E293B] border border-slate-700/80 rounded-2xl p-3 flex-col justify-between shadow-xl shrink-0 overflow-hidden min-h-0 ${isMobileSidebarOpen ? 'flex max-h-[30vh]' : 'hidden lg:flex lg:max-h-none'}`}>
-            <div className="space-y-3 overflow-y-auto pr-1 flex-1 min-h-0 font-mono text-xs" style={{ WebkitOverflowScrolling: 'touch' }}>
-              {/* Scope Switcher: 2 Options (Einsatz & Kräfte) */}
-              <div className="grid grid-cols-2 gap-1 p-1 bg-slate-900 border border-slate-700/80 rounded-xl text-xs font-semibold">
+          {/* ── MOBILE: Channel List View ─────────────────────────────────── */}
+          {mobileView === 'channels' && (
+            <div className="lg:hidden flex-1 flex flex-col bg-[#1E293B] p-3 overflow-hidden">
+              <div className="flex items-center justify-between mb-3 shrink-0">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Kanalauswahl</h3>
                 <button
                   type="button"
-                  onClick={() => {
-                    setActiveScope('operation');
-                    setActiveChannel('all');
-                  }}
-                  className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer truncate ${
-                    activeScope === 'operation' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  title="Einsatzbezogene Funkkanäle & Gruppen"
+                  onClick={() => setMobileView('chat')}
+                  className="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition"
                 >
-                  <Radio className="w-3.5 h-3.5" />
-                  <span>Funkkanäle</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveScope('responders');
-                  }}
-                  className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-1.5 cursor-pointer truncate ${
-                    activeScope === 'responders' ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  title="Liste aller Suchkräfte & 1:1 Direktchat"
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  <span>Einsatzkräfte</span>
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-
-                {activeScope === 'operation' ? (
-                  <div className="space-y-3">
-                    {/* Primary Operation Channels */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 block">
-                        HAUPTKANÄLE EINSATZ:
-                      </span>
-
-                      {/* Channel: Gesamter Einsatzfunk */}
-                      <button
-                        type="button"
-                        onClick={() => setActiveChannel('all')}
-                        className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
-                          activeChannel === 'all'
-                            ? 'bg-blue-600 text-white font-bold shadow ring-1 ring-blue-400'
-                            : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <span className="text-base">📢</span>
-                          <div className="truncate">
-                            <div className="font-bold leading-tight uppercase">Gesamter Einsatzfunk</div>
-                            <div className="text-[10px] opacity-75">{activeUsersCount} Einheiten online</div>
-                          </div>
-                        </div>
-                      </button>
-
-                      {/* Channel: Führungskanal EL */}
-                      <button
-                        type="button"
-                        onClick={() => setActiveChannel('admins')}
-                        className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
-                          activeChannel === 'admins'
-                            ? 'bg-red-700 text-white font-bold shadow ring-1 ring-red-400'
-                            : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <span className="text-base">🛡️</span>
-                          <div className="truncate">
-                            <div className="font-bold leading-tight uppercase">Führungskanal EL</div>
-                            <div className="text-[10px] opacity-75">Geschützter Chat Einsatzleitung</div>
-                          </div>
-                        </div>
-                      </button>
-                    </div>
-
-                    {/* Sektor- & Suchtruppfunk (Sektorfunk übernimmt Gruppenfunk) */}
-                    <div className="space-y-1.5 pt-2 border-t border-slate-700">
-                      <div className="flex items-center justify-between px-1">
-                        <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">
-                          🧭 SEKTOR- &amp; SUCHTRUPPFUNK ({effectiveOperation?.sectors?.length || 0} SEKTOREN):
-                        </span>
-                      </div>
-
-                      {effectiveOperation?.sectors && effectiveOperation.sectors.length > 0 ? (
-                        effectiveOperation.sectors.map((sec) => {
-                          const isSelected = activeChannel === sec.id;
-                          const isSearched = sec.status === 'searched';
-                          const isInProgress = sec.status === 'in_progress';
-                          const isSuspicious = sec.status === 'suspicious';
-
-                          const statusBadge = isSearched
-                            ? '✅ abgesucht'
-                            : isInProgress
-                            ? '⏳ in Bearbeitung'
-                            : isSuspicious
-                            ? '⚠️ verdächtig'
-                            : '🎯 offen';
-
-                          const assignedUsers = allUsers.filter(
-                            (u) => sec.assignedUserIds?.includes(u.id) || u.assignedSectorId === sec.id
-                          );
-                          const assignedTeams = effectiveOperation.teams?.filter(
-                            (t) => t.sectorIds?.includes(sec.id)
-                          ) || [];
-
-                          const teamNames = assignedTeams.map((t) => t.name).join(', ');
-                          const userNames = assignedUsers.map((u) => u.callSign || u.name).join(', ');
-                          const assignedSummary = teamNames
-                            ? `👥 ${teamNames}${userNames ? ` (${userNames})` : ''}`
-                            : userNames
-                            ? `👥 ${userNames}`
-                            : 'Keine Kräfte zugeteilt';
-
-                          const totalCount = assignedUsers.length > 0 ? `${assignedUsers.length} Kräfte` : '0 Kräfte';
-
-                          return (
-                            <button
-                              type="button"
-                              key={sec.id}
-                              onClick={() => setActiveChannel(sec.id)}
-                              className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
-                                isSelected
-                                  ? 'bg-amber-600 border border-amber-400 text-white font-bold shadow ring-1 ring-amber-300'
-                                  : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 truncate">
-                                <span className="text-base shrink-0">🧭</span>
-                                <div className="truncate">
-                                  <div className="font-bold truncate leading-tight text-white flex items-center gap-1.5">
-                                    <span className="truncate">{sec.name}</span>
-                                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold shrink-0 ${
-                                      isSearched
-                                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-600'
-                                        : isInProgress
-                                        ? 'bg-amber-950 text-amber-300 border border-amber-600'
-                                        : 'bg-slate-900 text-slate-400 border border-slate-700'
-                                    }`}>
-                                      {statusBadge}
-                                    </span>
-                                  </div>
-                                  <div className="text-[10px] text-slate-300 truncate mt-0.5 font-mono">
-                                    {assignedSummary} • {totalCount}
-                                  </div>
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })
-                      ) : (
-                        <div className="text-[10px] text-slate-500 italic px-2 py-1">
-                          Keine Sektoren im aktuellen Einsatz angelegt.
-                        </div>
-                      )}
-
-                      {/* Optional Fallback für gebildete Gruppen ohne Sektor-Zuordnung */}
-                      {effectiveOperation?.teams &&
-                        effectiveOperation.teams.filter((t) => !t.sectorIds || t.sectorIds.length === 0).length > 0 && (
-                          <div className="pt-2 border-t border-slate-700/60 space-y-1">
-                            <span className="text-[9px] font-bold text-blue-400 uppercase tracking-wider px-1 block">
-                              👥 WEITERE GRUPPEN (OHNE SEKTOR):
-                            </span>
-                            {effectiveOperation.teams
-                              .filter((t) => !t.sectorIds || t.sectorIds.length === 0)
-                              .map((team) => (
-                                <button
-                                  type="button"
-                                  key={team.id}
-                                  onClick={() => setActiveChannel(team.id)}
-                                  className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer text-left ${
-                                    activeChannel === team.id
-                                      ? 'bg-blue-700 border border-blue-400 text-white font-bold'
-                                      : 'bg-slate-800/60 hover:bg-slate-700/60 text-slate-300'
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-2 truncate">
-                                    <span className="text-sm shrink-0">👥</span>
-                                    <div className="truncate">
-                                      <div className="font-bold truncate text-amber-300 text-xs">{team.name}</div>
-                                      <div className="text-[10px] text-slate-400 truncate">
-                                        {(team.memberUserIds?.length || 0)} Mitglieder
-                                      </div>
-                                    </div>
-                                  </div>
-                                </button>
-                              ))}
-                          </div>
-                        )}
-                    </div>
-                  </div>
-                ) : activeScope === 'responders' ? (
-                  /* Einsatzkräfte & Direktchat Scope */
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
-                      <input
-                        type="text"
-                        value={userSearchQuery}
-                        onChange={(e) => setUserSearchQuery(e.target.value)}
-                        placeholder="Sucher / Funkname suchen..."
-                        className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider px-1 block">
-                        DIREKTCHAT MIT EINSATZKRAFT ({filteredResponders.length}):
-                      </span>
-
-                      {filteredResponders.map((user) => {
-                        const isLive = userLocations[user.id]?.isLive ?? user.isActive;
-                        const isSelected = activeChannel === user.id;
-
-                        return (
-                          <button
-                            type="button"
-                            key={user.id}
-                            onClick={() => setActiveChannel(user.id)}
-                            className={`w-full flex items-center justify-between p-2 rounded-xl transition cursor-pointer text-left ${
-                              isSelected
-                                ? 'bg-blue-600 text-white font-bold shadow'
-                                : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 truncate">
-                              <div className="relative h-7 w-7 rounded-lg overflow-hidden bg-slate-900 shrink-0 border border-slate-700 flex items-center justify-center font-bold text-white text-xs">
-                                {user.photoUrl ? (
-                                  <img src={user.photoUrl} alt={user.name} className="h-full w-full object-cover" />
-                                ) : (
-                                  user.name.charAt(0)
-                                )}
-                                <span
-                                  className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-slate-900 ${
-                                    isLive ? 'bg-emerald-500' : 'bg-slate-500'
-                                  }`}
-                                />
-                              </div>
-                              <div className="truncate">
-                                <div className="font-bold truncate leading-tight flex items-center gap-1">
-                                  <span className="truncate">{user.name}</span>
-                                  {user.role === 'admin' && (
-                                    <span className="text-[8px] px-1 rounded bg-red-950 text-red-300 font-mono">EL</span>
-                                  )}
-                                </div>
-                                <div className="text-[10px] text-blue-300 font-mono truncate">
-                                  {user.callSign} {user.licensePlate ? `• ${user.licensePlate}` : ''}
-                                </div>
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  /* Vereinsfunk Scope */
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider px-1 block">
-                      VEREINSFUNK (ALLGEMEIN):
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => setActiveChannel('all')}
-                      className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
-                        activeChannel === 'all'
-                          ? 'bg-emerald-600 text-white font-bold shadow ring-1 ring-emerald-400'
-                          : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <span className="text-base">💬</span>
-                        <div className="truncate">
-                          <div className="font-bold leading-tight uppercase">Allgemeiner Vereinsfunk</div>
-                          <div className="text-[10px] opacity-75">Spürhunde-Salzlandkreis e.V. Hauptchat</div>
-                        </div>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setActiveChannel('admins')}
-                      className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
-                        activeChannel === 'admins'
-                          ? 'bg-red-700 text-white font-bold shadow ring-1 ring-red-400'
-                          : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <span className="text-base">🛡️</span>
-                        <div className="truncate">
-                          <div className="font-bold leading-tight uppercase">Vorstand &amp; Admins</div>
-                          <div className="text-[10px] opacity-75">Geschützter Vereinskanal</div>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-        {/* Main Active Radio & Chat Area */}
-        <div className="flex-1 bg-[#1E293B] border border-slate-700/80 rounded-2xl flex flex-col justify-between shadow-xl overflow-hidden min-h-0">
-          {/* Active Target Header */}
-          <div className="bg-slate-800 p-4 border-b border-slate-600 flex items-center justify-between gap-3 shrink-0 shadow-md z-10">
-            <div className="flex items-center gap-3 truncate">
-              {activeTargetUser ? (
-                <div className="relative h-10 w-10 rounded-full overflow-hidden bg-slate-700 border border-slate-500 shadow-inner flex items-center justify-center font-bold text-white text-lg shrink-0">
-                  {activeTargetUser.photoUrl ? (
-                    <img src={activeTargetUser.photoUrl} alt={activeTargetUser.name} className="h-full w-full object-cover" />
-                  ) : (
-                    activeTargetUser.name.charAt(0)
-                  )}
-                </div>
-              ) : (
-                <div className="h-10 w-10 rounded-xl bg-slate-900 border border-slate-600 shadow-inner text-blue-400 flex items-center justify-center font-bold text-xl shrink-0">
-                  {activeChannel === 'all'
-                    ? '📢'
-                    : activeChannel === 'admins'
-                    ? '🛡️'
-                    : activeTeam
-                    ? '👥'
-                    : activeSector
-                    ? '🧭'
-                    : '💬'}
-                </div>
-              )}
-              <div className="truncate">
-                <h3 className="font-extrabold text-sm sm:text-base text-white tracking-wide truncate flex items-center gap-2">
-                  <span className="truncate uppercase">
-                    {activeChannel === 'all'
-                      ? 'Gesamter Einsatzfunk'
-                      : activeChannel === 'admins'
-                      ? 'Führungskanal EL'
-                      : activeTeam
-                      ? `Gruppenfunk: ${activeTeam.name}`
-                      : activeSector
-                      ? `Funk Sektor: ${activeSector.name}`
-                      : ''}
-                  </span>
-                  {activeTargetUser && (
-                    <span className="truncate">{activeTargetUser.name}</span>
-                  )}
-                  {activeTargetUser && (
-                    <span className="text-[10px] sm:text-xs text-blue-300 font-mono font-semibold shrink-0 bg-blue-900/40 px-2 py-0.5 rounded-full border border-blue-700/50">
-                      {activeTargetUser.callSign}
-                    </span>
-                  )}
-                </h3>
-                <div className="text-xs text-slate-300 font-sans truncate mt-0.5 flex items-center gap-1.5">
-                  {activeTargetUser ? (
-                    <>
-                      <span className={`w-2 h-2 rounded-full ${userLocations[activeTargetUser.id]?.isLive || activeTargetUser.isActive ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]' : 'bg-slate-500'}`} />
-                      <span className={userLocations[activeTargetUser.id]?.isLive || activeTargetUser.isActive ? 'text-emerald-400 font-medium' : 'text-slate-400'}>
-                        {userLocations[activeTargetUser.id]?.isLive || activeTargetUser.isActive ? 'Online' : 'Offline'}
-                      </span>
-                      {activeTargetUser.licensePlate && <span className="opacity-75 font-mono text-[10px]">• KFZ: {activeTargetUser.licensePlate}</span>}
-                    </>
-                  ) : (
-                    <span>
-                      {activeChannel === 'all'
-                        ? `${activeUsersCount} Einsatzkräfte online`
-                        : activeChannel === 'admins'
-                        ? 'Geschützter Führungskanal der Einsatzleitung'
-                        : activeTeam
-                        ? `Gruppen-Funkkanal (${(activeTeam.memberUserIds?.length || 0) + (activeTeam.externalVolunteersCount || 0)} Kräfte)`
-                        : activeSector
-                        ? `Sektor-Funk (${secAssignedCount(activeSector, allUsers)} online)`
-                        : ''}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Active Radio Feed Messages */}
-          <div
-            className="flex-1 p-3 sm:p-5 pb-12 sm:pb-8 overflow-y-auto space-y-4 bg-slate-900/60 touch-pan-y shadow-inner"
-            style={{ WebkitOverflowScrolling: 'touch' }}
-          >
-            {activeChannelMessages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-500 text-sm space-y-3 font-sans">
-                <Radio className="w-10 h-10 opacity-40 text-blue-400 animate-pulse" />
-                <span>Keine Funksprüche im aktiven Kanal vorhanden.</span>
-              </div>
-            ) : (
-              activeChannelMessages.map((msg, index) => {
-                const isMe = msg.senderId === currentUser.id;
-                const prevMsg = activeChannelMessages[index - 1];
-                const isSameSender = prevMsg && prevMsg.senderId === msg.senderId;
-
-                return (
-                  <div
-                    key={msg.id}
-                    className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} ${
-                      isSameSender ? 'mt-1' : 'mt-4'
-                    }`}
-                  >
-                    {!isSameSender && (
-                      <div className="flex items-center gap-2 px-2 mb-1.5 text-xs text-slate-400">
-                        <span className="font-bold text-slate-200">{isMe ? 'Du' : msg.senderName}</span>
-                        <span className="text-[10px] text-blue-300 font-mono font-semibold">({msg.senderCallSign})</span>
-                        {msg.senderRole === 'admin' && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-600 text-white font-mono font-bold shadow-sm">
-                            EL
-                          </span>
-                        )}
-                        <span className="text-[10px] text-slate-500 font-mono">
-                          • {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                    )}
-
-                    <div
-                      className={`max-w-[92%] sm:max-w-[75%] px-4 py-3 rounded-2xl text-sm space-y-2 shadow-lg transition ${
-                        isMe
-                          ? 'bg-gradient-to-br from-emerald-600 to-teal-500 text-white rounded-br-none shadow-emerald-900/30 border border-emerald-400/50'
-                          : 'bg-[#1E293B] text-slate-100 rounded-bl-none border border-slate-700 shadow-slate-900/50'
-                      }`}
-                    >
-                      {msg.text && <p className="leading-relaxed whitespace-pre-wrap font-medium">{msg.text}</p>}
-
-                      {msg.isVoiceMessage && msg.audioUrl && (
-                        <VoiceMessagePlayer audioUrl={msg.audioUrl} duration={msg.audioDuration} isMe={isMe} />
-                      )}
-
-                      {msg.location && (
-                        <div className="mt-2 pt-2 border-t border-white/20 flex items-center justify-between text-[11px]">
-                          <span className="flex items-center gap-1 font-mono font-medium">
-                            <MapPin className="w-3.5 h-3.5 text-amber-400" />
-                            GPS: {msg.location.lat.toFixed(5)}, {msg.location.lng.toFixed(5)}
-                          </span>
-                          <a
-                            href={`https://www.google.com/maps?q=${msg.location.lat},${msg.location.lng}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-2 py-0.5 rounded bg-black/30 text-white font-mono text-[10px] underline"
-                          >
-                            Google Maps
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Recording Overlay / Indicator */}
-          {isRecording && (
-            <div className="bg-amber-950/90 border-t border-amber-500/50 p-3 flex items-center justify-between animate-pulse text-amber-200 text-xs font-mono">
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full bg-red-600 animate-ping" />
-                <span className="font-bold uppercase tracking-wider">🎙️ CB-Funk Übertragung läuft...</span>
-                <span className="px-2 py-0.5 rounded bg-amber-900 border border-amber-600 font-bold">
-                  0:{recordingTime < 10 ? `0${recordingTime}` : recordingTime} / 0:30s
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={cancelRecording}
-                  className="px-3 py-1 rounded-lg bg-slate-800 text-slate-300 font-bold text-xs cursor-pointer"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  type="button"
-                  onClick={stopAndSendRecording}
-                  className="px-4 py-1 rounded-lg bg-emerald-600 text-white font-bold text-xs shadow-lg cursor-pointer"
-                >
-                  Senden (Roger!)
-                </button>
-              </div>
+              <ChannelSidebarContent />
             </div>
           )}
 
-          {/* Input Bar */}
-          <form onSubmit={handleSend} className="bg-slate-900 p-3 sm:p-4 border-t border-slate-700/80 space-y-3 shadow-lg rounded-b-2xl">
-            <div className="flex items-center justify-between text-xs px-1">
-              <button
-                type="button"
-                onClick={() => setIncludeLocation(!includeLocation)}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer font-sans ${
-                  includeLocation
-                    ? 'bg-blue-500/20 text-blue-300 border-blue-500'
-                    : 'bg-slate-900 text-slate-300 border-slate-700 hover:text-slate-100 hover:bg-slate-700'
-                }`}
-              >
-                <MapPin className="w-4 h-4" />
-                <span>GPS-Standort anhängen</span>
-              </button>
-              <div className="text-[11px] text-slate-400 font-medium hidden sm:flex items-center gap-1.5 bg-slate-800/60 px-2.5 py-1 rounded-md border border-slate-700/60">
-                <span>🎙️ Funk: Sprechtaste gedrückt halten</span>
-                <span className="text-slate-500">•</span>
-                <span>Laptop: <kbd className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] text-amber-300 font-mono">Leertaste</kbd></span>
-              </div>
+          {/* ── MOBILE: Chat View ─────────────────────────────────────────── */}
+          {mobileView === 'chat' && (
+            <div className="lg:hidden flex-1 flex flex-col bg-[#0F172A] overflow-hidden min-w-0">
+              <ChatAreaContent />
             </div>
+          )}
 
-            <div className="flex items-center gap-2.5">
-              <button
-                type="button"
-                onPointerDown={handlePttPointerDown}
-                onPointerUp={handlePttPointerUp}
-                onPointerCancel={handlePttPointerCancel}
-                onClick={handlePttButtonClick}
-                onContextMenu={(e) => e.preventDefault()}
-                title={isRecording ? 'Klicken zum Beenden und Senden' : 'Gedrückt halten zum Sprechen (oder Leertaste am Laptop)'}
-                className={`h-11 px-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition cursor-pointer shrink-0 border select-none touch-none ${
-                  isRecording
-                    ? 'bg-red-600 text-white border-red-500 animate-pulse shadow-lg ring-2 ring-red-500/50'
-                    : 'bg-amber-500 hover:bg-amber-400 text-slate-900 border-amber-400 shadow-md active:scale-95'
-                }`}
-              >
-                <Mic className="w-5 h-5" />
-                <span className="font-sans font-bold tracking-wide">
-                  {isRecording ? 'Senden...' : 'PTT Funk'}
-                </span>
-              </button>
-
-              <input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder={`Nachricht an ${
-                  activeChannel === 'all'
-                    ? 'alle Einheiten'
-                    : activeChannel === 'admins'
-                    ? 'Einsatzleitung'
-                    : activeSector
-                    ? `Sektor ${activeSector.name}`
-                    : activeTargetUser?.callSign || 'Kanal'
-                }...`}
-                className="flex-1 px-4 py-3 rounded-xl bg-slate-900 border border-slate-600 text-slate-50 text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 placeholder-slate-400 font-sans shadow-inner"
-              />
-
-              <button
-                type="submit"
-                disabled={!inputText.trim() && !includeLocation}
-                className="h-11 px-5 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg disabled:opacity-40 transition cursor-pointer flex items-center justify-center gap-2 shrink-0"
-              >
-                <Send className="w-5 h-5" />
-                <span className="hidden sm:inline">Senden</span>
-              </button>
-            </div>
-          </form>
+          {/* ── DESKTOP: Chat Area ────────────────────────────────────────── */}
+          <div className="hidden lg:flex flex-1 flex-col bg-[#0F172A] overflow-hidden min-w-0">
+            <ChatAreaContent />
+          </div>
         </div>
-      </div>
       )}
 
-      {/* --- MODAL 1: 📜 Chatverlauf --- */}
+      {/* ── MODAL 1: Chatverlauf ─────────────────────────────────────────── */}
       {showHistoryModal && (
-        <div className="fixed inset-0 z-[6000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-4xl text-slate-100 flex flex-col h-[85vh] overflow-hidden printable-chat-modal">
-            <div className="bg-slate-900 p-4 border-b border-slate-700 flex items-center justify-between shrink-0 hide-on-print">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-blue-400" />
+        <div className="fixed inset-0 z-[6000] flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className="bg-[#1E293B] border border-slate-700 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-4xl text-slate-100 flex flex-col h-[92vh] sm:h-[85vh] overflow-hidden printable-chat-modal">
+            <div className="bg-slate-900 px-4 py-3.5 border-b border-slate-700 flex items-center justify-between shrink-0 hide-on-print">
+              {/* Drag handle (mobile) */}
+              <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-slate-600 sm:hidden" />
+              <div className="flex items-center gap-2.5 mt-1 sm:mt-0">
+                <MessageSquare className="w-5 h-5 text-blue-400 shrink-0" />
                 <div>
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                    Vollständiger Chatverlauf & Nachrichten-Historie
-                  </h3>
-                  <p className="text-xs text-slate-400 font-mono">
-                    Archivierte Funksprüche und Textnachrichten durchsuchen
-                  </p>
+                  <h3 className="text-sm font-bold text-white">Chatverlauf</h3>
+                  <p className="text-[11px] text-slate-400 font-mono">Archivierte Funksprüche durchsuchen</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {isFirstAdmin(currentUser) && (
                   <button
-                    onClick={() => {
-                      window.print();
-                      setTimeout(() => clearChatHistory(), 1000);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer"
-                    title="Drucken / Als PDF speichern und anschließend leeren"
+                    onClick={() => { window.print(); setTimeout(() => clearChatHistory(), 1000); }}
+                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer hidden sm:flex"
+                    title="Als PDF speichern und Verlauf leeren"
                   >
-                    Als PDF speichern & Leeren
+                    PDF & Leeren
                   </button>
                 )}
-                <button
-                  onClick={() => setShowHistoryModal(false)}
-                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
-                >
+                <button onClick={() => setShowHistoryModal(false)} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            <div className="p-3 bg-slate-900/50 border-b border-slate-700 shrink-0 hide-on-print">
+            <div className="px-4 py-3 bg-slate-900/50 border-b border-slate-700 shrink-0 hide-on-print">
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
                 <input
                   type="text"
                   value={historySearchQuery}
                   onChange={(e) => setHistorySearchQuery(e.target.value)}
-                  placeholder="Chatverlauf nach Wort, Sender oder Funkrufname durchsuchen..."
+                  placeholder="Suchen nach Sender, Funkname, Text..."
                   className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500 font-mono"
                 />
               </div>
@@ -1466,28 +1432,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
             <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#0F172A]/40 font-mono printable-area">
               {chatMessages
                 .filter((m) => {
-                  if (
-                    m.channel === 'system' ||
-                    m.channel === 'logs' ||
-                    m.text.includes('hat sich soeben eingeloggt') ||
-                    m.text.includes('hat das System verlassen')
-                  ) {
-                    return false;
-                  }
+                  if (m.channel === 'system' || m.channel === 'logs' || m.text.includes('hat sich soeben eingeloggt') || m.text.includes('hat das System verlassen')) return false;
                   if (!historySearchQuery.trim()) return true;
                   const q = historySearchQuery.toLowerCase();
-                  return (
-                    m.text.toLowerCase().includes(q) ||
-                    m.senderName.toLowerCase().includes(q) ||
-                    m.senderCallSign.toLowerCase().includes(q)
-                  );
+                  return m.text.toLowerCase().includes(q) || m.senderName.toLowerCase().includes(q) || m.senderCallSign.toLowerCase().includes(q);
                 })
                 .map((msg) => (
                   <div key={msg.id} className="p-3 rounded-xl bg-slate-800/90 border border-slate-700 space-y-1 text-xs">
                     <div className="flex items-center justify-between text-slate-400 text-[11px]">
-                      <span className="font-bold text-blue-300">
-                        {msg.senderName} ({msg.senderCallSign}) • Kanal: {msg.channel}
-                      </span>
+                      <span className="font-bold text-blue-300">{msg.senderName} ({msg.senderCallSign}) • {msg.channel}</span>
                       <span>{new Date(msg.timestamp).toLocaleString('de-DE')}</span>
                     </div>
                     <p className="text-slate-100 whitespace-pre-wrap">{msg.text}</p>
@@ -1501,39 +1454,29 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         </div>
       )}
 
-      {/* --- MODAL 2: 📋 Logbuch (Ein- und Ausloggen) --- */}
+      {/* ── MODAL 2: Logbuch ─────────────────────────────────────────────── */}
       {showLogbookModal && (
-        <div className="fixed inset-0 z-[6000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-3xl text-slate-100 flex flex-col h-[80vh] overflow-hidden printable-chat-modal">
-            <div className="bg-slate-900 p-4 border-b border-slate-700 flex items-center justify-between shrink-0 hide-on-print">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-slate-400" />
+        <div className="fixed inset-0 z-[6000] flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className="bg-[#1E293B] border border-slate-700 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-3xl text-slate-100 flex flex-col h-[85vh] sm:h-[80vh] overflow-hidden printable-chat-modal">
+            <div className="bg-slate-900 px-4 py-3.5 border-b border-slate-700 flex items-center justify-between shrink-0 hide-on-print">
+              <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-slate-600 sm:hidden" />
+              <div className="flex items-center gap-2.5 mt-1 sm:mt-0">
+                <FileText className="w-5 h-5 text-slate-400 shrink-0" />
                 <div>
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                    System-Logbuch (Ein- & Ausloggen)
-                  </h3>
-                  <p className="text-xs text-slate-400 font-mono">
-                    Chronologische Erfassung aller Systemzugriffe und Anmeldungen
-                  </p>
+                  <h3 className="text-sm font-bold text-white">System-Logbuch</h3>
+                  <p className="text-[11px] text-slate-400 font-mono">Ein- & Ausloggen</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {isFirstAdmin(currentUser) && (
                   <button
-                    onClick={() => {
-                      window.print();
-                      setTimeout(() => clearLogbook(), 1000);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer"
-                    title="Drucken / Als PDF speichern und anschließend leeren"
+                    onClick={() => { window.print(); setTimeout(() => clearLogbook(), 1000); }}
+                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer hidden sm:flex"
                   >
-                    Als PDF speichern & Leeren
+                    PDF & Leeren
                   </button>
                 )}
-                <button
-                  onClick={() => setShowLogbookModal(false)}
-                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
-                >
+                <button onClick={() => setShowLogbookModal(false)} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -1544,7 +1487,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 <div className="text-center py-12 text-slate-500 text-xs">Keine Logbuch-Einträge vorhanden.</div>
               ) : (
                 logbookMessages.map((msg) => (
-                  <div key={msg.id} className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-start gap-3 text-xs">
+                  <div key={msg.id} className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-start gap-3 text-xs">
                     <span className="text-base">📋</span>
                     <div className="flex-1">
                       <div className="flex items-center justify-between text-[10px] text-slate-400">
@@ -1561,46 +1504,35 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         </div>
       )}
 
-      {/* --- MODAL 3: 🚨 Alarme & Funde --- */}
+      {/* ── MODAL 3: Alarme & Funde ──────────────────────────────────────── */}
       {showAlertsModal && (
-        <div className="fixed inset-0 z-[6000] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans">
-          <div className="bg-[#1E293B] border border-red-900/80 rounded-2xl shadow-2xl w-full max-w-4xl text-slate-100 flex flex-col h-[85vh] overflow-hidden printable-chat-modal">
-            <div className="bg-red-950/90 p-4 border-b border-red-800 flex items-center justify-between shrink-0 hide-on-print">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-400 animate-pulse" />
+        <div className="fixed inset-0 z-[6000] flex items-end sm:items-center justify-center sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+          <div className="bg-[#1E293B] border border-red-900/80 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-4xl text-slate-100 flex flex-col h-[90vh] sm:h-[85vh] overflow-hidden printable-chat-modal">
+            <div className="bg-red-950/90 px-4 py-3.5 border-b border-red-800 flex items-center justify-between shrink-0 hide-on-print">
+              <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-red-800 sm:hidden" />
+              <div className="flex items-center gap-2.5 mt-1 sm:mt-0">
+                <AlertTriangle className="w-5 h-5 text-red-400 animate-pulse shrink-0" />
                 <div>
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                    Einsatz-Alarme, Statusänderungen & Fundmeldungen
-                  </h3>
-                  <p className="text-xs text-red-200 font-mono">
-                    Wichtige Ereignisse, Eilmeldungen und Fundstücke mit GPS
-                  </p>
+                  <h3 className="text-sm font-bold text-white">Alarme & Fundmeldungen</h3>
+                  <p className="text-[11px] text-red-200 font-mono">Statusänderungen, Eilmeldungen & Funde</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {isFirstAdmin(currentUser) && (
                   <button
-                    onClick={() => {
-                      window.print();
-                      setTimeout(() => clearAlerts(), 1000);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer"
-                    title="Drucken / Als PDF speichern und anschließend leeren"
+                    onClick={() => { window.print(); setTimeout(() => clearAlerts(), 1000); }}
+                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer hidden sm:flex"
                   >
-                    Als PDF speichern & Leeren
+                    PDF & Leeren
                   </button>
                 )}
-                <button
-                  onClick={() => setShowAlertsModal(false)}
-                  className="p-1.5 rounded-lg bg-black/30 hover:bg-black/50 text-white"
-                >
+                <button onClick={() => setShowAlertsModal(false)} className="p-2 rounded-lg bg-black/30 hover:bg-black/50 text-white">
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
             <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#0F172A]/40 font-mono printable-area">
-              {/* Findings section */}
               {findings && findings.length > 0 && (
                 <div className="space-y-2 mb-4">
                   <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">
@@ -1615,7 +1547,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                       <p className="text-slate-200">{f.description}</p>
                       {f.location && (
                         <div className="text-[10px] text-amber-400">
-                          📍 GPS: {f.location.lat.toFixed(5)}, {f.location.lng.toFixed(5)} • Kraft: {f.userName}
+                          📍 GPS: {f.location.lat.toFixed(5)}, {f.location.lng.toFixed(5)} • {f.userName}
                         </div>
                       )}
                     </div>
@@ -1623,9 +1555,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 </div>
               )}
 
-              {/* Status Alert Messages */}
               <span className="text-xs font-bold text-red-400 uppercase tracking-wider block">
-                STATUS- &amp; EILMELDUNGEN ({alertMessages.length}):
+                STATUS- & EILMELDUNGEN ({alertMessages.length}):
               </span>
               {alertMessages.length === 0 ? (
                 <div className="text-center py-8 text-slate-500 text-xs">Keine besonderen Alarme vorhanden.</div>
