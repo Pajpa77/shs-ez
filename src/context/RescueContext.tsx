@@ -1010,7 +1010,34 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [allUsers]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify(allOperations));
+    try {
+      localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify(allOperations));
+    } catch (err) {
+      console.warn('[RescueContext] Quota exceeded saving operations. Stripping large payloads (snapshots)...');
+      try {
+        const strippedOps = allOperations.map(op => ({
+          ...op,
+          mapSnapshots: [],
+          mapSnapshotUrl: '',
+          logs: op.logs?.map(l => ({ ...l, snapshotUrl: undefined })) || []
+        }));
+        localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify(strippedOps));
+      } catch (err2) {
+        console.error('[RescueContext] Still exceeded quota. Stripping archived tracks...');
+        try {
+          const heavilyStrippedOps = allOperations.map(op => ({
+            ...op,
+            mapSnapshots: [],
+            mapSnapshotUrl: '',
+            archivedTracks: [],
+            logs: op.logs?.map(l => ({ ...l, snapshotUrl: undefined })) || []
+          }));
+          localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify(heavilyStrippedOps));
+        } catch (err3) {
+          console.error('[RescueContext] Failed to save even stripped operations', err3);
+        }
+      }
+    }
   }, [allOperations]);
 
   useEffect(() => {
@@ -4410,7 +4437,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             if (currentLen < t.points.length) {
               next[t.userId] = {
                 userId: t.userId,
-                isLive: true,
+                isLive: false,
                 lastUpdated: now,
                 currentPosition: t.points[t.points.length - 1],
                 trackHistory: [...t.points],
@@ -4428,7 +4455,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     // 5. Activate selected users (or current user/participants) and set arrivalStatus = 'ready' so tracking starts immediately
     const userIdsToActivate = (options?.activatedUserIds && options.activatedUserIds.length > 0)
       ? options.activatedUserIds
-      : currentUser ? [currentUser.id] : (op.participantIds || []);
+      : currentUser ? [currentUser.id] : [];
 
     if (userIdsToActivate.length > 0) {
       const selectedIds = new Set(userIdsToActivate);
