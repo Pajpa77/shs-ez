@@ -735,7 +735,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                           !user.isActive
                             ? 'bg-slate-500'
                             : connStatus === 'active'
-                            ? 'bg-emerald-500 animate-pulse'
+                              ? 'bg-sky-500 animate-pulse'
                             : connStatus === 'stale'
                             ? 'bg-amber-400 animate-pulse'
                             : 'bg-rose-500'
@@ -769,7 +769,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                             !user.isActive
                               ? 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700 hover:bg-emerald-900/40 hover:text-emerald-300'
                               : connStatus === 'active'
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-rose-900/40 hover:text-rose-300'
+                                ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-rose-900/40 hover:text-rose-300'
                               : connStatus === 'stale'
                               ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-rose-900/40 hover:text-rose-300'
                               : 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-900/40'

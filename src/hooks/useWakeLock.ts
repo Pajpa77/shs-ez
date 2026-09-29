@@ -8,7 +8,7 @@ import { useEffect, useRef, useCallback } from 'react';
 export function useWakeLock(enabled: boolean) {
   const wakeLockRef = useRef<any>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const intervalRef = useRef<any>(null);
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   const requestWakeLock = useCallback(async () => {
     if (!('wakeLock' in navigator)) {
@@ -37,7 +37,7 @@ export function useWakeLock(enabled: boolean) {
     }
   }, []);
 
-  // Silent audio keep-alive to prevent OS power management (iOS & Android)
+  // Continuous silent audio keep-alive to prevent OS power management (iOS & Android)
   // from suspending background GPS threads on dark/locked screens
   const startSilentHeartbeat = useCallback(() => {
     try {
@@ -52,37 +52,29 @@ export function useWakeLock(enabled: boolean) {
         audioCtxRef.current.resume().catch(() => {});
       }
 
-      if (!intervalRef.current) {
-        // High-frequency 4-second pulse keeps media execution context hot
-        intervalRef.current = setInterval(() => {
-          if (audioCtxRef.current) {
-            if (audioCtxRef.current.state === 'suspended') {
-              audioCtxRef.current.resume().catch(() => {});
-            }
-            if (audioCtxRef.current.state === 'running') {
-              try {
-                const osc = audioCtxRef.current.createOscillator();
-                const gain = audioCtxRef.current.createGain();
-                // 20Hz infrasound wave at micro-gain (completely inaudible, zero battery impact)
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(20, audioCtxRef.current.currentTime);
-                gain.gain.setValueAtTime(0.00001, audioCtxRef.current.currentTime);
-                osc.connect(gain);
-                gain.connect(audioCtxRef.current.destination);
-                osc.start();
-                osc.stop(audioCtxRef.current.currentTime + 0.1);
-              } catch {}
-            }
-          }
-        }, 4000);
+      if (!audioSourceRef.current && audioCtxRef.current) {
+        // Create a continuous silent buffer loop
+        const buffer = audioCtxRef.current.createBuffer(1, audioCtxRef.current.sampleRate * 2, audioCtxRef.current.sampleRate);
+        // buffer is inherently silent (filled with zeros)
+        const source = audioCtxRef.current.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+        source.connect(audioCtxRef.current.destination);
+        source.start();
+        audioSourceRef.current = source;
       }
-    } catch {}
+    } catch (err) {
+        console.warn('Audio heartbeat start error:', err);
+    }
   }, []);
 
   const stopSilentHeartbeat = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    if (audioSourceRef.current) {
+      try {
+        audioSourceRef.current.stop();
+        audioSourceRef.current.disconnect();
+      } catch {}
+      audioSourceRef.current = null;
     }
     if (audioCtxRef.current) {
       try {
@@ -102,9 +94,15 @@ export function useWakeLock(enabled: boolean) {
         if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
           audioCtxRef.current.resume().catch(() => {});
         }
+        if (!audioSourceRef.current) {
+          startSilentHeartbeat();
+        }
       };
+      
+      // Standard events to catch interaction
       window.addEventListener('touchstart', resumeOnInteraction, { passive: true });
       window.addEventListener('click', resumeOnInteraction, { passive: true });
+      window.addEventListener('scroll', resumeOnInteraction, { passive: true });
 
       const handleVisibilityChange = async () => {
         if (document.visibilityState === 'visible') {
@@ -120,6 +118,7 @@ export function useWakeLock(enabled: boolean) {
       return () => {
         window.removeEventListener('touchstart', resumeOnInteraction);
         window.removeEventListener('click', resumeOnInteraction);
+        window.removeEventListener('scroll', resumeOnInteraction);
         document.removeEventListener('visibilitychange', handleVisibilityChange);
         releaseWakeLock();
         stopSilentHeartbeat();

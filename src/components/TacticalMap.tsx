@@ -2561,7 +2561,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           : !item.isOnline
           ? 'bg-slate-500/20'
           : connStatus === 'active'
-          ? 'bg-emerald-500/20'
+            ? 'bg-sky-500/20'
           : connStatus === 'stale'
           ? 'bg-amber-500/40 animate-pulse'
           : 'bg-rose-500/30';

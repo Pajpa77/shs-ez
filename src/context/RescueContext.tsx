@@ -2251,6 +2251,17 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   return R * c;
 }
 
+  
+  const isRealGpsActiveRef = useRef(isRealGpsActive);
+  const currentUserRef = useRef(currentUser);
+  const userArrivalStatusesRef = useRef(userArrivalStatuses);
+
+  useEffect(() => {
+    isRealGpsActiveRef.current = isRealGpsActive;
+    currentUserRef.current = currentUser;
+    userArrivalStatusesRef.current = userArrivalStatuses;
+  }, [isRealGpsActive, currentUser, userArrivalStatuses]);
+
   // Real GPS tracking using navigator.geolocation
   useEffect(() => {
     if (!isRealGpsActive) {
@@ -2326,10 +2337,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
           }
 
           // Broadcast GPS for active responders on main operation map when NOT running a tracking test
-          if (currentUser && currentUser.role !== 'observer' && !isTestRunning) {
+          if (currentUserRef.current && currentUserRef.current?.role !== 'observer' && !isTestRunning) {
             setUserLocations((prev) => {
-              const userLoc = prev[currentUser.id] || {
-                userId: currentUser.id,
+              const userLoc = prev[currentUserRef.current?.id] || {
+                userId: currentUserRef.current?.id,
                 isLive: true,
                 lastUpdated: new Date().toISOString(),
                 currentPosition: point,
@@ -2353,13 +2364,13 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               }
 
               const isUserReady =
-                currentUser.arrivalStatus === 'ready' ||
-                userArrivalStatuses[currentUser.id] === 'ready' ||
-                currentUser.role === 'admin' ||
-                currentUser.role === 'einsatzleitung' ||
-                Boolean(currentUser.canLeadOperations);
+                currentUserRef.current?.arrivalStatus === 'ready' ||
+                userArrivalStatusesRef.current[currentUserRef.current?.id] === 'ready' ||
+                currentUserRef.current?.role === 'admin' ||
+                currentUserRef.current?.role === 'einsatzleitung' ||
+                Boolean(currentUserRef.current?.canLeadOperations);
               const isOpRunning = currentOperationRef.current && currentOperationRef.current.status === 'active';
-              const isEzRole = (currentUser.operationalRole || operationalRole) === 'ez_command';
+              const isEzRole = (currentUserRef.current?.operationalRole || operationalRole) === 'ez_command';
               let nextHistory = cleanHistory;
 
               // Ultra-precise search track recording: when responder is ready/admin and an operation is actively running
@@ -2440,7 +2451,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
               const updated = {
                 ...prev,
-                [currentUser.id]: updatedLocState,
+                [currentUserRef.current?.id]: updatedLocState,
               };
 
               // Decoupled Cloud Sync:
@@ -2462,7 +2473,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                   lastCloudTrackSyncRef.current = { timestamp: now, pointsCount: updatedHistory.length };
                 }
 
-                syncLocationToCloud(currentUser.id, updatedLocState, shouldSyncHistory);
+                syncLocationToCloud(currentUserRef.current?.id, updatedLocState, shouldSyncHistory);
               }
 
               // Broadcast to local tabs instantly for fluid UI
@@ -2491,21 +2502,21 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     // Aggressive Background GPS tick & Watchdog: ensures continuous recording when screen is locked/dark in pocket
     const bgGpsInterval = setInterval(() => {
       const isTestRunning = activeTrackingTestRef.current?.isActive && !activeTrackingTestRef.current?.isCompleted;
-      const isUserSearching = currentUser && (currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready');
+      const isUserSearching = currentUserRef.current && (currentUserRef.current?.arrivalStatus === 'ready' || userArrivalStatusesRef.current[currentUserRef.current?.id] === 'ready');
       const isOpRunning = currentOperation && currentOperation.status === 'active';
 
       // Hardware Watchdog: restart watchPosition if no coordinate update in 18 seconds on active mobile
       const timeSinceLastFix = Date.now() - lastGpsFixTimestamp;
-      if (isRealGpsActive && (isUserSearching || isTestRunning) && timeSinceLastFix > 18000) {
+      if (isRealGpsActiveRef.current && (isUserSearching || isTestRunning) && timeSinceLastFix > 18000) {
         console.log('[GPS Watchdog] Reviving stalled hardware GPS listener...');
         startWatcher();
       }
 
       const shouldRunBgGps =
         document.visibilityState === 'hidden' &&
-        isRealGpsActive &&
+        isRealGpsActiveRef.current &&
         'geolocation' in navigator &&
-        ((currentUser && currentUser.role !== 'observer') || isTestRunning);
+        ((currentUserRef.current && currentUserRef.current?.role !== 'observer') || isTestRunning);
 
       if (shouldRunBgGps) {
         navigator.geolocation.getCurrentPosition(
@@ -2544,17 +2555,17 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               });
             }
 
-            if (!isTestRunning && currentUser && currentUser.role !== 'observer') {
+            if (!isTestRunning && currentUserRef.current && currentUserRef.current?.role !== 'observer') {
               setUserLocations((prev) => {
-                const uLoc = prev[currentUser.id];
+                const uLoc = prev[currentUserRef.current?.id];
                 if (!uLoc) return prev;
                 const isReady =
-                  currentUser.arrivalStatus === 'ready' ||
-                  userArrivalStatuses[currentUser.id] === 'ready' ||
-                  currentUser.role === 'admin' ||
-                  currentUser.role === 'einsatzleitung' ||
-                  Boolean(currentUser.canLeadOperations);
-                const isEzRole = (currentUser.operationalRole || operationalRole) === 'ez_command';
+                  currentUserRef.current?.arrivalStatus === 'ready' ||
+                  userArrivalStatusesRef.current[currentUserRef.current?.id] === 'ready' ||
+                  currentUserRef.current?.role === 'admin' ||
+                  currentUserRef.current?.role === 'einsatzleitung' ||
+                  Boolean(currentUserRef.current?.canLeadOperations);
+                const isEzRole = (currentUserRef.current?.operationalRole || operationalRole) === 'ez_command';
                 const activeOpId = currentOperationRef.current?.id;
                 const isOpRunning = currentOperationRef.current && currentOperationRef.current.status === 'active';
                 let nextHistory = (uLoc.trackHistory || []).filter(
@@ -2619,10 +2630,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                     lastCloudTrackSyncRef.current = { timestamp: now, pointsCount: nextHistory.length };
                   }
 
-                  syncLocationToCloud(currentUser.id, updatedState, shouldSyncHistory);
+                  syncLocationToCloud(currentUserRef.current?.id, updatedState, shouldSyncHistory);
                 }
 
-                return { ...prev, [currentUser.id]: updatedState };
+                return { ...prev, [currentUserRef.current?.id]: updatedState };
               });
             }
           },
@@ -2638,7 +2649,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       }
       clearInterval(bgGpsInterval);
     };
-  }, [isRealGpsActive, currentUser, syncLocationToCloud, userArrivalStatuses]);
+  }, [isRealGpsActive, syncLocationToCloud]);
 
   // Periodic Status Tick to trigger UI updates for stale / offline signal calculations
   const [, setStatusTick] = useState(0);
@@ -4542,7 +4553,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       });
     }
 
-    // 5. Activate selected users (or current user/participants) and set arrivalStatus = 'ready' so tracking starts immediately
+    // 5. Activate selected users (or current user/participants) and set arrivalStatus = 'in_transit' so they are not automatically tracking
     const userIdsToActivate = (options?.activatedUserIds && options.activatedUserIds.length > 0)
       ? options.activatedUserIds
       : currentUser ? [currentUser.id] : [];
@@ -4555,7 +4566,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             const updatedUser: User = {
               ...u,
               isActive: true,
-              arrivalStatus: 'ready',
+              arrivalStatus: 'in_transit',
               lastSeen: 'Aktiviert für Folgesuche',
               updatedAt: now,
             };
@@ -4573,7 +4584,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       setUserArrivalStatuses((prev) => {
         const next = { ...prev };
         userIdsToActivate.forEach((id) => {
-          next[id] = 'ready';
+          next[id] = 'in_transit';
         });
         try {
           localStorage.setItem('rescue_app_arrival_statuses_slk_v4', JSON.stringify(next));
