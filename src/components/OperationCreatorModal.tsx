@@ -30,7 +30,7 @@ import {
   Cloud,
   Archive,
 } from 'lucide-react';
-import { VEREINSBUERO_LOCATION } from '../mockData';
+import { VEREINSBUERO_LOCATION, getSavedVereinsbueroLocation } from '../mockData';
 import { fetchRescueWeather } from '../lib/weatherService';
 
 const AVAILABLE_EQUIPMENT: { type: EquipmentType; label: string; icon: string; desc: string }[] = [
@@ -1012,14 +1012,15 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  setHqAddress(VEREINSBUERO_LOCATION.address);
-                  setHqLat(VEREINSBUERO_LOCATION.lat);
-                  setHqLng(VEREINSBUERO_LOCATION.lng);
-                  setHqDescription('Vereinsbüro Spürhunde-Salzlandkreis e.V.');
+                  const savedHq = getSavedVereinsbueroLocation();
+                  setHqAddress(savedHq.address);
+                  setHqLat(savedHq.lat);
+                  setHqLng(savedHq.lng);
+                  setHqDescription('Vereinshaus Aschersleben');
                 }}
                 className="px-2.5 py-1 rounded-lg bg-indigo-950/70 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 text-[11px] font-mono transition cursor-pointer flex items-center gap-1.5"
               >
-                <span>🏢 Vereinsbüro Aschersleben (Hohe Str. 15)</span>
+                <span>🏢 Vereinshaus Aschersleben</span>
               </button>
               <button
                 type="button"

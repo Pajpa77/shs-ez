@@ -179,6 +179,20 @@ export interface UserLocationState {
   operationalRole?: 'ez_command' | 'searcher';
 }
 
+export interface TrackSummaryItem {
+  userId: string;
+  name: string;
+  callSign: string;
+  color: string;
+  pointCount: number;
+  distanceMeters: number;
+  isLive: boolean;
+  isDrone: boolean;
+  equipmentIcon: string;
+  boundsPoints: [number, number][];
+  phaseLabel?: string;
+}
+
 export type OperationType = 'operation' | 'exercise' | 'live_search'; // Einsatz vs. Übung
 export type OperationStatus = 'planned' | 'active' | 'paused' | 'completed' | 'archived';
 

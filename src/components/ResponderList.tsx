@@ -31,6 +31,7 @@ import {
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { MemberCardModal } from './MemberCardModal';
 import { exportSingleTrackAsGpx } from '../lib/gpxExport';
+import { computeTrackSummaries } from '../lib/trackHelper';
 
 interface ResponderListProps {
   onOpenCreateUser: () => void;
@@ -103,6 +104,10 @@ export const ResponderList: React.FC<ResponderListProps> = ({
 
   const isRealAdmin = isUserAdmin(currentUser);
   const canLead = isUserEL(currentUser);
+  const isOpActive = Boolean(currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused'));
+  const trackSummaries = React.useMemo(() => {
+    return computeTrackSummaries(currentOperation, userLocations, allUsers);
+  }, [currentOperation, userLocations, allUsers]);
   const activeObserverUsers = currentOperationUsers.filter((u) => u.role === 'observer' && u.isActive);
   const offlineObserverUsers = currentOperationUsers.filter((u) => u.role === 'observer' && !u.isActive);
   const observerUsers = activeObserverUsers; // Only actively logged-in observers!
@@ -406,6 +411,148 @@ export const ResponderList: React.FC<ResponderListProps> = ({
             })}
         </div>
       </div>
+
+      {/* Suchspuren & Strecken (Suchspuren-Liste im Kräftemenü bei aktivem Einsatz) */}
+      {isOpActive ? (
+        <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700/80 p-5 rounded-2xl shadow-xl space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xl">🧭</span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-white text-sm sm:text-base uppercase tracking-wider">
+                    Suchspuren & Strecken ({trackSummaries.length})
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-mono font-bold">
+                    {(trackSummaries.reduce((sum, t) => sum + t.distanceMeters, 0) / 1000).toFixed(2)} km Gesamtstrecke
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 font-mono">
+                  Aufgezeichnete GPS-Wege & zurückgelegte Distanzen der Einsatzkräfte im aktuellen Einsatz („{currentOperation?.title}“).
+                </p>
+              </div>
+            </div>
+            {trackSummaries.length > 0 && (
+              <button
+                type="button"
+                onClick={onFocusUserOnMap}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold font-mono transition cursor-pointer flex items-center gap-1.5 shadow"
+                title="Lagekarte mit Suchspuren öffnen"
+              >
+                <span>🗺️ Lagekarte öffnen</span>
+              </button>
+            )}
+          </div>
+
+          {trackSummaries.length === 0 ? (
+            <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl text-center text-slate-400 text-xs font-mono leading-relaxed">
+              Noch keine Suchspuren für diesen Einsatz aufgezeichnet. Sobald aktive Einsatzkräfte im Suchgebiet suchen, werden ihre zurückgelegten Wege und Distanzen hier in Echtzeit zusammengeführt.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {trackSummaries.map((item) => {
+                const userObj = allUsers.find((u) => u.id === item.userId);
+                const distText =
+                  item.distanceMeters >= 1000
+                    ? `${(item.distanceMeters / 1000).toFixed(2)} km`
+                    : `${Math.round(item.distanceMeters)} m`;
+
+                return (
+                  <div
+                    key={`${item.userId}-${item.phaseLabel || 'track'}`}
+                    className="bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl p-3.5 space-y-2.5 shadow hover:border-slate-600 transition"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="w-3.5 h-3.5 rounded-full shrink-0 border-2 border-white shadow-sm"
+                          style={{ backgroundColor: item.color }}
+                          title={`Spurfarbe: ${item.color}`}
+                        />
+                        <div className="min-w-0">
+                          <div className="font-bold text-white text-xs truncate flex items-center gap-1">
+                            <span>{item.equipmentIcon}</span>
+                            <span className="truncate">{item.name}</span>
+                          </div>
+                          <div className="text-[10px] text-blue-400 font-mono truncate">
+                            {item.callSign}
+                          </div>
+                        </div>
+                      </div>
+
+                      <span
+                        className={`px-2 py-0.5 rounded-lg border text-[10px] font-mono font-bold shrink-0 ${
+                          item.isLive
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                            : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                        }`}
+                      >
+                        {item.isLive ? '🟢 Live' : '📁 Gesichert'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                      <div className="bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-700/60">
+                        <span className="text-[10px] text-slate-400 block">Suchstrecke:</span>
+                        <span className="font-bold text-emerald-400 text-xs">{distText}</span>
+                      </div>
+                      <div className="bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-700/60">
+                        <span className="text-[10px] text-slate-400 block">GPS-Punkte:</span>
+                        <span className="font-bold text-white text-xs">{item.pointCount} Pkt.</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (userObj) {
+                            handleFocusUser(userObj);
+                          } else {
+                            onFocusUserOnMap();
+                          }
+                        }}
+                        className="px-2.5 py-1 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white rounded-lg text-[11px] font-bold font-mono transition cursor-pointer border border-blue-500/40 flex items-center gap-1.5 shadow-sm"
+                        title="Suchspur auf der Lagekarte vergrößern & ansehen"
+                      >
+                        <span>🗺️ Auf Karte anzeigen</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const pts = userLocations[item.userId]?.trackHistory || [];
+                          if (pts.length > 0) {
+                            exportSingleTrackAsGpx({
+                              userName: item.name,
+                              callSign: item.callSign,
+                              points: pts,
+                              operationTitle: currentOperation?.title,
+                            });
+                          }
+                        }}
+                        className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-mono transition cursor-pointer flex items-center gap-1 border border-slate-700"
+                        title="Diesen Track als GPX-Datei herunterladen (für Garmin / Polizei)"
+                      >
+                        <Download className="w-3 h-3 text-emerald-400" />
+                        <span>GPX</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-[#1E293B]/70 border border-slate-800 p-4 rounded-2xl text-xs font-mono text-slate-400 flex items-center gap-3">
+          <span className="text-xl">ℹ️</span>
+          <div>
+            <strong className="text-slate-300 block">Suchspuren-Bereich:</strong>
+            Suchspuren werden ausschließlich bei einem <strong>aktiven Einsatz</strong> erfasst und dargestellt. Abgeschlossene Spuren werden im Einsatzarchiv und im Einsatzprotokoll dauerhaft gesichert.
+          </div>
+        </div>
+      )}
 
       {/* Active Search Teams Overview Section */}
       <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700/80 p-5 rounded-2xl shadow-xl space-y-4">

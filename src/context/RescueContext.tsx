@@ -2238,13 +2238,17 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
               }
 
               const isUserReady =
-                currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
+                currentUser.arrivalStatus === 'ready' ||
+                userArrivalStatuses[currentUser.id] === 'ready' ||
+                currentUser.role === 'admin' ||
+                currentUser.role === 'einsatzleitung' ||
+                Boolean(currentUser.canLeadOperations);
               const isOpRunning = currentOperationRef.current && currentOperationRef.current.status === 'active';
-              const isEzCommand = (currentUser.operationalRole || operationalRole) === 'ez_command';
-              let nextHistory = isEzCommand ? [] : cleanHistory;
+              const isEzRole = (currentUser.operationalRole || operationalRole) === 'ez_command';
+              let nextHistory = cleanHistory;
 
-              // Ultra-precise search track recording: only when responder is ready, an operation is actively running, AND NOT in EZ command center
-              if (isUserReady && isOpRunning && !isEzCommand) {
+              // Ultra-precise search track recording: when responder is ready/admin and an operation is actively running
+              if (isUserReady && isOpRunning) {
                 const lastHistorical = cleanHistory[cleanHistory.length - 1];
                 const distMoved = lastHistorical
                   ? calculateDistanceMeters(lastHistorical.lat, lastHistorical.lng, point.lat, point.lng)
@@ -2307,14 +2311,14 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                   nextHistory = cleanHistory;
                 }
               } else {
-                nextHistory = isEzCommand ? [] : cleanHistory;
+                nextHistory = cleanHistory;
               }
-              const updatedHistory = isEzCommand ? [] : nextHistory;
+              const updatedHistory = nextHistory;
               const updatedLocState: UserLocationState = {
                 ...userLoc,
                 currentPosition: point,
                 trackHistory: updatedHistory,
-                operationalRole: isEzCommand ? 'ez_command' : 'searcher',
+                operationalRole: isEzRole ? 'ez_command' : 'searcher',
                 lastUpdated: new Date().toISOString(),
                 isLive: true,
               };
@@ -2430,14 +2434,18 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 const uLoc = prev[currentUser.id];
                 if (!uLoc) return prev;
                 const isReady =
-                  currentUser.arrivalStatus === 'ready' || userArrivalStatuses[currentUser.id] === 'ready';
-                const isEzCommand = (currentUser.operationalRole || operationalRole) === 'ez_command';
+                  currentUser.arrivalStatus === 'ready' ||
+                  userArrivalStatuses[currentUser.id] === 'ready' ||
+                  currentUser.role === 'admin' ||
+                  currentUser.role === 'einsatzleitung' ||
+                  Boolean(currentUser.canLeadOperations);
+                const isEzRole = (currentUser.operationalRole || operationalRole) === 'ez_command';
                 const activeOpId = currentOperationRef.current?.id;
                 const isOpRunning = currentOperationRef.current && currentOperationRef.current.status === 'active';
-                let nextHistory = isEzCommand ? [] : ((uLoc.trackHistory || []).filter(
+                let nextHistory = (uLoc.trackHistory || []).filter(
                   pt => !pt.operationId || !activeOpId || pt.operationId === activeOpId
-                ));
-                if (isReady && isOpRunning && !isEzCommand) {
+                );
+                if (isReady && isOpRunning) {
                   const lastPt = nextHistory[nextHistory.length - 1];
                   const distMoved = lastPt
                     ? calculateDistanceMeters(lastPt.lat, lastPt.lng, bgPoint.lat, bgPoint.lng)
@@ -2473,8 +2481,8 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 const updatedState: UserLocationState = {
                   ...uLoc,
                   currentPosition: bgPoint,
-                  trackHistory: isEzCommand ? [] : nextHistory,
-                  operationalRole: isEzCommand ? 'ez_command' : 'searcher',
+                  trackHistory: nextHistory,
+                  operationalRole: isEzRole ? 'ez_command' : 'searcher',
                   lastUpdated: new Date().toISOString(),
                   isLive: true,
                 };
@@ -3769,7 +3777,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
           const updated: UserLocationState = {
             ...loc,
             operationalRole: role,
-            trackHistory: role === 'ez_command' ? [] : loc.trackHistory,
+            trackHistory: loc.trackHistory || [],
           };
           syncLocationToCloud(currentUser.id, updated);
           return { ...prev, [currentUser.id]: updated };
