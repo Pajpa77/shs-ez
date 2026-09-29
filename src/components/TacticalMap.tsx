@@ -168,7 +168,7 @@ const TILE_LAYERS: Record<'osm' | 'hybrid' | 'satellite' | 'topo', TileLayerConf
   hybrid: {
     name: 'Satellit + Straßennamen',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    overlayUrl: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',
+    overlayUrl: 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png',
     attribution: '&copy; Esri, Maxar, &copy; OpenStreetMap',
     subdomains: ['a', 'b', 'c', 'd'],
     maxZoom: 19,
@@ -874,7 +874,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         subdomains: config.subdomains || ['a', 'b', 'c', 'd'],
         maxZoom: 22,
         maxNativeZoom: maxNative,
-        pane: 'overlayPane',
+        zIndex: 2,
+        className: 'pointer-events-none',
         opacity: 1,
         crossOrigin: true,
       });
@@ -1034,16 +1035,17 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     const applyFilter = () => {
       const tilePane = mapContainerRef.current?.querySelector('.leaflet-tile-pane') as HTMLElement | null;
       if (tilePane) {
-        tilePane.style.filter = isMapLight
-          ? 'none'
-          : 'invert(1) hue-rotate(180deg) brightness(0.82) saturate(0.9)';
+        const shouldInvert = !isMapLight && activeBaseMap !== 'satellite' && activeBaseMap !== 'hybrid';
+        tilePane.style.filter = shouldInvert
+          ? 'invert(1) hue-rotate(180deg) brightness(0.82) saturate(0.9)'
+          : 'none';
       }
     };
     // Apply immediately and also after a short delay (tiles may not be in DOM yet on first render)
     applyFilter();
     const t = setTimeout(applyFilter, 300);
     return () => clearTimeout(t);
-  }, [isMapLight]);
+  }, [isMapLight, activeBaseMap]);
 
   // Handle Sector Drawing (Freehand Pen and Click Vertex Modes)
   useEffect(() => {
