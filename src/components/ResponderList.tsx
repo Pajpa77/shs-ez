@@ -465,7 +465,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 min-w-0">
                         <span
-                          className="w-3.5 h-3.5 rounded-full shrink-0 border-2 border-white shadow-sm"
+                          className="w-5 h-2 rounded-sm shrink-0 border border-white/80 shadow-sm"
                           style={{ backgroundColor: item.color }}
                           title={`Spurfarbe: ${item.color}`}
                         />

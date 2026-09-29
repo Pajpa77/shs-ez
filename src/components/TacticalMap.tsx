@@ -2608,7 +2608,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
         const iconHtml = `
           <div class="relative group cursor-pointer">
-            <div class="absolute -inset-1.5 rounded-full ${outerGlowClass}"></div>
+            
             <div class="relative flex items-center justify-center h-10 w-10 rounded-full border-2 ${avatarBorderClass} shadow-2xl overflow-hidden" style="background-color: ${item.trackColor};">
               ${
                 safeUserPhoto
