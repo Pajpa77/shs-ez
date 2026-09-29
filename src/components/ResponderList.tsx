@@ -280,10 +280,10 @@ export const ResponderList: React.FC<ResponderListProps> = ({
               const distMeters = loc ? calculateDistanceToEzMeters(loc.lat, loc.lng) : null;
               const distText = distMeters !== null ? (distMeters >= 1000 ? `${(distMeters / 1000).toFixed(1)} km` : `${Math.round(distMeters)} m`) : 'Kein GPS';
 
-              let statusBadge = { label: 'In Anfahrt', color: 'bg-red-500/20 text-red-300 border-red-500/50', icon: '🔴' };
-              if (status === 'ready') {
+              let statusBadge = !isOpActive ? { label: 'Kein Einsatz aktiv', color: 'bg-slate-500/20 text-slate-300 border-slate-500/50', icon: '👤' } : { label: 'In Anfahrt', color: 'bg-red-500/20 text-red-300 border-red-500/50', icon: '🔴' };
+              if (isOpActive && status === 'ready') {
                 statusBadge = { label: 'Bereit (Tracking aktiv)', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500', icon: '🟢' };
-              } else if (status === 'ez_reached') { statusBadge = { label: 'EZ erreicht (Bestätigung ausstehend)', color: 'bg-slate-50 dark:bg-amber-500/20 text-amber-300 border-amber-500/50', icon: '📍' }; } else if (status === 'near_ez') { statusBadge = { label: 'Im Einsatzbereich (< 0.5km)', color: 'bg-amber-500/20 text-amber-300 border-amber-500/50', icon: '📍' }; }
+              } else if (isOpActive && status === 'ez_reached') { statusBadge = { label: 'EZ erreicht (Bestätigung ausstehend)', color: 'bg-slate-50 dark:bg-amber-500/20 text-amber-300 border-amber-500/50', icon: '📍' }; } else if (isOpActive && status === 'near_ez') { statusBadge = { label: 'Im Einsatzbereich (< 0.5km)', color: 'bg-amber-500/20 text-amber-300 border-amber-500/50', icon: '📍' }; }
 
               return (
                 <div key={user.id} className="bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl p-3.5 space-y-2.5 shadow">
