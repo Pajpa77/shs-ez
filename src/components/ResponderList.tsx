@@ -280,10 +280,10 @@ export const ResponderList: React.FC<ResponderListProps> = ({
               const distMeters = loc ? calculateDistanceToEzMeters(loc.lat, loc.lng) : null;
               const distText = distMeters !== null ? (distMeters >= 1000 ? `${(distMeters / 1000).toFixed(1)} km` : `${Math.round(distMeters)} m`) : 'Kein GPS';
 
-              let statusBadge = !isOpActive ? { label: 'Kein Einsatz aktiv', color: 'bg-slate-500/20 text-slate-300 border-slate-500/50', icon: '👤' } : { label: 'In Anfahrt', color: 'bg-red-500/20 text-red-300 border-red-500/50', icon: '🔴' };
+              let statusBadge = !isOpActive ? { label: 'Kein Einsatz aktiv', color: 'bg-slate-500/20 text-slate-300 border-slate-500/50' } : { label: 'In Anfahrt', color: 'bg-red-500/20 text-red-300 border-red-500/50' };
               if (isOpActive && status === 'ready') {
-                statusBadge = { label: 'Bereit (Tracking aktiv)', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500', icon: '🟢' };
-              } else if (isOpActive && status === 'ez_reached') { statusBadge = { label: 'EZ erreicht (Bestätigung ausstehend)', color: 'bg-slate-50 dark:bg-amber-500/20 text-amber-300 border-amber-500/50', icon: '📍' }; } else if (isOpActive && status === 'near_ez') { statusBadge = { label: 'Im Einsatzbereich (< 0.5km)', color: 'bg-amber-500/20 text-amber-300 border-amber-500/50', icon: '📍' }; }
+                statusBadge = { label: 'Bereit (Tracking aktiv)', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500' };
+              } else if (isOpActive && status === 'ez_reached') { statusBadge = { label: 'EZ erreicht (Bestätigung ausstehend)', color: 'bg-slate-50 dark:bg-amber-500/20 text-amber-300 border-amber-500/50' }; } else if (isOpActive && status === 'near_ez') { statusBadge = { label: 'Im Einsatzbereich (< 0.5km)', color: 'bg-amber-500/20 text-amber-300 border-amber-500/50' }; }
 
               return (
                 <div key={user.id} className="bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 rounded-xl p-3.5 space-y-2.5 shadow">
@@ -302,7 +302,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                         <div className="font-bold text-xs text-white leading-tight flex items-center gap-1.5">
                           <span>{user.name}</span>
                           <span
-                            className="w-3 h-3 rounded-sm inline-block shrink-0 border border-white/80 shadow-sm"
+                            className="w-5 h-2 rounded-sm inline-block shrink-0 border border-white/80 shadow-sm"
                             style={{ backgroundColor: getUserTrackColor(user, allUsers) }}
                             title={`Suchspur-Farbe: ${getUserTrackColor(user, allUsers)}`}
                           />
@@ -311,7 +311,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                       </div>
                     </div>
                     <span className={`px-2 py-0.5 rounded-lg border text-[10px] font-mono font-bold flex items-center gap-1 ${statusBadge.color}`}>
-                      <span>{statusBadge.icon}</span> {statusBadge.label}
+                      {statusBadge.label}
                     </span>
                   </div>
 
