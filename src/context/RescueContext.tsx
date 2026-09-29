@@ -4225,26 +4225,21 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         return updated;
       });
 
-      // Clear live chat messages for this ended operation so live chat starts clean
-      setChatMessages((prev) => prev.filter((m) => m.operationId !== id));
-
-      try {
-        localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
-
-      // Check remaining active or paused operations
-      const remainingActiveOrPaused = next.find((op) => op.id !== id && (op.status === 'active' || op.status === 'paused'));
-      const nextId = remainingActiveOrPaused ? remainingActiveOrPaused.id : '';
-      setCurrentOperationIdState(nextId);
-      try {
-        localStorage.setItem(STORAGE_KEY_ACTIVE_OP, nextId);
-      } catch {
-        // ignore
-      }
-
       return next;
+    });
+
+    // Clear live chat messages for this ended operation so live chat starts clean
+    setChatMessages((prev) => prev.filter((m) => m.operationId !== id));
+
+    // Clear current operation ID so the app falls back to another active operation (if any)
+    setCurrentOperationIdState((prevId) => {
+      if (prevId === id) {
+        try {
+          localStorage.setItem(STORAGE_KEY_ACTIVE_OP, '');
+        } catch {}
+        return '';
+      }
+      return prevId;
     });
 
     // 5. Automatically log out all non-admin users (responders, group leaders) and reset arrival status for everyone
