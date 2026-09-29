@@ -98,8 +98,8 @@ export const INITIAL_USERS: User[] = [
 
 // Vereinsbüro Spürhunde-Salzlandkreis e.V.
 const DEFAULT_VEREINSBUERO_BASE = {
-  lat: 51.75691, // Feinausrichtung auf das Vereinshaus Hohe Straße 15
-  lng: 11.45360,
+  lat: 51.756800, // Exakt Hohe Straße 15, 06449 Aschersleben (Vereinshaus Spürhunde)
+  lng: 11.453497,
   address: 'Vereinsbüro Spürhunde-Salzlandkreis e.V., Hohe Straße 15, 06449 Aschersleben',
 };
 

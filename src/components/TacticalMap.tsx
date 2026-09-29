@@ -1631,11 +1631,74 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
     if (isDraggableHq) {
       hqMarker.on('dragend', async (e: L.LeafletEvent) => {
+        hqMarker.dragging.disable();
+        const el = hqMarker.getElement();
+        if (el) el.classList.remove('ring-4', 'ring-emerald-400', 'scale-110');
         const marker = e.target as L.Marker;
         const newPos = marker.getLatLng();
-        await applyEzReposition(newPos.lat, newPos.lng);
+        triggerEzRepositionModal(newPos.lat, newPos.lng);
       });
     }
+
+    // Long-Press handler directly on the EZ Pin (Finger 500ms gedrückt halten schaltet Verschieben frei)
+    setTimeout(() => {
+      const el = hqMarker.getElement();
+      if (!el || !isDraggableHq) return;
+
+      let longPressTimer: any = null;
+      let startX = 0;
+      let startY = 0;
+
+      const clearTimer = () => {
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+      };
+
+      const handlePressStart = (e: TouchEvent | MouseEvent) => {
+        if ('touches' in e && e.touches.length !== 1) return;
+        if ('button' in e && e.button !== 0) return;
+        const pt = 'touches' in e ? e.touches[0] : e;
+        startX = pt.clientX;
+        startY = pt.clientY;
+
+        clearTimer();
+        longPressTimer = setTimeout(() => {
+          longPressTimer = null;
+          if (navigator.vibrate) navigator.vibrate([40, 50, 40]);
+          playAlertSound('notification');
+
+          // Unlock dragging on the marker!
+          hqMarker.dragging.enable();
+          el.classList.add('ring-4', 'ring-emerald-400', 'scale-110');
+          setEzToastNotice('📍 EZ freigeschaltet! Ziehe die Pin an die gewünschte Stelle.');
+          setTimeout(() => setEzToastNotice(''), 4000);
+        }, 500);
+      };
+
+      const handlePressMove = (e: TouchEvent | MouseEvent) => {
+        if (!longPressTimer) return;
+        const pt = 'touches' in e ? e.touches[0] : e;
+        const dx = Math.abs(pt.clientX - startX);
+        const dy = Math.abs(pt.clientY - startY);
+        if (dx > 8 || dy > 8) {
+          clearTimer();
+        }
+      };
+
+      const handlePressEnd = () => {
+        clearTimer();
+      };
+
+      el.addEventListener('touchstart', handlePressStart, { passive: true });
+      el.addEventListener('touchmove', handlePressMove, { passive: true });
+      el.addEventListener('touchend', handlePressEnd, { passive: true });
+      el.addEventListener('touchcancel', handlePressEnd, { passive: true });
+      el.addEventListener('mousedown', handlePressStart);
+      el.addEventListener('mousemove', handlePressMove);
+      el.addEventListener('mouseup', handlePressEnd);
+    }, 50);
 
     const markerNavData = {
       lat: hqLat,

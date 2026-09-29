@@ -1513,30 +1513,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         )}
 
-        {/* DIRECT ROLE TOGGLE IN NAVBAR HEADER (EZ vs. SUCHER) */}
-        {isAdmin && currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && (
-          <button
-            type="button"
-            onClick={toggleOperationalRole}
-            className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg border text-xs font-mono font-bold transition cursor-pointer shadow-md shrink-0 active:scale-95 ${
-              isEZ
-                ? 'bg-cyan-950/80 hover:bg-cyan-900 text-cyan-200 border-cyan-500/80 ring-1 ring-cyan-500/50'
-                : 'bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border-emerald-500/80 ring-1 ring-emerald-500/50'
-            }`}
-            title={isEZ ? 'Aktuell: In der EZ (Keine Spur). Klicken um zu Sucher zu wechseln' : 'Aktuell: Sucher (Spur aktiv). Klicken um zu EZ zu wechseln'}
-          >
-            <span className="text-sm shrink-0">{isEZ ? '🏢' : '🚶'}</span>
-            <div className="flex flex-col text-left leading-tight">
-              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white">
-                {isEZ ? 'In der EZ' : 'Sucher'}
-              </span>
-              <span className="text-[8px] text-slate-300 font-sans hidden xs:inline">
-                {isEZ ? '→ Zu Sucher' : '→ Zu EZ'}
-              </span>
-            </div>
-          </button>
-        )}
-
         {/* User Profile Lockup & Dropdown */}
         <div className="relative">
           <button
