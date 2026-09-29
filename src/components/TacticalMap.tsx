@@ -1550,24 +1550,23 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       ? `<span class="ml-1 px-1.5 py-0.2 bg-emerald-500 text-slate-950 font-black rounded-full text-[10px] shadow">${ezResponders.length}</span>`
       : '';
 
+    const pinWidth = ezResponders.length > 0 ? 86 : 68;
+    const pinHeight = 36;
     const hqIcon = L.divIcon({
       className: 'custom-hq-marker',
-      html: isStandbyOffice
-        ? `
-          <div class="flex items-center justify-center px-2 py-1 rounded-lg bg-indigo-950 text-indigo-200 border border-indigo-400 font-bold text-xs shadow-xl ring-2 ring-indigo-500/50 whitespace-nowrap">
-            📡 EZ ${responderCountBadge}
+      html: `
+        <div style="display:flex; flex-direction:column; align-items:center; width:${pinWidth}px; height:${pinHeight}px; pointer-events:auto; filter:drop-shadow(0 2px 5px rgba(0,0,0,0.5)); transform:translateZ(0);">
+          <div style="display:flex; align-items:center; justify-content:center; gap:4px; padding:3px 8px; border-radius:10px; background:${isStandbyOffice ? '#1e1b4b' : '#3730a3'}; color:#ffffff; font-weight:800; font-size:11px; white-space:nowrap; border:1.5px solid ${isStandbyOffice ? '#818cf8' : '#ffffff'}; box-shadow:0 2px 6px rgba(0,0,0,0.4); line-height:1.2;">
+            <span>${isStandbyOffice ? '🏢' : '📡'} EZ</span>
+            ${responderCountBadge}
           </div>
-        `
-        : `
-          <div class="relative flex items-center justify-center">
-            <span class="absolute h-10 w-10 rounded-full bg-indigo-500/40 animate-ping"></span>
-            <div class="relative flex items-center justify-center px-2.5 py-1 rounded-xl bg-indigo-700 text-white shadow-xl ring-2 ring-white font-black text-xs whitespace-nowrap">
-              📡 EZ ${responderCountBadge}
-            </div>
-          </div>
-        `,
-      iconSize: [ezResponders.length > 0 ? 82 : 64, 30],
-      iconAnchor: [ezResponders.length > 0 ? 41 : 32, 15],
+          <div style="width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-top:7px solid ${isStandbyOffice ? '#818cf8' : '#ffffff'}; margin-top:-1px;"></div>
+          <div style="width:5px; height:5px; border-radius:50%; background:#ffffff; border:1.5px solid ${isStandbyOffice ? '#818cf8' : '#4338ca'}; margin-top:-2px; box-shadow:0 0 3px rgba(0,0,0,0.8);"></div>
+        </div>
+      `,
+      iconSize: [pinWidth, pinHeight],
+      iconAnchor: [pinWidth / 2, pinHeight],
+      popupAnchor: [0, -pinHeight],
     });
 
     const canManageOps = isUserAdminOrEL(currentUser);
@@ -1714,65 +1713,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     `);
     ezLayerRef.current.addLayer(hqMarker);
 
-    // Direct Mobile Touch-Drag Handler for EZ Marker
-    const markerEl = hqMarker.getElement();
-    if (markerEl && isDraggableHq) {
-      let isTouchDragging = false;
-      let startTouchPt = { x: 0, y: 0 };
-      let dragStarted = false;
-
-      const onTouchStartMarker = (e: TouchEvent) => {
-        if (e.touches.length !== 1) return;
-        startTouchPt = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        dragStarted = false;
-      };
-
-      const onTouchMoveMarker = (e: TouchEvent) => {
-        if (e.touches.length !== 1 || !mapInstanceRef.current) return;
-        const currentTouch = e.touches[0];
-        const dx = Math.abs(currentTouch.clientX - startTouchPt.x);
-        const dy = Math.abs(currentTouch.clientY - startTouchPt.y);
-
-        if (!dragStarted && (dx > 8 || dy > 8)) {
-          dragStarted = true;
-          isTouchDragging = true;
-          mapInstanceRef.current.dragging.disable();
-          markerEl.classList.add('scale-125', 'ring-4', 'ring-emerald-400');
-        }
-
-        if (isTouchDragging) {
-          e.preventDefault();
-          e.stopPropagation();
-          const mapContainer = mapInstanceRef.current.getContainer();
-          const rect = mapContainer.getBoundingClientRect();
-          const pt = L.point(currentTouch.clientX - rect.left, currentTouch.clientY - rect.top);
-          const latlng = mapInstanceRef.current.containerPointToLatLng(pt);
-          hqMarker.setLatLng(latlng);
-        }
-      };
-
-      const onTouchEndMarker = async (e: TouchEvent) => {
-        markerEl.classList.remove('scale-125', 'ring-4', 'ring-emerald-400');
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.dragging.enable();
-        }
-
-        if (isTouchDragging) {
-          e.preventDefault();
-          e.stopPropagation();
-          isTouchDragging = false;
-          dragStarted = false;
-          const finalPos = hqMarker.getLatLng();
-          await applyEzReposition(finalPos.lat, finalPos.lng);
-        }
-      };
-
-      markerEl.addEventListener('touchstart', onTouchStartMarker, { passive: true });
-      window.addEventListener('touchmove', onTouchMoveMarker, { passive: false });
-      window.addEventListener('touchend', onTouchEndMarker, { passive: false });
-      window.addEventListener('touchcancel', onTouchEndMarker, { passive: false });
-    }
-  }, [currentOperation, activeTrackingTest, allUsers, userLocations, currentUser, updateOperation, playAlertSound]);
+    }, [currentOperation, activeTrackingTest, allUsers, userLocations, currentUser, updateOperation, playAlertSound]);
 
   // Render Search Sectors (Suchsektoren)
   useEffect(() => {
