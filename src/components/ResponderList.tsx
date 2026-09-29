@@ -302,7 +302,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                         <div className="font-bold text-xs text-white leading-tight flex items-center gap-1.5">
                           <span>{user.name}</span>
                           <span
-                            className="w-2.5 h-2.5 rounded-full inline-block shrink-0 border border-white/80 shadow-sm"
+                            className="w-3 h-3 rounded-sm inline-block shrink-0 border border-white/80 shadow-sm"
                             style={{ backgroundColor: getUserTrackColor(user, allUsers) }}
                             title={`Suchspur-Farbe: ${getUserTrackColor(user, allUsers)}`}
                           />

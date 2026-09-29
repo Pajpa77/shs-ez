@@ -2571,7 +2571,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           : !item.isOnline
           ? 'border-slate-400 opacity-60'
           : connStatus === 'active'
-          ? 'border-white'
+          ? 'border-sky-400 ring-2 ring-sky-400/50'
           : connStatus === 'stale'
           ? 'border-amber-400 ring-2 ring-amber-400/50'
           : 'border-rose-500 ring-2 ring-rose-500/50';
@@ -2612,19 +2612,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   : `<span class="text-white font-bold text-xs">${escapeHtml(item.user.name.charAt(0))}</span>`
               }
             </div>
-            <!-- Sub-badge with equipment icon -->
-            <div class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full ${isEzCommand ? 'bg-indigo-900 text-white border-indigo-400' : 'bg-[#1E293B] text-xs border border-white/50'} shadow">
-              ${badge.icon}
             </div>
-            <!-- Call sign banner with Sector, Cluster Position & Connection Status -->
-            <div class="absolute top-11 left-1/2 transform -translate-x-1/2 px-2 py-0.5 rounded ${item.isOnline ? 'bg-[#1E293B]/95 text-white' : 'bg-slate-800/90 text-slate-300'} text-[10px] font-semibold border border-slate-700 whitespace-nowrap shadow-md flex items-center gap-1">
-              <span>${safeCallSign}</span>
-              ${ezBadge}
-              ${clusterBadge}
-              ${sectorTag}
-              ${statusBadgeHtml}
-            </div>
-          </div>
         `;
 
         const customIcon = L.divIcon({
