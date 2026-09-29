@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { User, isFirstAdmin, isUserAdmin, isUserEL, isUserAdminOrEL, getUserTrackColor } from '../types';
+import { PocketModeOverlay } from './PocketModeOverlay';
 import { VEREINSBUERO_LOCATION } from '../mockData';
 import {
   Shield,
@@ -212,6 +213,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   } = useRescue();
 
   const [showSarAdminMenu, setShowSarAdminMenu] = useState(false);
+  const [isPocketMode, setIsPocketMode] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showOpDropdown, setShowOpDropdown] = useState(false);
   const [showResponderListDropdown, setShowResponderListDropdown] = useState(false);
@@ -1528,7 +1530,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         )}
 
-        {/* Chat / Funk Schnellzugriff mit Ungelesen-Badge */}
+        
+          {/* Hosentaschen Modus */}
+          <button
+            onClick={() => setIsPocketMode(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600 transition cursor-pointer text-[10px] font-mono font-bold shadow-sm shrink-0"
+            title="Hosentaschen-Modus (Bildschirm verdunkeln und sperren für Akku-sparendes Tracking)"
+          >
+            <span className="hidden sm:inline whitespace-nowrap">HOSENTASCHE</span>
+            <span className="sm:hidden">LOCK</span>
+          </button>
+
+          {/* Chat / Funk Schnellzugriff mit Ungelesen-Badge */}
         <div className="relative">
           <button
             onClick={() => setActiveTab('chat')}
@@ -1677,6 +1690,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
         </div>
       </div>
+    
+      {isPocketMode && <PocketModeOverlay onUnlock={() => setIsPocketMode(false)} />}
+
     </header>
   );
 };

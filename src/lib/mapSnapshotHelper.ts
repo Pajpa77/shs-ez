@@ -120,7 +120,8 @@ function getEquipmentIcon(equipment?: string[]): string {
 export async function generateTacticalMapWithRealMap(
   op: SearchOperation,
   userLocations?: Record<string, UserLocationState>,
-  allUsers?: User[]
+  allUsers?: User[],
+  filterUserId?: string
 ): Promise<string> {
   const CANVAS_W = 1400;
   const CANVAS_H = 920;
@@ -148,26 +149,24 @@ export async function generateTacticalMapWithRealMap(
 
   // 1a. Historical / Archived tracks (e.g. Suchphase 1)
   if (op.archivedTracks) {
-    op.archivedTracks.forEach((t) => {
-      if (!t.points || t.points.length < 2) return;
-      const validPoints = t.points.filter(
-        (p) => typeof p.lat === 'number' && typeof p.lng === 'number' && !isNaN(p.lat) && !isNaN(p.lng)
-      );
-      if (validPoints.length < 2) return;
+      op.archivedTracks.forEach((t) => {
+        if (filterUserId && t.userId !== filterUserId) return;
+        const validPoints = t.points.filter((p) => typeof p.lat === 'number' && typeof p.lng === 'number');
+        if (validPoints.length < 2) return;
 
-      const user = usersMap.get(t.userId);
-      const color = t.color || getUserTrackColor(user || t.userId, resolvedUsers);
+        let totalDist = 0;
+        for (let i = 1; i < validPoints.length; i++) {
+          const d = L.latLng(validPoints[i - 1].lat, validPoints[i - 1].lng).distanceTo(
+            L.latLng(validPoints[i].lat, validPoints[i].lng)
+          );
+          const tDiff = validPoints[i].timestamp - validPoints[i - 1].timestamp;
+          if (d <= 1200 && tDiff <= 15 * 60 * 1000) totalDist += d;
+        }
 
-      let totalDist = 0;
-      for (let i = 1; i < validPoints.length; i++) {
-        const d = calculateDistanceMeters(validPoints[i - 1].lat, validPoints[i - 1].lng, validPoints[i].lat, validPoints[i].lng);
-        const tDiff = validPoints[i - 1].timestamp && validPoints[i].timestamp
-          ? Math.abs(new Date(validPoints[i].timestamp).getTime() - new Date(validPoints[i - 1].timestamp).getTime())
-          : 0;
-        if (d <= 1200 && tDiff <= 15 * 60 * 1000) totalDist += d;
-      }
+        const user = usersMap.get(t.userId);
+        const color = user ? getUserTrackColor(user, resolvedUsers) : '#94a3b8';
 
-      tracksList.push({
+        tracksList.push({
         id: t.id || `archived-${t.userId}-${Date.now()}`,
         userId: t.userId,
         userName: t.userName || user?.name || 'Einsatzkraft',
@@ -184,43 +183,26 @@ export async function generateTacticalMapWithRealMap(
 
   // 1b. Live tracks (Phase 2 if user already had archived track, else active track)
   if (userLocations) {
-    Object.entries(userLocations).forEach(([uId, locState]) => {
-      const history = (locState.trackHistory || []).filter(
-        (p) => typeof p.lat === 'number' && typeof p.lng === 'number' && !isNaN(p.lat) && !isNaN(p.lng) &&
-               (!p.operationId || !op.id || p.operationId === op.id)
-      );
-      if (history.length < 2) return;
+      const isPhase2 = op.archivedTracks && op.archivedTracks.length > 0;
+      Object.entries(userLocations).forEach(([uId, locState]) => {
+        if (filterUserId && uId !== filterUserId) return;
+        const activePoints = (locState.activeTrack || []).filter(
+          (p) => typeof p.lat === 'number' && typeof p.lng === 'number'
+        );
+        if (activePoints.length >= 2) {
+          let totalDist = 0;
+          for (let i = 1; i < activePoints.length; i++) {
+            const d = L.latLng(activePoints[i - 1].lat, activePoints[i - 1].lng).distanceTo(
+              L.latLng(activePoints[i].lat, activePoints[i].lng)
+            );
+            const tDiff = activePoints[i].timestamp - activePoints[i - 1].timestamp;
+            if (d <= 1200 && tDiff <= 15 * 60 * 1000) totalDist += d;
+          }
 
-      const user = usersMap.get(uId);
-      const color = getUserTrackColor(user || uId, resolvedUsers);
+          const user = usersMap.get(uId);
+          const color = user ? getUserTrackColor(user, resolvedUsers) : '#94a3b8';
 
-      // Check if user already has an archived track from previous phase
-      const archivedForUser = op.archivedTracks?.find((at) => at.userId === uId);
-      let activePoints = history;
-      let isPhase2 = false;
-
-      if (archivedForUser && archivedForUser.points.length > 0) {
-        const lastArchivedTime = new Date(archivedForUser.points[archivedForUser.points.length - 1].timestamp).getTime();
-        const newer = history.filter((p) => new Date(p.timestamp).getTime() > lastArchivedTime + 2000);
-        if (newer.length >= 2) {
-          activePoints = newer;
-          isPhase2 = true;
-        } else {
-          // Entirely covered by archived track
-          return;
-        }
-      }
-
-      let totalDist = 0;
-      for (let i = 1; i < activePoints.length; i++) {
-        const d = calculateDistanceMeters(activePoints[i - 1].lat, activePoints[i - 1].lng, activePoints[i].lat, activePoints[i].lng);
-        const tDiff = activePoints[i - 1].timestamp && activePoints[i].timestamp
-          ? Math.abs(new Date(activePoints[i].timestamp).getTime() - new Date(activePoints[i - 1].timestamp).getTime())
-          : 0;
-        if (d <= 1200 && tDiff <= 15 * 60 * 1000) totalDist += d;
-      }
-
-      tracksList.push({
+          tracksList.push({
         id: `live-${uId}`,
         userId: uId,
         userName: user?.name || 'Einsatzkraft',
@@ -232,6 +214,7 @@ export async function generateTacticalMapWithRealMap(
         isLive: locState.isLive ?? true,
         phaseLabel: isPhase2 ? 'Suchphase 2 (Aktiv)' : 'Suchphase (Aktiv)',
       });
+        }
     });
   }
 
@@ -963,12 +946,13 @@ export function generateTacticalCanvasFallback(
 export async function captureTacticalMapScreenshot(
   fallbackOperation?: SearchOperation | null,
   userLocations?: Record<string, UserLocationState>,
-  allUsers?: User[]
+  allUsers?: User[],
+  filterUserId?: string
 ): Promise<string | null> {
   // If an operation is provided, always generate the high-res crisp OSM map snapshot!
   if (fallbackOperation) {
     try {
-      const snap = await generateTacticalMapWithRealMap(fallbackOperation, userLocations, allUsers);
+      const snap = await generateTacticalMapWithRealMap(fallbackOperation, userLocations, allUsers, filterUserId);
       if (snap && snap.startsWith('data:image')) {
         return snap;
       }
@@ -1001,7 +985,7 @@ export async function captureTacticalMapScreenshot(
   }
 
   if (fallbackOperation) {
-    return generateTacticalCanvasFallback(fallbackOperation, userLocations, allUsers);
+    return generateTacticalCanvasFallback(fallbackOperation, userLocations, allUsers, filterUserId);
   }
 
   if (fallbackOperation?.mapSnapshotUrl && fallbackOperation.mapSnapshotUrl.startsWith('data:image')) {
