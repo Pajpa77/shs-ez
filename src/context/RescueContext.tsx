@@ -1973,7 +1973,7 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               if (!cloudOp) {
                 merged.push(cleanOperation(localOp));
               } else {
-                merged.push(cleanOperation({ ...localOp, ...cloudOp }));
+                merged.push(mergeOperations(localOp, cloudOp));
               }
             });
             cloudOps.forEach((cloudOp) => {
@@ -2067,7 +2067,22 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!isFirebaseConfigured) return;
     const payload = serializeOperationForFirestore(op);
     safeFirestoreWrite(
-      () => setDoc(doc(db, 'operations', op.id), payload, { merge: true }),
+      async () => {
+        try {
+          await setDoc(doc(db, 'operations', op.id), payload, { merge: true });
+        } catch (err: any) {
+          // If Firestore rejects due to document size limit (1MB), strip the heavy base64 strings
+          console.warn('[RescueContext] Firestore write failed. Attempting to save stripped operation...', err);
+          const strippedPayload = serializeOperationForFirestore({
+            ...op,
+            mapSnapshots: [],
+            mapSnapshotUrl: '',
+            archivedTracks: [],
+            logs: op.logs?.map(l => ({ ...l, snapshotUrl: undefined })) || []
+          });
+          await setDoc(doc(db, 'operations', op.id), strippedPayload, { merge: true });
+        }
+      },
       'operations'
     );
   }, []);
