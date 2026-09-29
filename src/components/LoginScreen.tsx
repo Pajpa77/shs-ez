@@ -830,15 +830,15 @@ export const LoginScreen: React.FC = () => {
                                           <span>🚶</span> Als Sucher mitlaufen
                                         </span>
                                         <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">
-                                          Im Feld
+                                          Sucher
                                         </span>
                                       </div>
                                       <p className="text-[10px] text-blue-100 font-sans leading-tight mt-1">
-                                        Führungskraft im Gelände. <span className="text-emerald-300 font-bold">Trackingspur (Linie) wird aufgezeichnet</span>.
+                                        Führungskraft als Sucher. <span className="text-emerald-300 font-bold">Trackingspur (Linie) wird aufgezeichnet</span>.
                                       </p>
                                     </div>
                                     <div className="w-full py-1.5 px-2 rounded-lg bg-emerald-600 group-hover:bg-emerald-500 text-white font-bold text-[10px] uppercase font-mono text-center flex items-center justify-center gap-1 mt-1">
-                                      <span>Im Feld {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
+                                      <span>Als Sucher {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
                                       <ArrowRight className="w-3 h-3" />
                                     </div>
                                   </button>

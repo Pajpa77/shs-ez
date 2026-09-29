@@ -225,6 +225,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     addMultipleSectors,
     reportFinding,
     showConfirmModal,
+    operationalRole,
+    toggleOperationalRole,
   } = useRescue();
 
   const currentOperation = propOperation !== undefined ? propOperation : globalOperation;
@@ -4508,7 +4510,36 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 )}
               </div>
 
-              {/* Primary Action Button (Universal Mobile / OS Navi Launch) */}
+              {/* OPERATIONAL ROLE SWITCHER FOR ADMIN / EL IN EZ MODAL */}
+                {isAdminOrEL && currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && (
+                  <div className="mb-3 p-3 rounded-xl bg-slate-900 border border-amber-500/50 flex items-center justify-between font-mono text-xs shadow-inner">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-lg shrink-0">{operationalRole === 'ez_command' ? '🏢' : '🚶'}</span>
+                      <div className="min-w-0">
+                        <div className="font-bold text-white text-xs truncate">
+                          {operationalRole === 'ez_command' ? 'Status: In der EZ' : 'Status: Sucher'}
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate">
+                          {operationalRole === 'ez_command' ? 'Keine Trackingspur auf Karte' : 'Trackingspur wird live aufgezeichnet'}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleOperationalRole()}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition border shadow cursor-pointer shrink-0 ${
+                        operationalRole === 'ez_command'
+                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400'
+                          : 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-400'
+                      }`}
+                      title={operationalRole === 'ez_command' ? 'Zu Sucher wechseln (Spur aufzeichnen)' : 'In die EZ wechseln (Spur pausieren)'}
+                    >
+                      {operationalRole === 'ez_command' ? '🚶 Zu Sucher' : '🏢 Zu EZ'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Primary Action Button (Universal Mobile / OS Navi Launch) */}
               <div>
                 <button
                   onClick={() => handleOpenNavigation(ezNavData.lat, ezNavData.lng, ezNavData.title)}

@@ -148,7 +148,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <span className="text-base">{isEZ ? '🏢' : '🚶'}</span>
               <div>
                 <div className="font-bold text-white text-[11px]">
-                  {isEZ ? 'Status: In der EZ' : 'Status: Im Gelände (Sucher)'}
+                  {isEZ ? 'Status: In der EZ' : 'Status: Sucher'}
                 </div>
                 <div className="text-[9px] text-slate-400">
                   {isEZ ? 'Pins aggregiert • Keine Linie' : 'Spur wird live aufgezeichnet'}
@@ -164,9 +164,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400'
                   : 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-400'
               }`}
-              title={isEZ ? 'Ins Gelände wechseln (Spur aufzeichnen)' : 'In die EZ wechseln (Spur pausieren)'}
+              title={isEZ ? 'Zu Sucher wechseln (Spur aufzeichnen)' : 'In die EZ wechseln (Spur pausieren)'}
             >
-              {isEZ ? '🚶 Zu Feld' : '🏢 Zu EZ'}
+              {isEZ ? '🚶 Zu Sucher' : '🏢 Zu EZ'}
             </button>
           </div>
         )}

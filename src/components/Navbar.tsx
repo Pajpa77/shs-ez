@@ -388,14 +388,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </span>
                 </div>
 
-                {/* MODE SWITCHER FOR LEADERSHIP (EZ vs. FELD) */}
-                {isAdmin && currentOperation && currentOperation.status === 'active' && (
+                {/* MODE SWITCHER FOR LEADERSHIP (EZ vs. SUCHER) */}
+                {isAdmin && currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && (
                   <div className="mb-2 p-2 rounded-xl bg-slate-900/95 border border-amber-500/50 flex items-center justify-between font-mono">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-base shrink-0">{isEZ ? '🏢' : '🚶'}</span>
                       <div className="min-w-0">
                         <div className="font-bold text-white text-[11px] truncate">
-                          {isEZ ? 'Status: In der EZ' : 'Status: Im Gelände (Sucher)'}
+                          {isEZ ? 'Status: In der EZ' : 'Status: Sucher'}
                         </div>
                         <div className="text-[9px] text-slate-400 truncate">
                           {isEZ ? 'Keine Trackingspur auf Karte' : 'Trackingspur wird live aufgezeichnet'}
@@ -410,9 +410,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                           ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400'
                           : 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-400'
                       }`}
-                      title={isEZ ? 'Ins Gelände wechseln (Spur aufzeichnen)' : 'In die EZ wechseln (Spur pausieren)'}
+                      title={isEZ ? 'Zu Sucher wechseln (Spur aufzeichnen)' : 'In die EZ wechseln (Spur pausieren)'}
                     >
-                      {isEZ ? '🚶 Zu Feld' : '🏢 Zu EZ'}
+                      {isEZ ? '🚶 Zu Sucher' : '🏢 Zu EZ'}
                     </button>
                   </div>
                 )}
@@ -1513,6 +1513,30 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         )}
 
+        {/* DIRECT ROLE TOGGLE IN NAVBAR HEADER (EZ vs. SUCHER) */}
+        {isAdmin && currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && (
+          <button
+            type="button"
+            onClick={toggleOperationalRole}
+            className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg border text-xs font-mono font-bold transition cursor-pointer shadow-md shrink-0 active:scale-95 ${
+              isEZ
+                ? 'bg-cyan-950/80 hover:bg-cyan-900 text-cyan-200 border-cyan-500/80 ring-1 ring-cyan-500/50'
+                : 'bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border-emerald-500/80 ring-1 ring-emerald-500/50'
+            }`}
+            title={isEZ ? 'Aktuell: In der EZ (Keine Spur). Klicken um zu Sucher zu wechseln' : 'Aktuell: Sucher (Spur aktiv). Klicken um zu EZ zu wechseln'}
+          >
+            <span className="text-sm shrink-0">{isEZ ? '🏢' : '🚶'}</span>
+            <div className="flex flex-col text-left leading-tight">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-white">
+                {isEZ ? 'In der EZ' : 'Sucher'}
+              </span>
+              <span className="text-[8px] text-slate-300 font-sans hidden xs:inline">
+                {isEZ ? '→ Zu Sucher' : '→ Zu EZ'}
+              </span>
+            </div>
+          </button>
+        )}
+
         {/* User Profile Lockup & Dropdown */}
         <div className="relative">
           <button
@@ -1581,6 +1605,35 @@ export const Navbar: React.FC<NavbarProps> = ({
                     KFZ: {currentUser?.licensePlate || 'k.A.'} • {isFirstAdmin(currentUser) ? 'First Admin & App-Owner (unantastbar)' : currentUser?.role === 'admin' ? 'ELZ (Admin)' : 'Einsatzkraft'}
                   </div>
                 </div>
+
+                {/* MODE SWITCHER IN USER MENU (EZ vs. SUCHER) */}
+                {isAdmin && currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && (
+                  <div className="mb-2 p-2 rounded-xl bg-slate-900/95 border border-amber-500/50 flex items-center justify-between font-mono">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-base shrink-0">{isEZ ? '🏢' : '🚶'}</span>
+                      <div className="min-w-0">
+                        <div className="font-bold text-white text-[11px] truncate">
+                          {isEZ ? 'Status: In der EZ' : 'Status: Sucher'}
+                        </div>
+                        <div className="text-[9px] text-slate-400 truncate">
+                          {isEZ ? 'Keine Trackingspur auf Karte' : 'Trackingspur wird live aufgezeichnet'}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleOperationalRole()}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition border shadow cursor-pointer shrink-0 ${
+                        isEZ
+                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400'
+                          : 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-400'
+                      }`}
+                      title={isEZ ? 'Zu Sucher wechseln (Spur aufzeichnen)' : 'In die EZ wechseln (Spur pausieren)'}
+                    >
+                      {isEZ ? '🚶 Zu Sucher' : '🏢 Zu EZ'}
+                    </button>
+                  </div>
+                )}
 
                 <div className="space-y-1 mb-2 font-mono">
                   <button
