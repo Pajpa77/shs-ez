@@ -206,6 +206,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     chatMessages,
     sendChatMessage,
     markChatAsRead,
+    markDmAsRead,
+    unreadDmCounts,
     lastReadChatTimestamp,
     userLocations,
     playAlertSound,
@@ -652,6 +654,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
   const selectChannel = (channelId: string) => {
     setActiveChannel(channelId);
     setMobileView('chat');
+    // Wenn ein User-Direktkanal geöffnet wird: DMs von diesem User als gelesen markieren
+    const isUserChannel = allUsers.some((u) => u.id === channelId);
+    if (isUserChannel) {
+      markDmAsRead(channelId);
+    }
   };
 
   // ─── Channel Sidebar Content ──────────────────────────────────────────────
@@ -850,6 +857,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
               {filteredResponders.map((user) => {
                 const isLive = userLocations[user.id]?.isLive ?? user.isActive;
                 const isSelected = activeChannel === user.id;
+                const dmCount = unreadDmCounts[user.id] || 0;
 
                 return (
                   <button
@@ -859,6 +867,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                     className={`w-full flex items-center justify-between p-2.5 rounded-xl transition cursor-pointer text-left ${
                       isSelected
                         ? 'bg-blue-600 text-white font-bold shadow'
+                        : dmCount > 0
+                        ? 'bg-blue-950/60 hover:bg-blue-900/60 text-slate-100 ring-1 ring-blue-500/60'
                         : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
                     }`}
                   >
@@ -874,6 +884,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                             isLive ? 'bg-emerald-500' : 'bg-slate-500'
                           }`}
                         />
+                        {/* DM-Unread-Badge */}
+                        {dmCount > 0 && !isSelected && (
+                          <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center border border-slate-900 animate-pulse z-10">
+                            {dmCount > 9 ? '9+' : dmCount}
+                          </span>
+                        )}
                       </div>
                       <div className="truncate">
                         <div className="font-bold truncate leading-tight flex items-center gap-1 text-sm">
@@ -887,10 +903,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                         </div>
                       </div>
                     </div>
-                    {isSelected && <ChevronRight className="w-4 h-4 shrink-0 opacity-70" />}
+                    {dmCount > 0 && !isSelected ? (
+                      <span className="text-[10px] font-bold text-blue-300 shrink-0">💬 Neu</span>
+                    ) : isSelected ? (
+                      <ChevronRight className="w-4 h-4 shrink-0 opacity-70" />
+                    ) : null}
                   </button>
                 );
               })}
+
             </div>
           </div>
         )}

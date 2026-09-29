@@ -1513,7 +1513,31 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         )}
 
+        {/* Chat / Funk Schnellzugriff mit Ungelesen-Badge */}
+        <div className="relative">
+          <button
+            onClick={() => setActiveTab('chat')}
+            className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-mono font-bold transition cursor-pointer shadow-sm shrink-0 ${
+              activeTab === 'chat'
+                ? 'bg-blue-700 text-white border-blue-500'
+                : unreadChatCount > 0
+                ? 'bg-red-950/80 hover:bg-red-900 text-red-200 border-red-600/80'
+                : 'bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border-blue-700/60'
+            }`}
+            title={unreadChatCount > 0 ? `${unreadChatCount} ungelesene Nachrichten` : 'Einsatzfunk / Chat öffnen'}
+          >
+            <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline whitespace-nowrap">FUNK</span>
+            {unreadChatCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-slate-900 shadow-lg z-10 animate-bounce">
+                {unreadChatCount > 99 ? '99+' : unreadChatCount}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* User Profile Lockup & Dropdown */}
+
         <div className="relative">
           <button
             onClick={() => {

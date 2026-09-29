@@ -172,8 +172,12 @@ interface RescueContextType {
   // Chat
   chatMessages: ChatMessage[];
   unreadChatCount: number;
+  /** Anzahl ungelesener Direktnachrichten pro senderId – für DM-Badges auf User-Buttons */
+  unreadDmCounts: Record<string, number>;
   lastReadChatTimestamp: number;
   markChatAsRead: () => void;
+  /** Nur DMs an mich als gelesen markieren die von einem bestimmten User kommen */
+  markDmAsRead: (fromUserId: string) => void;
   sendChatMessage: (data: {
     text: string;
     channel: string;
@@ -984,6 +988,10 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const isRelevantOp =
         m.operationId === 'general' ||
         (currentOperation && m.operationId === currentOperation.id);
+      // DMs: nur zählen wenn ich der Empfänger bin
+      if (m.isDirect) {
+        return isRelevantOp && msgTime > lastReadChatTimestamp && m.recipientId === currentUser?.id;
+      }
       return (
         isRelevantOp &&
         msgTime > lastReadChatTimestamp &&
@@ -991,6 +999,71 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       );
     }).length;
   }, [chatMessages, lastReadChatTimestamp, currentUser?.id, currentOperation?.id]);
+
+  /** Ungelesene DMs pro senderId – für rote Badges auf User-Buttons im ChatPanel */
+  const [dmReadTimestamps, setDmReadTimestamps] = useState<Record<string, number>>(() => {
+    try {
+      const stored = localStorage.getItem('rescue_dm_read_timestamps_v1');
+      return stored ? JSON.parse(stored) : {};
+    } catch { return {}; }
+  });
+
+  const unreadDmCounts = useMemo<Record<string, number>>(() => {
+    const counts: Record<string, number> = {};
+    chatMessages.forEach((m) => {
+      if (!m.isDirect || m.recipientId !== currentUser?.id) return;
+      const isRelevantOp =
+        m.operationId === 'general' ||
+        (currentOperation && m.operationId === currentOperation.id);
+      if (!isRelevantOp) return;
+      const msgTime = new Date(m.timestamp).getTime();
+      const lastRead = dmReadTimestamps[m.senderId] || 0;
+      if (msgTime > lastRead) {
+        counts[m.senderId] = (counts[m.senderId] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [chatMessages, dmReadTimestamps, currentUser?.id, currentOperation?.id]);
+
+  const markDmAsRead = useCallback((fromUserId: string) => {
+    const now = Date.now();
+    setDmReadTimestamps((prev) => {
+      const next = { ...prev, [fromUserId]: now };
+      try { localStorage.setItem('rescue_dm_read_timestamps_v1', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  // Browser-Notification + Vibration bei eingehenden DMs an den aktuellen User
+  const prevChatLengthForDmRef = useRef<number>(0);
+  useEffect(() => {
+    const msgs = chatMessages;
+    if (msgs.length <= prevChatLengthForDmRef.current) {
+      prevChatLengthForDmRef.current = msgs.length;
+      return;
+    }
+    const newMsgs = msgs.slice(prevChatLengthForDmRef.current);
+    prevChatLengthForDmRef.current = msgs.length;
+
+    newMsgs.forEach((m) => {
+      if (!m.isDirect || m.recipientId !== currentUser?.id || m.senderId === currentUser?.id) return;
+      // Vibration (Mobile)
+      if ('vibrate' in navigator) {
+        try { navigator.vibrate([150, 80, 150, 80, 300]); } catch {}
+      }
+      // Browser Push-Notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(`💬 Direktnachricht von ${m.senderName || m.senderCallSign || 'Unbekannt'}`, {
+            body: m.isVoiceMessage ? '🎙️ CB-Sprachnachricht' : (m.text || '(Anhang)'),
+            icon: '/assets/icon-192.png',
+            badge: '/assets/icon-192.png',
+            tag: `dm-${m.senderId}`, // ersetzt ältere Notification vom selben Sender
+          });
+        } catch {}
+      }
+    });
+  }, [chatMessages, currentUser?.id]);
 
   const isOperationActive = Boolean(currentOperation && currentOperation.status === 'active');
   const isOperationPaused = Boolean(currentOperation && currentOperation.status === 'paused');
@@ -5510,8 +5583,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
         chatMessages,
         unreadChatCount,
+        unreadDmCounts,
         lastReadChatTimestamp,
         markChatAsRead,
+        markDmAsRead,
         sendChatMessage,
         sendEmergencyAlert,
         clearChatHistory,
