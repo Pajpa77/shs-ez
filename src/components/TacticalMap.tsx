@@ -2566,7 +2566,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           ? 'bg-amber-500/40 animate-pulse'
           : 'bg-rose-500/30';
 
-        const avatarBorderClass = isPaused
+        
+        const isOpRunning = currentOperation?.status === 'active';
+        const avatarBorderClass = (!isOpRunning && currentOperation?.status !== 'paused')
+          ? 'border-white ring-2 ring-white/50'
+          : isPaused
           ? 'border-amber-400 ring-2 ring-amber-400/40'
           : !item.isOnline
           ? 'border-slate-400 opacity-60'

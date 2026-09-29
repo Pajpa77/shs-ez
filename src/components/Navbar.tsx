@@ -683,58 +683,66 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 space-y-1.5">
                       <div className="text-[10px] font-mono text-slate-400 uppercase font-bold flex items-center justify-between">
                         <span>Mein Status</span>
-                        <span className="font-bold">
-                          {currentUser?.arrivalStatus === 'ready' || currentUser?.arrivalStatus === 'ez_reached' ? (
-                            <span className="text-emerald-400">🟢 Bereit in EZ / Feld</span>
-                          ) : currentUser?.arrivalStatus === 'near_ez' ? (
-                            <span className="text-amber-300">🟡 Im Einsatzbereich (≤500m)</span>
-                          ) : (
-                            <span className="text-rose-400">🔴 In Anfahrt (&gt;500m)</span>
-                          )}
-                        </span>
+                          <span className="font-bold">
+                            {!(currentOperation?.status === 'active' || currentOperation?.status === 'paused') ? (
+                              <span className="text-slate-300">👤 Eingeloggt (Bereitschaft)</span>
+                            ) : currentUser?.arrivalStatus === 'ready' || currentUser?.arrivalStatus === 'ez_reached' ? (
+                              <span className="text-emerald-400">🟢 Bereit in EZ / Feld</span>
+                            ) : currentUser?.arrivalStatus === 'near_ez' ? (
+                              <span className="text-amber-300">🟡 Im Einsatzbereich (≤500m)</span>
+                            ) : (
+                              <span className="text-rose-400">🚨 In Anfahrt (&gt;500m)</span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 pt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (currentUser && (currentOperation?.status === 'active' || currentOperation?.status === 'paused')) setUserArrivalStatus(currentUser.id, 'in_transit');
+                            }}
+                            disabled={!(currentOperation?.status === 'active' || currentOperation?.status === 'paused')}
+                            className={`py-1.5 px-1 rounded-lg text-[9px] font-mono font-bold transition border cursor-pointer ${
+                              !(currentOperation?.status === 'active' || currentOperation?.status === 'paused') ? 'opacity-50 cursor-not-allowed bg-slate-800 text-slate-500 border-slate-700' :
+                              currentUser?.arrivalStatus === 'in_transit' || !currentUser?.arrivalStatus
+                                ? 'bg-rose-700 text-white border-rose-400 shadow'
+                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+                            }`}
+                          >
+                            🚨 Anfahrt
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (currentUser && (currentOperation?.status === 'active' || currentOperation?.status === 'paused')) setUserArrivalStatus(currentUser.id, 'near_ez');
+                            }}
+                            disabled={!(currentOperation?.status === 'active' || currentOperation?.status === 'paused')}
+                            className={`py-1.5 px-1 rounded-lg text-[9px] font-mono font-bold transition border cursor-pointer ${
+                              !(currentOperation?.status === 'active' || currentOperation?.status === 'paused') ? 'opacity-50 cursor-not-allowed bg-slate-800 text-slate-500 border-slate-700' :
+                              currentUser?.arrivalStatus === 'near_ez'
+                                ? 'bg-amber-600 text-white border-amber-400 shadow'
+                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+                            }`}
+                          >
+                            🟡 Im Gebiet
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (currentUser && (currentOperation?.status === 'active' || currentOperation?.status === 'paused')) setUserArrivalStatus(currentUser.id, 'ready');
+                            }}
+                            disabled={!(currentOperation?.status === 'active' || currentOperation?.status === 'paused')}
+                            className={`py-1.5 px-1 rounded-lg text-[9px] font-mono font-bold transition border cursor-pointer ${
+                              !(currentOperation?.status === 'active' || currentOperation?.status === 'paused') ? 'opacity-50 cursor-not-allowed bg-slate-800 text-slate-500 border-slate-700' :
+                              currentUser?.arrivalStatus === 'ready' || currentUser?.arrivalStatus === 'ez_reached'
+                                ? 'bg-emerald-600 text-white border-emerald-400 shadow'
+                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+                            }`}
+                          >
+                            🟢 Bereit
+                          </button>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-1 pt-0.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (currentUser) setUserArrivalStatus(currentUser.id, 'in_transit');
-                          }}
-                          className={`py-1.5 px-1 rounded-lg text-[9px] font-mono font-bold transition border cursor-pointer ${
-                            currentUser?.arrivalStatus === 'in_transit' || !currentUser?.arrivalStatus
-                              ? 'bg-rose-700 text-white border-rose-400 shadow'
-                              : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
-                          }`}
-                        >
-                          🔴 Anfahrt
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (currentUser) setUserArrivalStatus(currentUser.id, 'near_ez');
-                          }}
-                          className={`py-1.5 px-1 rounded-lg text-[9px] font-mono font-bold transition border cursor-pointer ${
-                            currentUser?.arrivalStatus === 'near_ez'
-                              ? 'bg-amber-600 text-white border-amber-400 shadow'
-                              : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
-                          }`}
-                        >
-                          🟡 Am Ort
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (currentUser) setUserArrivalStatus(currentUser.id, 'ready');
-                          }}
-                          className={`py-1.5 px-1 rounded-lg text-[9px] font-mono font-bold transition border cursor-pointer ${
-                            currentUser?.arrivalStatus === 'ready' || currentUser?.arrivalStatus === 'ez_reached'
-                              ? 'bg-emerald-600 text-white border-emerald-400 shadow'
-                              : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
-                          }`}
-                        >
-                          🟢 Bereit
-                        </button>
-                      </div>
-                    </div>
 
                     {/* 4. Mein Profil, Ausrüstung & KFZ */}
                     {onOpenProfileModal && (
