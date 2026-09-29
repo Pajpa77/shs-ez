@@ -3118,20 +3118,6 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               <span>EZ</span>
             </button>
 
-            {canManageOps && mode !== 'archive' && (
-              <button
-                onClick={() => setIsPlacingEzMode((prev) => !prev)}
-                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border font-mono ${
-                  isPlacingEzMode
-                    ? 'bg-indigo-600 text-white border-white animate-pulse'
-                    : 'bg-indigo-950/70 text-indigo-300 border-indigo-700/60'
-                }`}
-                title="Einsatzzentrale auf Karte platzieren (oder langes Drücken)"
-              >
-                <MapPin className="w-3.5 h-3.5 text-indigo-400" />
-                <span>EZ Ort</span>
-              </button>
-            )}
 
             <button
               onClick={() => setIsWeatherModalOpenMobile(true)}
