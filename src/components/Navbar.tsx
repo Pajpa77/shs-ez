@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { User, isFirstAdmin, isUserAdmin, isUserEL, isUserAdminOrEL } from '../types';
+import { User, isFirstAdmin, isUserAdmin, isUserEL, isUserAdminOrEL, getUserTrackColor } from '../types';
 import { VEREINSBUERO_LOCATION } from '../mockData';
 import {
   Shield,
@@ -1268,15 +1268,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {[...allUsers].sort((a, b) => (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0)).map((user) => {
                         const isOnline = user.isActive;
                         const status = getUserArrivalStatus(user.id);
-                        let statusBadge = { label: 'In Bereitschaft', color: 'bg-slate-800 text-slate-400 border-slate-700', icon: '⚪' };
+                        let statusBadge = { label: 'In Bereitschaft', color: 'bg-slate-800 text-slate-400 border-slate-700' };
 
                         if (isOnline) {
                           if (status === 'ready') {
-                            statusBadge = { label: 'Vor Ort / Im Einsatz', color: 'bg-emerald-950 text-emerald-300 border-emerald-700', icon: '🟢' };
-                          } else if (status === 'ez_reached') { statusBadge = { label: 'EZ erreicht', color: 'bg-amber-500/20 text-amber-300 border-amber-500/50', icon: '📍' }; } else if (status === 'near_ez') { statusBadge = { label: 'Im Einsatzbereich (< 0.5km)', color: 'bg-amber-500 text-white border-amber-600', icon: '📍' }; }
+                            statusBadge = { label: 'Vor Ort / Im Einsatz', color: 'bg-emerald-950 text-emerald-300 border-emerald-700' };
+                          } else if (status === 'ez_reached') { statusBadge = { label: 'EZ erreicht', color: 'bg-amber-500/20 text-amber-300 border-amber-500/50' }; } else if (status === 'near_ez') { statusBadge = { label: 'Im Einsatzbereich (< 0.5km)', color: 'bg-amber-500 text-white border-amber-600' }; }
                           else {
                             // in_transit
-                            statusBadge = { label: 'Auf Anfahrt', color: 'bg-red-950/60 text-red-300 border-red-700', icon: '🔴' };
+                            statusBadge = { label: 'Auf Anfahrt', color: 'bg-red-950/60 text-red-300 border-red-700' };
                           }
                         }
 
@@ -1286,7 +1286,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             className="p-2 rounded-xl bg-slate-900/80 border border-slate-700/80 flex items-center justify-between text-xs"
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isOnline ? '#10b981' : '#64748b' }}></span>
+                              <span className="w-5 h-2 rounded-sm shrink-0 border border-slate-700 shadow-sm" style={{ backgroundColor: isOnline ? getUserTrackColor(user, allUsers) : '#64748b' }}></span>
                               <div className="min-w-0">
                                 <div className="font-bold text-white text-xs truncate flex items-center gap-1">
                                   <span>{user.name}</span>
@@ -1300,7 +1300,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               </div>
                             </div>
                             <span className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border shrink-0 ${statusBadge.color}`}>
-                              {statusBadge.icon} {statusBadge.label}
+                              {statusBadge.label}
                             </span>
                           </div>
                         );
