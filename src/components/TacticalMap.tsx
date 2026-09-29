@@ -138,6 +138,7 @@ interface TileLayerConfig {
   name: string;
   url: string;
   overlayUrl?: string;
+  roadsUrl?: string;
   attribution: string;
   subdomains?: string[] | string;
   maxZoom?: number;
@@ -168,9 +169,9 @@ const TILE_LAYERS: Record<'osm' | 'hybrid' | 'satellite' | 'topo', TileLayerConf
   hybrid: {
     name: 'Satellit + Straßennamen',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    overlayUrl: 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}.png',
-    attribution: '&copy; Esri, Maxar, &copy; OpenStreetMap',
-    subdomains: ['a', 'b', 'c', 'd'],
+    roadsUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+    overlayUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; Esri, Maxar, Earthstar Geographics',
     maxZoom: 19,
   },
 };
@@ -864,22 +865,33 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     const config = TILE_LAYERS[key] || TILE_LAYERS.osm;
     const maxNative = config.maxZoom || 19;
     if (key === 'hybrid' && 'overlayUrl' in config && config.overlayUrl) {
-      const baseSat = L.tileLayer(config.url, {
+      const layers = [];
+      layers.push(L.tileLayer(config.url, {
         attribution: config.attribution,
         maxZoom: 22,
         maxNativeZoom: maxNative,
         crossOrigin: true,
-      });
-      const labelsOverlay = L.tileLayer(config.overlayUrl, {
-        subdomains: config.subdomains || ['a', 'b', 'c', 'd'],
+      }));
+      if (config.roadsUrl) {
+        layers.push(L.tileLayer(config.roadsUrl, {
+          maxZoom: 22,
+          maxNativeZoom: maxNative,
+          zIndex: 2,
+          className: 'pointer-events-none',
+          opacity: 1,
+          crossOrigin: true,
+        }));
+      }
+      layers.push(L.tileLayer(config.overlayUrl, {
+        subdomains: config.subdomains || [],
         maxZoom: 22,
         maxNativeZoom: maxNative,
-        zIndex: 2,
+        zIndex: 3,
         className: 'pointer-events-none',
         opacity: 1,
         crossOrigin: true,
-      });
-      return L.layerGroup([baseSat, labelsOverlay]);
+      }));
+      return L.layerGroup(layers);
     }
     return L.tileLayer(config.url, {
       attribution: config.attribution,
