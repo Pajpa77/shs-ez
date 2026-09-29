@@ -4436,7 +4436,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       });
     }
 
-    // Restore and prepare trackHistory for responders so new GPS recordings extend the movement profile seamlessly
+    // Restore and prepare trackHistory for responders so new GPS recordings extend the movement profile seamlessly.
+    // WICHTIG: currentPosition wird NICHT aus dem Archiv wiederhergestellt – das würde falsche User-Pins auf der
+    // Karte erzeugen für User die beim neuen Einsatz gar nicht eingeloggt sind. Nur trackHistory wird gesichert,
+    // damit neue GPS-Punkte nahtlos angehängt werden können, sobald der User sich wieder einloggt.
     if (shouldPreserve) {
       setUserLocations((prev) => {
         const next = { ...prev };
@@ -4445,11 +4448,15 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             const currentLoc = next[t.userId];
             const currentLen = currentLoc?.trackHistory?.length || 0;
             if (currentLen < t.points.length) {
+              // Falls der User bereits live ist (aktueller Einsatz), seine echte Position beibehalten.
+              // Andernfalls: kein currentPosition setzen → kein falscher User-Pin auf der Karte!
+              const isCurrentlyLive = currentLoc?.isLive === true;
               next[t.userId] = {
                 userId: t.userId,
                 isLive: false,
                 lastUpdated: now,
-                currentPosition: t.points[t.points.length - 1],
+                // Nur echte Live-Position behalten; historische Position NICHT als Pin anzeigen
+                currentPosition: isCurrentlyLive ? currentLoc?.currentPosition : undefined,
                 trackHistory: [...t.points],
               };
             }

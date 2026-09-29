@@ -2386,9 +2386,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       // If user is explicitly selected, NEVER skip them (even if EZ staff) so their location is visible!
       if (isEzStaff && selectedUser?.id !== userId) return;
 
-      // Only display active / logged-in users unless showInactiveResponders is active OR user is a participant of current operation OR user is explicitly selected
+      // Only display active / logged-in users unless showInactiveResponders is active OR user is explicitly selected.
+      // WICHTIG: "Teilnehmer am Archiv" (archivedTracks oder trackHistory) bekommen KEINEN Pin, wenn sie
+      // nicht aktuell online sind – sonst erscheinen Pins von Usern aus früheren Phasen auf der Karte!
+      const isCurrentlyOnline = user.isActive || Boolean(userLocations[userId]?.isLive);
       const isParticipant = Boolean(
-        currentOperation && (
+        currentOperation && isCurrentlyOnline && (
           currentOperation.participantIds?.includes(userId) ||
           currentOperation.archivedTracks?.some(t => t.userId === userId) ||
           (userLocations[userId]?.trackHistory?.length || 0) > 0
