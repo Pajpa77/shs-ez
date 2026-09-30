@@ -5,20 +5,12 @@ import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import './index.css';
 import 'leaflet/dist/leaflet.css';
 
-// Service Worker Auto-Update Registration & Controller Change Auto-Reload
+// Check for new app deployments when user focuses tab
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-  let refreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (refreshing) return;
-    refreshing = true;
-    window.location.reload();
-  });
-
-  // Check for new app deployments whenever user returns/focuses the tab or app
   window.addEventListener('focus', () => {
     navigator.serviceWorker.getRegistration().then((reg) => {
-      if (reg) reg.update();
-    });
+      if (reg) reg.update().catch(() => {});
+    }).catch(() => {});
   });
 }
 

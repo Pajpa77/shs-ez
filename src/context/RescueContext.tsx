@@ -746,6 +746,212 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   // Chat Toast Notifications & Channel Routing State
+  // Web Audio alert sounds synthesized
+  const playAlertSound = useCallback((type: string = 'alert') => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+
+      if (type === 'emergency_alarm') {
+        const now = ctx.currentTime;
+        // Super sharp, piercing double-oscillator siren sound that sweeps quickly and repeats 4 times
+        for (let i = 0; i < 4; i++) {
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const gain = ctx.createGain();
+          
+          osc1.type = 'sawtooth';
+          osc2.type = 'sawtooth';
+          const startTime = now + (i * 0.28);
+          
+          osc1.frequency.setValueAtTime(1400, startTime);
+          osc1.frequency.linearRampToValueAtTime(2600, startTime + 0.12);
+          osc1.frequency.linearRampToValueAtTime(1400, startTime + 0.24);
+          
+          osc2.frequency.setValueAtTime(1450, startTime);
+          osc2.frequency.linearRampToValueAtTime(2650, startTime + 0.12);
+          osc2.frequency.linearRampToValueAtTime(1450, startTime + 0.24);
+          
+          gain.gain.setValueAtTime(0.35, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.005, startTime + 0.26);
+          
+          osc1.connect(gain);
+          osc2.connect(gain);
+          gain.connect(ctx.destination);
+          
+          osc1.start(startTime);
+          osc1.stop(startTime + 0.26);
+          osc2.start(startTime);
+          osc2.stop(startTime + 0.26);
+        }
+      } else if (type === 'chat_all') {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, now); // D5
+        osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } else if (type === 'chat_admins') {
+        const now = ctx.currentTime;
+        // Distinctive, authoritative 4-note Führungsfunk command fanfare: A5 -> C#6 -> E6 -> A6
+        const pitches = [880.00, 1108.73, 1318.51, 1760.00];
+        pitches.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          const t = now + idx * 0.075;
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.26, t);
+          gain.gain.exponentialRampToValueAtTime(0.005, t + 0.24);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.24);
+        });
+      } else if (type === 'chat_direct') {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+        osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+        osc.frequency.setValueAtTime(1046.50, now + 0.24); // C6
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.45);
+      } else if (type !== 'alert' && type !== 'finding' && type !== 'radio' && type !== 'cb_tx_start' && type !== 'cb_tx_end' && type !== 'cb_roger' && type !== 'notification' && type.trim().length > 0) {
+        // Sector specific channel or unique channel: calculate dynamic frequency from hash!
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        let hash = 0;
+        for (let i = 0; i < type.length; i++) {
+          hash = type.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const freqIndex = Math.abs(hash) % 7;
+        // Perfect heptatonic scale pitches: F5, G5, A5, B5, C6, D6, E6
+        const baseFreq = [698.46, 783.99, 880.00, 987.77, 1046.50, 1174.66, 1318.51][freqIndex];
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(baseFreq, now);
+        osc.frequency.setValueAtTime(baseFreq * 1.25, now + 0.12); // ascending dynamic interval
+        
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.32);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.32);
+      } else if (type === 'notification') {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, now); // D5
+        osc.frequency.setValueAtTime(880, now + 0.12); // A5
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      } else if (type === 'cb_tx_start') {
+        const now = ctx.currentTime;
+        const bufferSize = Math.floor(ctx.sampleRate * 0.08);
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * 0.15;
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+        noise.connect(gain);
+        gain.connect(ctx.destination);
+        noise.start(now);
+      } else if (type === 'cb_tx_end' || type === 'cb_roger') {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1150, now);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.12);
+      } else if (type === 'finding') {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(1760, now + 0.15);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.3);
+        osc.frequency.exponentialRampToValueAtTime(1760, now + 0.45);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.6);
+      } else if (type === 'alert') {
+        const now = ctx.currentTime;
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'triangle';
+        osc1.frequency.setValueAtTime(1046.5, now);
+        gain1.gain.setValueAtTime(0.25, now);
+        gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.15);
+
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(1318.5, now + 0.18);
+        gain2.gain.setValueAtTime(0.25, now + 0.18);
+        gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.18);
+        osc2.stop(now + 0.35);
+      } else {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, now);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      }
+    } catch {
+      // AudioContext might be guarded
+    }
+  }, []);
+
+  
   const [chatToasts, setChatToasts] = useState<ChatToastNotification[]>([]);
   const toastedMsgIdsRef = useRef<Set<string>>(new Set());
   const [activeChatTarget, setActiveChatTarget] = useState<ActiveChatTarget | null>(null);
@@ -1253,211 +1459,6 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(chatMessages));
   }, [chatMessages]);
-
-  // Web Audio alert sounds synthesized
-  const playAlertSound = useCallback((type: string = 'alert') => {
-    try {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
-
-      if (type === 'emergency_alarm') {
-        const now = ctx.currentTime;
-        // Super sharp, piercing double-oscillator siren sound that sweeps quickly and repeats 4 times
-        for (let i = 0; i < 4; i++) {
-          const osc1 = ctx.createOscillator();
-          const osc2 = ctx.createOscillator();
-          const gain = ctx.createGain();
-          
-          osc1.type = 'sawtooth';
-          osc2.type = 'sawtooth';
-          const startTime = now + (i * 0.28);
-          
-          osc1.frequency.setValueAtTime(1400, startTime);
-          osc1.frequency.linearRampToValueAtTime(2600, startTime + 0.12);
-          osc1.frequency.linearRampToValueAtTime(1400, startTime + 0.24);
-          
-          osc2.frequency.setValueAtTime(1450, startTime);
-          osc2.frequency.linearRampToValueAtTime(2650, startTime + 0.12);
-          osc2.frequency.linearRampToValueAtTime(1450, startTime + 0.24);
-          
-          gain.gain.setValueAtTime(0.35, startTime);
-          gain.gain.exponentialRampToValueAtTime(0.005, startTime + 0.26);
-          
-          osc1.connect(gain);
-          osc2.connect(gain);
-          gain.connect(ctx.destination);
-          
-          osc1.start(startTime);
-          osc1.stop(startTime + 0.26);
-          osc2.start(startTime);
-          osc2.stop(startTime + 0.26);
-        }
-      } else if (type === 'chat_all') {
-        const now = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, now); // D5
-        osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
-        gain.gain.setValueAtTime(0.2, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.3);
-      } else if (type === 'chat_admins') {
-        const now = ctx.currentTime;
-        // Distinctive, authoritative 4-note Führungsfunk command fanfare: A5 -> C#6 -> E6 -> A6
-        const pitches = [880.00, 1108.73, 1318.51, 1760.00];
-        pitches.forEach((freq, idx) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'triangle';
-          const t = now + idx * 0.075;
-          osc.frequency.setValueAtTime(freq, t);
-          gain.gain.setValueAtTime(0.26, t);
-          gain.gain.exponentialRampToValueAtTime(0.005, t + 0.24);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(t);
-          osc.stop(t + 0.24);
-        });
-      } else if (type === 'chat_direct') {
-        const now = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
-        osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
-        osc.frequency.setValueAtTime(1046.50, now + 0.24); // C6
-        gain.gain.setValueAtTime(0.22, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.45);
-      } else if (type !== 'alert' && type !== 'finding' && type !== 'radio' && type !== 'cb_tx_start' && type !== 'cb_tx_end' && type !== 'cb_roger' && type !== 'notification' && type.trim().length > 0) {
-        // Sector specific channel or unique channel: calculate dynamic frequency from hash!
-        const now = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        
-        let hash = 0;
-        for (let i = 0; i < type.length; i++) {
-          hash = type.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const freqIndex = Math.abs(hash) % 7;
-        // Perfect heptatonic scale pitches: F5, G5, A5, B5, C6, D6, E6
-        const baseFreq = [698.46, 783.99, 880.00, 987.77, 1046.50, 1174.66, 1318.51][freqIndex];
-        
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(baseFreq, now);
-        osc.frequency.setValueAtTime(baseFreq * 1.25, now + 0.12); // ascending dynamic interval
-        
-        gain.gain.setValueAtTime(0.18, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.32);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.32);
-      } else if (type === 'notification') {
-        const now = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, now); // D5
-        osc.frequency.setValueAtTime(880, now + 0.12); // A5
-        gain.gain.setValueAtTime(0.2, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.35);
-      } else if (type === 'cb_tx_start') {
-        const now = ctx.currentTime;
-        const bufferSize = Math.floor(ctx.sampleRate * 0.08);
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          data[i] = (Math.random() * 2 - 1) * 0.15;
-        }
-        const noise = ctx.createBufferSource();
-        noise.buffer = buffer;
-        const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.18, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-        noise.connect(gain);
-        gain.connect(ctx.destination);
-        noise.start(now);
-      } else if (type === 'cb_tx_end' || type === 'cb_roger') {
-        const now = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(1150, now);
-        gain.gain.setValueAtTime(0.2, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.12);
-      } else if (type === 'finding') {
-        const now = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(880, now);
-        osc.frequency.exponentialRampToValueAtTime(1760, now + 0.15);
-        osc.frequency.exponentialRampToValueAtTime(880, now + 0.3);
-        osc.frequency.exponentialRampToValueAtTime(1760, now + 0.45);
-        gain.gain.setValueAtTime(0.3, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.6);
-      } else if (type === 'alert') {
-        const now = ctx.currentTime;
-        const osc1 = ctx.createOscillator();
-        const gain1 = ctx.createGain();
-        osc1.type = 'triangle';
-        osc1.frequency.setValueAtTime(1046.5, now);
-        gain1.gain.setValueAtTime(0.25, now);
-        gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-        osc1.connect(gain1);
-        gain1.connect(ctx.destination);
-        osc1.start(now);
-        osc1.stop(now + 0.15);
-
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.type = 'triangle';
-        osc2.frequency.setValueAtTime(1318.5, now + 0.18);
-        gain2.gain.setValueAtTime(0.25, now + 0.18);
-        gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-        osc2.connect(gain2);
-        gain2.connect(ctx.destination);
-        osc2.start(now + 0.18);
-        osc2.stop(now + 0.35);
-      } else {
-        const now = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(600, now);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.08);
-      }
-    } catch {
-      // AudioContext might be guarded
-    }
-  }, []);
 
   // Set initial cloud sync flag to false after 4s timeout to allow real-time transition alerts
   useEffect(() => {
@@ -5827,6 +5828,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         startTrackingTest,
         stopTrackingTest,
         saveTrackingTestResult,
+        chatToasts,
+        dismissChatToast,
+        activeChatTarget,
+        openChatTarget,
       }}
     >
       {children}
