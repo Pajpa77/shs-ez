@@ -2018,6 +2018,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     // 2. Render historical / archived search tracks (from previous search phases or saved on pause/end)
     if (currentOperation?.archivedTracks && currentOperation.archivedTracks.length > 0 && !activeTrackingTest?.isActive) {
       currentOperation.archivedTracks.forEach((archivedTrack) => {
+        const validPoints = archivedTrack.points.filter(pt => pt.operationId === currentOperation.id);
+        if (validPoints.length < 2) return;
+        archivedTrack = { ...archivedTrack, points: validPoints };
         if (!archivedTrack.points || archivedTrack.points.length < 2) return;
 
         renderedTrackUserIds.add(archivedTrack.userId);
@@ -2157,7 +2160,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
         // Check if user already has an archived track from previous phase
         const archivedForUserRaw = currentOperation?.archivedTracks?.find((at) => at.userId === userId);
-   const archivedForUser = archivedForUserRaw ? { ...archivedForUserRaw, points: archivedForUserRaw.points.filter(pt => !pt.operationId || pt.operationId === currentOperation.id) } : undefined;
+   const archivedForUser = archivedForUserRaw ? { ...archivedForUserRaw, points: archivedForUserRaw.points.filter(pt => pt.operationId === currentOperation.id) } : undefined;
         let activeHistory = history;
         let isPhase2 = false;
 
