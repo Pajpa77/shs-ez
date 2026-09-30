@@ -1402,7 +1402,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 title="Bereitschaftsmodus - Klicken zum Wählen oder Starten eines Einsatzes"
               >
                 <span className="w-2 h-2 rounded-full bg-slate-200 shrink-0 shadow-sm" />
-                <span className="font-bold text-slate-200">Bereitschaft</span>
+                <span className="font-bold text-slate-200 hidden sm:inline">Bereitschaft</span>
                 <span className="text-blue-300/70 text-[10px] hidden sm:inline">(Kein aktiver Einsatz ⚪)</span>
               </button>
             )}
@@ -1532,6 +1532,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         
           {/* Hosentaschen Modus */}
+          {!Capacitor.isNativePlatform() && (
           <button
             onClick={() => setIsPocketMode(true)}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600 transition cursor-pointer text-[10px] font-mono font-bold shadow-sm shrink-0"
@@ -1540,6 +1541,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="hidden sm:inline whitespace-nowrap">HOSENTASCHE</span>
             <span className="sm:hidden">LOCK</span>
           </button>
+          )}
 
           {/* Chat / Funk Schnellzugriff mit Ungelesen-Badge */}
         <div className="relative">

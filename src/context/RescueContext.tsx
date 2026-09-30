@@ -851,6 +851,7 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const watchPositionIdRef = useRef<number | null>(null);
+  const nativeWatcherIdRef = useRef<string | null>(null);
   const isInitialCloudSyncRef = useRef<boolean>(true);
   const hasSeededOpsRef = useRef<boolean>(false);
   const hasSeededUsersRef = useRef<boolean>(false);
@@ -2268,6 +2269,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       if (watchPositionIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchPositionIdRef.current);
         watchPositionIdRef.current = null;
+      }
+      if (nativeWatcherIdRef.current !== null) {
+        stopCapacitorBackgroundGps(nativeWatcherIdRef.current);
+        nativeWatcherIdRef.current = null;
       }
       return;
     }

@@ -264,7 +264,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto text-xs">
+        <form onSubmit={handleSave} className="p-5 space-y-4 max-h-[calc(100vh-6rem)] sm:max-h-[80vh] overflow-y-auto text-xs">
           {errorMsg && (
             <div className="p-3 rounded-xl bg-red-950/90 border border-red-600 text-red-300 text-xs font-mono flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />

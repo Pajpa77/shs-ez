@@ -345,7 +345,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto text-xs">
+        <form onSubmit={handleSave} className="p-5 space-y-4 max-h-[calc(100vh-6rem)] sm:max-h-[80vh] overflow-y-auto text-xs">
           {savedSuccess && (
             <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500 text-emerald-300 font-bold flex items-center gap-2 font-mono">
               <CheckCircle className="w-4 h-4" />

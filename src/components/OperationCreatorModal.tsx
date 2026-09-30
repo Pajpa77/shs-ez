@@ -545,7 +545,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
               <h2 className="text-sm font-bold text-white uppercase tracking-wide">
                 {mode === 'edit' ? 'Laufenden Einsatz bearbeiten' : 'Neue Suchaktion starten'}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-mono">
                 {mode === 'edit'
                   ? 'Vermisstenprofil, Wohnadresse, Sichtort und Einsatzdaten aktualisieren'
                   : 'Einsatzleitung eröffnet Lage, erfasst Vermisstenprofil und setzt Einsatzschwerpunkte'}
@@ -581,7 +581,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto text-xs">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-6rem)] sm:max-h-[80vh] overflow-y-auto text-xs">
           {formError && (
             <div className="p-3 rounded-xl bg-red-950/90 border border-red-600 text-red-300 text-xs font-mono flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />
@@ -594,7 +594,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 font-mono">
               Einsatzart / Typ auswählen *:
             </label>
-            <div className="grid grid-cols-2 gap-3 font-mono">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono">
               <button
                 type="button"
                 onClick={() => setType('live_search')}

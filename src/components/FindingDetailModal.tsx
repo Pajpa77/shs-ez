@@ -86,7 +86,7 @@ export const FindingDetailModal: React.FC<FindingDetailModalProps> = ({ finding,
           </button>
         </div>
 
-        <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto text-xs">
+        <div className="p-5 space-y-4 max-h-[calc(100vh-6rem)] sm:max-h-[80vh] overflow-y-auto text-xs">
           {/* Media preview */}
           {finding.mediaUrl && (
             <div className="rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 max-h-72 flex items-center justify-center">
