@@ -1,3 +1,5 @@
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { RescueProvider, useRescue } from './context/RescueContext';
 import { useAlerts } from './hooks/useAlerts';
@@ -186,6 +188,28 @@ const MainApp: React.FC = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isShareAppModalOpen, setIsShareAppModalOpen] = useState(false);
   const [isSearchTeamsModalOpen, setIsSearchTeamsModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+        if (canGoBack) {
+          window.history.back();
+        } else {
+          showConfirmModal({
+            title: 'App beenden?',
+            message: 'Möchten Sie SHS-EZ wirklich schließen?',
+            confirmLabel: 'Beenden',
+            cancelLabel: 'Zurück',
+            isDanger: true,
+            onConfirm: () => {
+              CapacitorApp.exitApp();
+            }
+          });
+        }
+      });
+    }
+  }, [showConfirmModal]);
+
   const [isUserListPdfOpen, setIsUserListPdfOpen] = useState(false);
   const [directChatTarget, setDirectChatTarget] = useState<User | null>(null);
 
