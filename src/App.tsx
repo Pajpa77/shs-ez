@@ -81,6 +81,7 @@ const MainApp: React.FC = () => {
     activeTrackingTest,
     confirmModalState,
     dismissConfirmModal,
+    showConfirmModal,
   } = useRescue();
 
   // Initialize push notifications & vibration alerts
