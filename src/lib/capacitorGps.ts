@@ -1,5 +1,7 @@
-import { Capacitor } from '@capacitor/core';
-import { BackgroundGeolocation } from '@capacitor-community/background-geolocation';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+import type { BackgroundGeolocationPlugin } from '@capacitor-community/background-geolocation';
+
+const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>('BackgroundGeolocation');
 
 export const startCapacitorBackgroundGps = async (
   onLocation: (pos: any) => void

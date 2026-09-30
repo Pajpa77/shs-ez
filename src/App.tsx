@@ -321,25 +321,130 @@ const MainApp: React.FC = () => {
         </div>
       )}
 
-      {/* Auth / Login Success Notification Toast */}
+      {/* Stack of Floating Chat Toasts (Messenger Style) */}
+      {chatToasts.length > 0 && (
+        <div className="fixed top-20 right-4 z-[3300] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
+          {chatToasts.map((toast) => {
+            const isElChannel = toast.channel === 'admins';
+            const isDirect = toast.isDirect;
+            const isAlert = toast.isAlert;
+
+            return (
+              <div
+                key={toast.id}
+                onClick={() => {
+                  setActiveTab('chat');
+                  const targetUser = toast.isDirect ? allUsers.find(u => u.id === toast.senderId) || null : null;
+                  openChatTarget(toast.isDirect ? 'direct' : toast.channel, targetUser);
+                  dismissChatToast(toast.id);
+                }}
+                className={`pointer-events-auto rounded-2xl p-3.5 shadow-2xl backdrop-blur-md border-2 transition-all duration-200 cursor-pointer animate-in slide-in-from-top-4 hover:scale-[1.02] active:scale-[0.98] ${
+                  isAlert
+                    ? 'bg-red-950/95 border-red-500 shadow-red-900/50 text-white'
+                    : isElChannel
+                    ? 'bg-slate-900/95 border-amber-500 shadow-amber-950/60 text-white ring-2 ring-amber-500/20'
+                    : isDirect
+                    ? 'bg-slate-900/95 border-emerald-500 shadow-emerald-950/60 text-white'
+                    : 'bg-slate-900/95 border-blue-500 shadow-blue-950/60 text-white'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    {toast.senderPhotoUrl ? (
+                      <img
+                        src={toast.senderPhotoUrl}
+                        alt={toast.senderName}
+                        className="w-9 h-9 rounded-full object-cover border border-slate-600 shrink-0"
+                      />
+                    ) : (
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border ${
+                        isAlert
+                          ? 'bg-red-600 text-white border-red-400'
+                          : isElChannel
+                          ? 'bg-amber-500/30 text-amber-300 border-amber-400/50'
+                          : isDirect
+                          ? 'bg-emerald-500/30 text-emerald-300 border-emerald-400/50'
+                          : 'bg-blue-500/30 text-blue-300 border-blue-400/50'
+                      }`}>
+                        {isAlert ? '🚨' : isElChannel ? '⚡' : isDirect ? '💬' : '📻'}
+                      </div>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono uppercase tracking-wider ${
+                          isAlert
+                            ? 'bg-red-600 text-white'
+                            : isElChannel
+                            ? 'bg-amber-500 text-slate-950 font-black'
+                            : isDirect
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-blue-600 text-white'
+                        }`}>
+                          {toast.channelName}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono ml-auto">
+                          {toast.timestamp}
+                        </span>
+                      </div>
+                      <div className="font-bold text-xs text-white truncate mt-0.5">
+                        {toast.senderName} {toast.senderCallSign && <span className="font-mono text-slate-300 font-normal">({toast.senderCallSign})</span>}
+                      </div>
+                      <p className="text-xs text-slate-200 line-clamp-2 mt-0.5 font-sans leading-snug">
+                        {toast.text}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      dismissChatToast(toast.id);
+                    }}
+                    className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition shrink-0"
+                    title="Schließen"
+                  >
+                    ✕
+                  </button>
+                </div>
+                
+                <div className="mt-2 pt-1.5 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400">
+                  <span className="text-slate-300 font-medium">💬 Klicken zum Öffnen</span>
+                  <span className="text-blue-400 font-mono">Chat öffnen ➔</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Non-blocking Auth / Status Toast Notification (Auto-Dismissing) */}
       {authNotification && (
-        <div className="fixed top-20 right-4 z-[3200] max-w-md bg-white dark:bg-slate-900 border-2 border-blue-500 rounded-2xl p-4 shadow-2xl text-white flex items-center justify-between gap-4 animate-in slide-in-from-top-5 duration-200 font-mono">
+        <div className="fixed top-20 right-4 z-[3200] max-w-md bg-slate-900/95 border-2 border-slate-700/80 shadow-2xl rounded-2xl p-4 text-white flex items-center justify-between gap-4 animate-in slide-in-from-top-5 duration-200 font-mono backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-600/30 border border-blue-400 text-blue-300 flex items-center justify-center shrink-0">
+            <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 text-sm ${
+              authNotification.type === 'login'
+                ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300'
+                : 'bg-amber-950/80 border-amber-500/60 text-amber-300'
+            }`}>
               {authNotification.type === 'login' ? '🟢' : '⚠️'}
             </div>
             <div>
-              <div className="text-xs font-bold text-blue-200 uppercase">
-                {authNotification.type === 'login' ? 'Anmeldung erfolgreich' : 'Abgemeldet'}
+              <div className={`text-xs font-bold uppercase tracking-wider ${
+                authNotification.type === 'login' ? 'text-emerald-300' : 'text-amber-300'
+              }`}>
+                {authNotification.title || (authNotification.type === 'login' ? 'Benutzer angemeldet' : 'Benutzer abgemeldet')}
               </div>
-              <div className="text-xs text-black dark:text-slate-100 font-sans mt-0.5">{authNotification.message}</div>
+              <div className="text-xs text-slate-100 font-sans mt-0.5">{authNotification.message}</div>
               <div className="text-[10px] text-slate-400 mt-0.5">{authNotification.timestamp}</div>
             </div>
           </div>
           <button
             type="button"
             onClick={clearAuthNotification}
-            className="p-1.5 rounded-lg bg-[#1E293B] hover:bg-slate-100 dark:bg-slate-700 text-slate-400 hover:text-white transition cursor-pointer"
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition cursor-pointer"
+            title="Schließen"
           >
             ✕
           </button>

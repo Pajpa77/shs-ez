@@ -48,6 +48,7 @@ import {
   isQuotaError,
 } from '../lib/firebase';
 import { captureTacticalMapScreenshot } from '../lib/mapSnapshotHelper';
+import { startCapacitorBackgroundGps, stopCapacitorBackgroundGps } from '../lib/capacitorGps';
 import {
   collection,
   doc,
@@ -58,6 +59,29 @@ import {
   serverTimestamp,
   getDocs,
 } from 'firebase/firestore';
+
+export interface ChatToastNotification {
+  id: string;
+  msgId: string;
+  senderId: string;
+  senderName: string;
+  senderCallSign?: string;
+  senderPhotoUrl?: string;
+  senderRole?: string;
+  channel: string;
+  channelName: string;
+  text: string;
+  isVoiceMessage?: boolean;
+  isAlert?: boolean;
+  timestamp: string;
+  isDirect?: boolean;
+}
+
+export interface ActiveChatTarget {
+  channel: string;
+  targetUser?: User | null;
+  timestamp: number;
+}
 
 export interface ConfirmModalOptions {
   title: string;
@@ -81,7 +105,7 @@ interface RescueContextType {
   confirmLogout: () => void;
   cancelLogout: () => void;
   isLogoutConfirmOpen: boolean;
-  authNotification: { type: 'login' | 'logout'; message: string; timestamp: string } | null;
+  authNotification: { type: 'login' | 'logout' | 'info'; title?: string; message: string; timestamp: string } | null;
   clearAuthNotification: () => void;
   switchUser: (userId: string) => void;
   createUser: (userData: Omit<User, 'id' | 'isActive'>) => User;
@@ -92,6 +116,10 @@ interface RescueContextType {
   deactivateAllUsers: (includeSelf?: boolean) => void;
 
   // Global In-App Confirm Modal (Replaces browser window.confirm)
+  chatToasts: ChatToastNotification[];
+  dismissChatToast: (id: string) => void;
+  activeChatTarget: ActiveChatTarget | null;
+  openChatTarget: (channel: string, targetUser?: User | null) => void;
   confirmModalState: ConfirmModalOptions | null;
   showConfirmModal: (options: ConfirmModalOptions) => void;
   dismissConfirmModal: () => void;
@@ -693,10 +721,20 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   } | null>(null);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [authNotification, setAuthNotification] = useState<{
-    type: 'login' | 'logout';
+    type: 'login' | 'logout' | 'info';
+    title?: string;
     message: string;
     timestamp: string;
   } | null>(null);
+
+  // Auto-dismiss auth/toast notification after 4.5 seconds
+  useEffect(() => {
+    if (!authNotification) return;
+    const timer = setTimeout(() => {
+      setAuthNotification(null);
+    }, 4500);
+    return () => clearTimeout(timer);
+  }, [authNotification]);
 
   const [operationalRole, setOperationalRoleState] = useState<'ez_command' | 'searcher'>(() => {
     try {
@@ -706,6 +744,92 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return 'searcher';
     }
   });
+
+  // Chat Toast Notifications & Channel Routing State
+  const [chatToasts, setChatToasts] = useState<ChatToastNotification[]>([]);
+  const toastedMsgIdsRef = useRef<Set<string>>(new Set());
+  const [activeChatTarget, setActiveChatTarget] = useState<ActiveChatTarget | null>(null);
+
+  const dismissChatToast = useCallback((id: string) => {
+    setChatToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const openChatTarget = useCallback((channel: string, targetUser?: User | null) => {
+    setActiveChatTarget({
+      channel,
+      targetUser: targetUser || null,
+      timestamp: Date.now(),
+    });
+  }, []);
+
+  const handleIncomingChatMessage = useCallback((msg: ChatMessage) => {
+    if (!msg || msg.senderId === currentUserIdRef.current) return;
+    if (toastedMsgIdsRef.current.has(msg.id)) return;
+    toastedMsgIdsRef.current.add(msg.id);
+
+    if (toastedMsgIdsRef.current.size > 200) {
+      const arr = Array.from(toastedMsgIdsRef.current);
+      toastedMsgIdsRef.current = new Set(arr.slice(100));
+    }
+
+    // If DM, only show to recipient
+    if (msg.isDirect && msg.recipientId !== currentUserIdRef.current) {
+      return;
+    }
+
+    // Play tone specific to channel
+    if (msg.isAlert) {
+      playAlertSound('emergency_alarm');
+    } else if (msg.channel === 'admins') {
+      playAlertSound('chat_admins');
+    } else if (msg.channel === 'all') {
+      playAlertSound('chat_all');
+    } else if (msg.isDirect) {
+      playAlertSound('chat_direct');
+    } else if (msg.isVoiceMessage) {
+      playAlertSound('cb_roger');
+    } else {
+      playAlertSound(msg.channel);
+    }
+
+    let channelName = '📻 Gesamtfunk';
+    if (msg.isAlert) {
+      channelName = '🚨 Einsatzalarm';
+    } else if (msg.channel === 'admins') {
+      channelName = '⚡ Führungsfunk EL';
+    } else if (msg.isDirect) {
+      channelName = '💬 Direktnachricht';
+    } else if (msg.channel === 'system') {
+      channelName = '⚙️ System';
+    } else {
+      const sector = currentOperationRef.current?.sectors?.find((s) => s.id === msg.channel);
+      channelName = sector ? `📍 Sektor ${sector.name}` : '📍 Sektorfunk';
+    }
+
+    const toastId = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newToast: ChatToastNotification = {
+      id: toastId,
+      msgId: msg.id,
+      senderId: msg.senderId,
+      senderName: msg.senderName,
+      senderCallSign: msg.senderCallSign,
+      senderPhotoUrl: msg.senderPhotoUrl,
+      senderRole: msg.senderRole,
+      channel: msg.channel,
+      channelName,
+      text: msg.isVoiceMessage ? '🎙️ CB-Sprachnachricht' : (msg.text || '(Anhang)'),
+      isVoiceMessage: msg.isVoiceMessage,
+      isAlert: msg.isAlert,
+      timestamp: new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isDirect: msg.isDirect,
+    };
+
+    setChatToasts((prev) => [newToast, ...prev.slice(0, 3)]); // Keep max 4 concurrent stacked toasts
+
+    setTimeout(() => {
+      dismissChatToast(toastId);
+    }, 6500);
+  }, [playAlertSound, dismissChatToast]);
 
   // Global In-App Confirm Modal State
   const [confirmModalState, setConfirmModalState] = useState<ConfirmModalOptions | null>(null);
@@ -791,7 +915,7 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setUserActiveStatus(userId, false);
     setCurrentUserId('');
     setIsLogoutConfirmOpen(false);
-    playAlertSound('alert');
+    playAlertSound('notification');
     setAuthNotification({
       type: 'logout',
       message: `Erfolgreich abgemeldet: ${userName} (${userCallSign || userRole}) hat das System verlassen.`,
@@ -1184,18 +1308,21 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         osc.stop(now + 0.3);
       } else if (type === 'chat_admins') {
         const now = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(783.99, now); // G5
-        osc.frequency.setValueAtTime(987.77, now + 0.08); // B5
-        osc.frequency.setValueAtTime(1174.66, now + 0.16); // D6
-        gain.gain.setValueAtTime(0.18, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.35);
+        // Distinctive, authoritative 4-note Führungsfunk command fanfare: A5 -> C#6 -> E6 -> A6
+        const pitches = [880.00, 1108.73, 1318.51, 1760.00];
+        pitches.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          const t = now + idx * 0.075;
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.26, t);
+          gain.gain.exponentialRampToValueAtTime(0.005, t + 0.24);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.24);
+        });
       } else if (type === 'chat_direct') {
         const now = ctx.currentTime;
         const osc = ctx.createOscillator();
@@ -1363,20 +1490,11 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             )
           );
         } else if (type === 'NEW_CHAT') {
-          if (payload.isAlert) {
-            playAlertSound('emergency_alarm');
-          } else if (payload.isVoiceMessage) {
-            playAlertSound('cb_roger');
-          } else if (payload.isDirect) {
-            playAlertSound('chat_direct');
-          } else if (payload.channel === 'all') {
-            playAlertSound('chat_all');
-          } else if (payload.channel === 'admins') {
-            playAlertSound('chat_admins');
-          } else {
-            playAlertSound(payload.channel);
-          }
-          setChatMessages((prev) => [...prev, payload]);
+          handleIncomingChatMessage(payload);
+          setChatMessages((prev) => {
+            if (prev.some((m) => m.id === payload.id)) return prev;
+            return [...prev, payload];
+          });
         } else if (type === 'SECTOR_STATUS') {
           setAllOperations((prev) =>
             prev.map((op) =>
@@ -1454,19 +1572,22 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const isMeAdminOrEL = Boolean(
               myUser && (myUser.role === 'admin' || myUser.role === 'einsatzleitung' || myUser.isAdmin || myUser.canLeadOperations)
             );
-            if (localU && !isInitialCloudSyncRef.current && isMeAdminOrEL) {
+            const isOpRunning = Boolean(
+              currentOperationRef.current && (currentOperationRef.current.status === 'active' || currentOperationRef.current.status === 'paused')
+            );
+            if (localU && !isInitialCloudSyncRef.current && payload.id !== currentUserIdRef.current) {
               if (payload.isActive && !localU.isActive) {
                 playAlertSound('notification');
-                if (payload.id !== currentUserIdRef.current) {
+                if (isMeAdminOrEL && isOpRunning) {
                   setActiveAlertNotification({
                     title: '🟢 Neuer Benutzer angemeldet',
-                    message: `${payload.name} (${payload.callSign || payload.role}) hat sich soeben eingeloggt.`,
+                    message: `${payload.name} (${payload.callSign || payload.role}) hat sich soeben eingeloggt. Bitte Suchtrupp & Sektor zuteilen.`,
                     timestamp: new Date().toLocaleTimeString(),
                   });
                 }
               } else if (!payload.isActive && localU.isActive) {
-                playAlertSound('alert');
-                if (payload.id !== currentUserIdRef.current) {
+                playAlertSound('notification');
+                if (isMeAdminOrEL && isOpRunning) {
                   setActiveAlertNotification({
                     title: '⚠️ Benutzer abgemeldet / offline',
                     message: `${payload.name} (${payload.callSign || payload.role}) hat das System verlassen.`,
@@ -1729,19 +1850,7 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 if (change.type === 'added') {
                   const msg = change.doc.data() as ChatMessage;
                   if (msg && msg.senderId !== currentUserIdRef.current) {
-                    if (msg.isAlert) {
-                      playAlertSound('emergency_alarm');
-                    } else if (msg.isVoiceMessage) {
-                      playAlertSound('cb_roger');
-                    } else if (msg.isDirect) {
-                      playAlertSound('chat_direct');
-                    } else if (msg.channel === 'all') {
-                      playAlertSound('chat_all');
-                    } else if (msg.channel === 'admins') {
-                      playAlertSound('chat_admins');
-                    } else {
-                      playAlertSound(msg.channel);
-                    }
+                    handleIncomingChatMessage(msg);
 
                     if (msg.isAlert) {
                       setActiveAlertNotification({
@@ -1827,28 +1936,42 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                   const isMeAdminOrEL = Boolean(
                     myUser && (myUser.role === 'admin' || myUser.role === 'einsatzleitung' || myUser.isAdmin || myUser.canLeadOperations)
                   );
+                  const isOpRunning = Boolean(
+                    currentOperationRef.current && (currentOperationRef.current.status === 'active' || currentOperationRef.current.status === 'paused')
+                  );
 
-                  if (isMeAdminOrEL) {
-                    if (newlyActive.length > 0) {
-                      playAlertSound('notification');
+                  if (newlyActive.length > 0) {
+                    playAlertSound('notification');
+                    if (isMeAdminOrEL && isOpRunning) {
                       if (newlyActive.length === 1) {
                         const u = newlyActive[0];
                         setActiveAlertNotification({
                           title: '🟢 Neuer Benutzer angemeldet',
-                          message: `${u.name} (${u.callSign || u.role}) hat sich soeben eingeloggt.`,
+                          message: `${u.name} (${u.callSign || u.role}) hat sich soeben eingeloggt. Bitte Suchtrupp & Sektor zuteilen.`,
                           timestamp: new Date().toLocaleTimeString(),
                         });
                       } else {
                         setActiveAlertNotification({
                           title: '🟢 Mehrere Benutzer angemeldet',
-                          message: `${newlyActive.length} Kräfte wurden soeben aktiviert: ${newlyActive.map(u => u.name).join(', ')}.`,
+                          message: `${newlyActive.length} Kräfte wurden soeben aktiviert: ${newlyActive.map(u => u.name).join(', ')}. Bitte Suchtrupps & Sektoren zuteilen.`,
                           timestamp: new Date().toLocaleTimeString(),
                         });
                       }
+                    } else {
+                      setAuthNotification({
+                        type: 'login',
+                        title: 'Benutzer angemeldet',
+                        message: newlyActive.length === 1
+                          ? `${newlyActive[0].name} (${newlyActive[0].callSign || newlyActive[0].role}) ist jetzt online.`
+                          : `${newlyActive.length} Einsatzkräfte sind jetzt online.`,
+                        timestamp: new Date().toLocaleTimeString(),
+                      });
                     }
+                  }
 
-                    if (newlyOffline.length > 0 && newlyActive.length === 0) {
-                      playAlertSound('alert');
+                  if (newlyOffline.length > 0 && newlyActive.length === 0) {
+                    playAlertSound('notification');
+                    if (isMeAdminOrEL && isOpRunning) {
                       if (newlyOffline.length === 1) {
                         const u = newlyOffline[0];
                         setActiveAlertNotification({
@@ -1863,6 +1986,15 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                           timestamp: new Date().toLocaleTimeString(),
                         });
                       }
+                    } else {
+                      setAuthNotification({
+                        type: 'logout',
+                        title: 'Benutzer abgemeldet',
+                        message: newlyOffline.length === 1
+                          ? `${newlyOffline[0].name} (${newlyOffline[0].callSign || newlyOffline[0].role}) hat sich abgemeldet.`
+                          : `${newlyOffline.length} Einsatzkräfte sind offline gegangen.`,
+                        timestamp: new Date().toLocaleTimeString(),
+                      });
                     }
                   }
                 }
@@ -2897,7 +3029,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             color: trackColor,
             phaseLabel: `Einsatzspur (${targetUser.callSign || 'Sucher'})`,
             recordedAt: new Date().toISOString(),
-            points: [...locState.trackHistory].filter(p => p.operationId === (typeof targetOp !== 'undefined' ? targetOp.id : (typeof op !== 'undefined' ? op.id : currentOperation?.id))),
+            points: [...locState.trackHistory].filter(p => !p.operationId || p.operationId === currentOperation?.id),
           });
           updateOperation(currentOperation.id, {
             archivedTracks: updatedArchived,
@@ -2905,12 +3037,32 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         }
       }
 
-      playAlertSound('alert');
-      setActiveAlertNotification({
-        title: '⚠️ Benutzer abgemeldet / offline',
-        message: `${targetUser.name} (${targetUser.callSign || targetUser.role}) hat das System verlassen.`,
-        timestamp: new Date().toLocaleTimeString(),
-      });
+      const isSelf = userId === currentUserIdRef.current;
+      const myUser = allUsers.find((u) => u.id === currentUserIdRef.current);
+      const isMeAdminOrEL = Boolean(
+        myUser && (myUser.role === 'admin' || myUser.role === 'einsatzleitung' || myUser.isAdmin || myUser.canLeadOperations)
+      );
+      const isOpRunning = Boolean(
+        currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused')
+      );
+
+      if (!isSelf) {
+        playAlertSound('notification');
+        if (isMeAdminOrEL && isOpRunning) {
+          setActiveAlertNotification({
+            title: '⚠️ Benutzer abgemeldet / offline',
+            message: `${targetUser.name} (${targetUser.callSign || targetUser.role}) hat das System verlassen.`,
+            timestamp: new Date().toLocaleTimeString(),
+          });
+        } else {
+          setAuthNotification({
+            type: 'logout',
+            title: 'Benutzer abgemeldet',
+            message: `${targetUser.name} (${targetUser.callSign || targetUser.role}) ist offline gegangen.`,
+            timestamp: new Date().toLocaleTimeString(),
+          });
+        }
+      }
 
       const opId = currentOperation?.id || 'op-1';
       const logoutChatMsg: ChatMessage = {
@@ -2923,9 +3075,9 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         senderPhotoUrl: targetUser.photoUrl,
         channel: 'system',
         isDirect: false,
-        text: `⚠️ ABGEMELDET / OFFLINE: ${targetUser.name} (${targetUser.callSign}) hat den Dienst verlassen!`,
+        text: `⚠️ ABGEMELDET / OFFLINE: ${targetUser.name} (${targetUser.callSign}) hat das System verlassen.`,
         timestamp: new Date().toISOString(),
-        isAlert: true,
+        isAlert: false,
       };
       setChatMessages((prev) => [...prev, logoutChatMsg]);
       syncChatToCloud(logoutChatMsg);
@@ -2952,15 +3104,33 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
     // If user went from inactive to active (logged in), notify admins & log in target/current operation (skip for TrackingTest)
     if (isActive && !wasActive && targetUser && !isTrackingTestUser) {
-      playAlertSound('notification');
-      setActiveAlertNotification({
-        title: '🟢 Neuer Benutzer angemeldet',
-        message: `${targetUser.name} (${targetUser.callSign || targetUser.role}) hat sich soeben eingeloggt (Bereitschaft & EZ-Kontrolle).`,
-        timestamp: new Date().toLocaleTimeString(),
-      });
-
-      // Target operation determination: targetOperationId takes precedence over state to prevent async race
+      const isSelf = userId === currentUserIdRef.current;
+      const myUser = allUsers.find((u) => u.id === currentUserIdRef.current);
+      const isMeAdminOrEL = Boolean(
+        myUser && (myUser.role === 'admin' || myUser.role === 'einsatzleitung' || myUser.isAdmin || myUser.canLeadOperations)
+      );
       const targetOp = (targetOperationId ? allOperations.find((op) => op.id === targetOperationId) : null) || currentOperation;
+      const isOpRunning = Boolean(
+        targetOp && (targetOp.status === 'active' || targetOp.status === 'paused')
+      );
+
+      if (!isSelf) {
+        playAlertSound('notification');
+        if (isMeAdminOrEL && isOpRunning) {
+          setActiveAlertNotification({
+            title: '🟢 Neuer Benutzer angemeldet',
+            message: `${targetUser.name} (${targetUser.callSign || targetUser.role}) hat sich soeben eingeloggt. Bitte Suchtrupp & Sektor zuteilen.`,
+            timestamp: new Date().toLocaleTimeString(),
+          });
+        } else {
+          setAuthNotification({
+            type: 'login',
+            title: 'Benutzer angemeldet',
+            message: `${targetUser.name} (${targetUser.callSign || targetUser.role}) ist jetzt online.`,
+            timestamp: new Date().toLocaleTimeString(),
+          });
+        }
+      }
       const opId = targetOp?.id || targetOperationId || 'op-1';
 
       const loginChatMsg: ChatMessage = {
@@ -3123,6 +3293,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       playAlertSound('notification');
       setAuthNotification({
         type: 'login',
+        title: 'Anmeldung erfolgreich',
         message: `Erfolgreich angemeldet als ${user.name} (${user.callSign || user.role}).`,
         timestamp: new Date().toLocaleTimeString(),
       });
@@ -3185,6 +3356,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       playAlertSound('notification');
       setAuthNotification({
         type: 'login',
+        title: 'Benutzer gewechselt',
         message: `Benutzer gewechselt zu ${user.name} (${user.callSign || user.role}).`,
         timestamp: new Date().toLocaleTimeString(),
       });
@@ -3989,7 +4161,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     const updatedArchived = [...existingArchived];
     (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState]) => {
       if (locState?.trackHistory && locState.trackHistory.length > 1) {
-          const validPoints = locState.trackHistory.filter(pt => pt.operationId === targetOp?.id || pt.operationId === op.id || !pt.operationId);
+          const validPoints = locState.trackHistory.filter(pt => !pt.operationId || pt.operationId === targetOp?.id);
           if (validPoints.length < 2) return;
         const user = allUsers.find((u) => u.id === userId);
         // Only skip archiving if an existing entry already covers the same or MORE points for this user
@@ -4005,7 +4177,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             color,
             phaseLabel: `Suchphase vor Pause (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
             recordedAt: now,
-            points: [...locState.trackHistory].filter(p => p.operationId === (typeof targetOp !== 'undefined' ? targetOp.id : (typeof op !== 'undefined' ? op.id : currentOperation?.id))),
+            points: [...locState.trackHistory].filter(p => !p.operationId || p.operationId === targetOp?.id),
           });
         }
       }
@@ -4296,7 +4468,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 color: getUserTrackColor(user || userId, allUsers),
                 phaseLabel: `Suchphase 1 (${new Date(op.createdAt).toLocaleDateString()})`,
                 recordedAt: now,
-                points: [...locState.trackHistory].filter(p => p.operationId === (typeof targetOp !== 'undefined' ? targetOp.id : (typeof op !== 'undefined' ? op.id : currentOperation?.id))),
+                points: [...locState.trackHistory].filter(p => !p.operationId || p.operationId === op?.id),
               });
             }
           }
@@ -4464,7 +4636,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             color,
             phaseLabel: op.completedAt ? `Suchphase 1 (${new Date(op.completedAt).toLocaleDateString('de-DE')})` : 'Phase 1',
             recordedAt: now,
-            points: [...locState.trackHistory].filter(p => p.operationId === (typeof targetOp !== 'undefined' ? targetOp.id : (typeof op !== 'undefined' ? op.id : currentOperation?.id))),
+            points: [...locState.trackHistory].filter(p => !p.operationId || p.operationId === op.id),
           });
         }
       }

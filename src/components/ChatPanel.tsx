@@ -215,6 +215,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     clearChatHistory,
     clearLogbook,
     clearAlerts,
+    activeChatTarget,
   } = useRescue();
 
   // Primary navigation tab: 'channels' (Kanäle & Gruppen) vs 'findings' (Fundmeldungen mit Infos)
@@ -265,14 +266,26 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
   }, [currentOperation?.id]);
 
   useEffect(() => {
-    if (initialDirectUser) {
+    if (activeChatTarget) {
+      setMainTab('channels');
+      if (activeChatTarget.targetUser || activeChatTarget.channel === 'direct') {
+        setActiveScope('responders');
+        if (activeChatTarget.targetUser) {
+          setActiveChannel(activeChatTarget.targetUser.id);
+        }
+      } else {
+        setActiveScope('operation');
+        setActiveChannel(activeChatTarget.channel);
+      }
+      setMobileView('chat');
+    } else if (initialDirectUser) {
       setMainTab('channels');
       setActiveScope('responders');
       setActiveChannel(initialDirectUser.id);
     } else if (currentUser?.role === 'observer') {
       setActiveChannel('admins');
     }
-  }, [initialDirectUser, currentUser]);
+  }, [activeChatTarget, initialDirectUser, currentUser]);
 
   // Auto scroll and mark as read
   useEffect(() => {
