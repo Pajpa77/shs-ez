@@ -59,21 +59,19 @@ service cloud.firestore {
       allow delete: if true;
     }
 
-    // Tactical Chat Transmissions (Append-Only Audit Trail)
+    // Tactical Chat Transmissions, System Logs & Broadcasts
     match /chat_messages/{messageId} {
       allow read: if true;
-      allow create: if request.resource.data.id is string
+      allow create, update: if request.resource.data.id is string
         && request.resource.data.senderId is string
         && request.resource.data.senderName is string
         && (!('text' in request.resource.data) || (request.resource.data.text is string && request.resource.data.text.size() <= 3000));
-      // Preserved immutability: chat cannot be tampered with or deleted once sent
-      allow update, delete: if false;
+      allow delete: if true;
     }
 
-    // Global Settings
+    // Global Settings & Configurations
     match /settings/{settingId} {
-      allow read: if true;
-      allow write: if false;
+      allow read, write: if true;
     }
   }
 }

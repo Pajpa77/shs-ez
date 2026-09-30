@@ -151,64 +151,7 @@ export const VEREINSBUERO_LOCATION = {
 };
 
 // Saubere Ausgangslage für Spürhunde-Salzlandkreis e.V.
-export const INITIAL_OPERATIONS: SearchOperation[] = [
-  {
-    id: 'op-salzland-001',
-    title: 'Einsatzbereit - Spürhunde-Salzlandkreis e.V.',
-    type: 'operation',
-    status: 'completed',
-    createdAt: new Date().toISOString(),
-    completedAt: new Date().toISOString(),
-    commander: 'Maria (Einsatzleitung)',
-    headquartersLocation: {
-      lat: VEREINSBUERO_LOCATION.lat,
-      lng: VEREINSBUERO_LOCATION.lng,
-      address: VEREINSBUERO_LOCATION.address,
-    },
-    missingPerson: {
-      name: 'Bereitschaftszustand (Keine aktive Suche)',
-      age: 0,
-      gender: 'diverse',
-      photoUrl: '',
-      lastSeenTime: 'Einsatzbereit',
-      lastSeenLocation: {
-        lat: VEREINSBUERO_LOCATION.lat,
-        lng: VEREINSBUERO_LOCATION.lng,
-        address: VEREINSBUERO_LOCATION.address,
-        description: 'Vereinsbüro Aschersleben',
-      },
-      homeAddress: {
-        lat: VEREINSBUERO_LOCATION.lat,
-        lng: VEREINSBUERO_LOCATION.lng,
-        address: VEREINSBUERO_LOCATION.address,
-      },
-      clothing: 'Wird bei Alarmierung eingetragen',
-      description: 'System einsatzbereit für Spürhunde-Salzlandkreis e.V. Einsatzleitung: Maria, Jens & Micha.',
-      medicalConditions: [],
-      emergencyContact: 'Einsatzleitung Maria, Jens, Micha',
-      policeCaseId: 'SLK-BEREIT',
-    },
-    sectors: [],
-    findings: [],
-    logs: [
-      {
-        id: 'log-init-1',
-        operationId: 'op-salzland-001',
-        timestamp: new Date().toISOString(),
-        authorName: 'Maria',
-        authorRole: 'admin',
-        category: 'status',
-        text: 'Einsatzleitsystem initialisiert für Spürhunde-Salzlandkreis e.V. (Vereinsbüro: Hohe Straße 15, 06449 Aschersleben). Bereit für neue Einsätze und Übungen.',
-      },
-    ],
-    participantIds: ['user-maria'],
-    externalVolunteersCount: 0,
-    externalVolunteersNotes: '',
-    selectedEquipment: ['k9_mantrailer', 'k9_cadaver', 'drone', 'first_aid', 'foot_search'],
-    ezAdminIds: ['user-maria', 'user-jens', 'user-micha'],
-    notes: 'Vereinsbüro in Aschersleben, Hohe Straße 15.',
-  },
-];
+export const INITIAL_OPERATIONS: SearchOperation[] = [];
 
 export const INITIAL_USER_LOCATIONS: Record<string, UserLocationState> = {
   'user-maria': {

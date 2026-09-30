@@ -11,5 +11,5 @@
 
 - **Field Authentication**: Fast pin/password-based access designed for tactical field responders and emergency dog handlers without requiring personal email addresses.
 - **Credential Governance**: Administrative oversight via designated incident commanders (`admin` / `einsatzleitung`).
-- **Data Protection**: Audit log immutability on tactical chat messages (`chat_messages` append-only rule), protected First-Admin identity (`user-maria`), and strict coordinate boundaries.
+- **Data Protection**: Tactical chat transmission validation (`chat_messages`), protected First-Admin identity (`user-maria`), and strict coordinate boundaries.
 - **Reporting Vulnerabilities**: Contact the IT & Incident Command team of Spürhunde-Salzlandkreis e.V.

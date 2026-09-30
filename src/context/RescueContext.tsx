@@ -58,6 +58,7 @@ import {
   updateDoc,
   serverTimestamp,
   getDocs,
+  writeBatch,
 } from 'firebase/firestore';
 
 export interface ChatToastNotification {
@@ -659,10 +660,26 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } catch {}
   }, []);
 
+  const deleteChatMessagesFromCloud = useCallback((msgIds: string[]) => {
+    if (!isFirebaseConfigured || !msgIds || msgIds.length === 0) return;
+    safeFirestoreWrite(async () => {
+      for (let i = 0; i < msgIds.length; i += 400) {
+        const chunk = msgIds.slice(i, i + 400);
+        const batch = writeBatch(db);
+        chunk.forEach((id) => {
+          batch.delete(doc(db, 'chat_messages', id));
+        });
+        await batch.commit();
+      }
+    }, 'delete_chat_messages');
+  }, []);
+
   const clearChatHistory = useCallback(() => {
-    setChatMessages((prev) =>
-      prev.filter(
-        (m) =>
+    const toDelete: string[] = [];
+    setChatMessages((prev) => {
+      const remaining: ChatMessage[] = [];
+      prev.forEach((m) => {
+        const isPreserved =
           m.channel === 'system' ||
           m.channel === 'logs' ||
           m.text.includes('hat sich soeben eingeloggt') ||
@@ -672,40 +689,76 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           m.text.includes('EINSATZ BEENDET') ||
           m.text.includes('EINSATZ PAUSIERT') ||
           m.text.includes('EINSATZ WIEDERAUFGENOMMEN') ||
-          m.text.includes('REALEINSATZ')
-      )
-    );
-  }, []);
+          m.text.includes('REALEINSATZ');
+        if (isPreserved) {
+          remaining.push(m);
+        } else {
+          toDelete.push(m.id);
+        }
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(remaining));
+      } catch {}
+      return remaining;
+    });
+    if (toDelete.length > 0) {
+      deleteChatMessagesFromCloud(toDelete);
+    }
+  }, [deleteChatMessagesFromCloud]);
 
   const clearLogbook = useCallback(() => {
-    setChatMessages((prev) =>
-      prev.filter(
-        (m) =>
-          !(
-            m.channel === 'system' ||
-            m.channel === 'logs' ||
-            m.text.includes('hat sich soeben eingeloggt') ||
-            m.text.includes('hat das System verlassen')
-          )
-      )
-    );
-  }, []);
+    const toDelete: string[] = [];
+    setChatMessages((prev) => {
+      const remaining: ChatMessage[] = [];
+      prev.forEach((m) => {
+        const isLogbook =
+          m.channel === 'system' ||
+          m.channel === 'logs' ||
+          m.text.includes('hat sich soeben eingeloggt') ||
+          m.text.includes('hat das System verlassen');
+        if (!isLogbook) {
+          remaining.push(m);
+        } else {
+          toDelete.push(m.id);
+        }
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(remaining));
+      } catch {}
+      return remaining;
+    });
+    if (toDelete.length > 0) {
+      deleteChatMessagesFromCloud(toDelete);
+    }
+  }, [deleteChatMessagesFromCloud]);
 
   const clearAlerts = useCallback(() => {
-    setChatMessages((prev) =>
-      prev.filter(
-        (m) =>
-          !(
-            m.isAlert ||
-            m.text.includes('EINSATZ REAKTIVIERT') ||
-            m.text.includes('EINSATZ BEENDET') ||
-            m.text.includes('EINSATZ PAUSIERT') ||
-            m.text.includes('EINSATZ WIEDERAUFGENOMMEN') ||
-            m.text.includes('REALEINSATZ')
-          )
-      )
-    );
-  }, []);
+    const toDelete: string[] = [];
+    setChatMessages((prev) => {
+      const remaining: ChatMessage[] = [];
+      prev.forEach((m) => {
+        const isAlert =
+          m.isAlert ||
+          m.text.includes('EINSATZ REAKTIVIERT') ||
+          m.text.includes('EINSATZ BEENDET') ||
+          m.text.includes('EINSATZ PAUSIERT') ||
+          m.text.includes('EINSATZ WIEDERAUFGENOMMEN') ||
+          m.text.includes('REALEINSATZ');
+        if (!isAlert) {
+          remaining.push(m);
+        } else {
+          toDelete.push(m.id);
+        }
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(remaining));
+      } catch {}
+      return remaining;
+    });
+    if (toDelete.length > 0) {
+      deleteChatMessagesFromCloud(toDelete);
+    }
+  }, [deleteChatMessagesFromCloud]);
 
   const [isRealGpsActive, setIsRealGpsActive] = useState<boolean>(true);
   const [isSimulatorRunning, setIsSimulatorRunning] = useState<boolean>(false);
@@ -1715,40 +1768,20 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               }
             });
             if (cloudOps.length > 0) {
-              setAllOperations((prevLocalOps) => {
-                const cloudMap = new Map(cloudOps.map((o) => [o.id, o]));
-                const merged: SearchOperation[] = [];
-                const processedIds = new Set<string>();
-
-                prevLocalOps.forEach((localOp) => {
-                  if (deletedOpIdsRef.current.has(localOp.id)) return;
-                  processedIds.add(localOp.id);
-                  const cloudOp = cloudMap.get(localOp.id);
-                  if (!cloudOp) {
-                    merged.push(cleanOperation(localOp));
-                  } else {
-                    merged.push(mergeOperations(localOp, cloudOp));
-                  }
-                });
-
-                // Add any cloud operations not in local state
-                cloudOps.forEach((cloudOp) => {
-                  if (!deletedOpIdsRef.current.has(cloudOp.id) && !processedIds.has(cloudOp.id)) {
-                    merged.push(cleanOperation(cloudOp));
-                  }
-                });
-
-                // Sort: active operations first (newest to oldest), then completed operations
-                merged.sort((a, b) => {
-                  if (a.status === 'active' && b.status !== 'active') return -1;
-                  if (a.status !== 'active' && b.status === 'active') return 1;
-                  return (
-                    new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-                  );
-                });
-
-                return merged;
+              cloudOps.sort((a, b) => {
+                if (a.status === 'active' && b.status !== 'active') return -1;
+                if (a.status !== 'active' && b.status === 'active') return 1;
+                return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
               });
+              setAllOperations(cloudOps);
+              try {
+                localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify(cloudOps));
+              } catch {}
+            } else {
+              setAllOperations([]);
+              try {
+                localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify([]));
+              } catch {}
             }
           } else if (
             !hasSeededOpsRef.current &&
@@ -1878,11 +1911,16 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               isInitialChatLoad = false;
             }
 
-            if (cloudChat.length > 0) {
-              setChatMessages(cloudChat);
-            }
+            setChatMessages(cloudChat);
+            try {
+              localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(cloudChat));
+            } catch {}
           } else {
             isInitialChatLoad = false;
+            setChatMessages([]);
+            try {
+              localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify([]));
+            } catch {}
           }
         },
         (err) => {
@@ -2168,29 +2206,15 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             console.warn('Error refreshing operation:', err);
           }
         });
-        if (cloudOps.length > 0) {
-          setAllOperations((prevLocalOps) => {
-            const cloudMap = new Map(cloudOps.map((o) => [o.id, o]));
-            const merged: SearchOperation[] = [];
-            const processedIds = new Set<string>();
-            prevLocalOps.forEach((localOp) => {
-              if (deletedOpIdsRef.current.has(localOp.id)) return;
-              processedIds.add(localOp.id);
-              const cloudOp = cloudMap.get(localOp.id);
-              if (!cloudOp) {
-                merged.push(cleanOperation(localOp));
-              } else {
-                merged.push(mergeOperations(localOp, cloudOp));
-              }
-            });
-            cloudOps.forEach((cloudOp) => {
-              if (!deletedOpIdsRef.current.has(cloudOp.id) && !processedIds.has(cloudOp.id)) {
-                merged.push(cleanOperation(cloudOp));
-              }
-            });
-            return merged;
-          });
-        }
+        cloudOps.sort((a, b) => {
+          if (a.status === 'active' && b.status !== 'active') return -1;
+          if (a.status !== 'active' && b.status === 'active') return 1;
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        });
+        setAllOperations(cloudOps);
+        try {
+          localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify(cloudOps));
+        } catch {}
       }
 
       // 2. Refresh User Locations
@@ -4853,6 +4877,9 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     }
 
     deletedOpIdsRef.current.add(id);
+    try {
+      localStorage.setItem('rescue_deleted_op_ids_slk_v4', JSON.stringify(Array.from(deletedOpIdsRef.current)));
+    } catch {}
     setUserLocations((prev) => {
       const next = { ...prev };
       Object.keys(next).forEach(uid => {
@@ -4861,6 +4888,19 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         }
       });
       return next;
+    });
+
+    // Clean up associated chat messages for this operation from cloud and local cache
+    const opMsgIds = chatMessages.filter((m) => m.operationId === id).map((m) => m.id);
+    if (opMsgIds.length > 0) {
+      deleteChatMessagesFromCloud(opMsgIds);
+    }
+    setChatMessages((prev) => {
+      const remaining = prev.filter((m) => m.operationId !== id);
+      try {
+        localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(remaining));
+      } catch {}
+      return remaining;
     });
 
     // Delete from Firestore Cloud Database
