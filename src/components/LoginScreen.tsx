@@ -378,6 +378,18 @@ export const LoginScreen: React.FC = () => {
     setFailedAttempts(0);
     setForceLogoutTarget(null);
 
+    // When NO operation is active (Bereitschaft): login immediately without showing any selector
+    if (activeOperations.length === 0) {
+      const isLead = isUserAdminOrEL(foundUser);
+      handleFinalizeLogin(
+        foundUser,
+        foundUser.role === 'observer' ? 'observer' : 'active',
+        undefined,
+        isLead ? 'ez_command' : 'searcher'
+      );
+      return;
+    }
+
     // Observer accounts skip the role picker – finalize directly as observer.
     const isTempObserver = foundUser.role === 'observer' && (
       isFirstAdmin(foundUser) || 
@@ -388,7 +400,6 @@ export const LoginScreen: React.FC = () => {
       foundUser.name.toLowerCase().includes('admin')
     );
 
-    // For multiple ops show op picker, for single op finalize immediately.
     if (foundUser.role === 'observer' && !isTempObserver) {
       if (activeOperations.length > 1) {
         setVerifiedUser(foundUser);
@@ -396,9 +407,17 @@ export const LoginScreen: React.FC = () => {
       } else {
         handleFinalizeLogin(foundUser, 'observer', activeOperations[0]?.id);
       }
-    } else {
-      setVerifiedUser(foundUser);
+      return;
     }
+
+    // Regular responder (non-admin) during a single active operation logs in directly as searcher
+    if (!isUserAdminOrEL(foundUser) && activeOperations.length === 1) {
+      handleFinalizeLogin(foundUser, 'active', activeOperations[0].id, 'searcher');
+      return;
+    }
+
+    // Otherwise (Admin during active op or multiple active ops): show selector
+    setVerifiedUser(foundUser);
   };
 
   const handleFailedAttempt = () => {

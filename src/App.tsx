@@ -82,6 +82,10 @@ const MainApp: React.FC = () => {
     confirmModalState,
     dismissConfirmModal,
     showConfirmModal,
+    allUsers,
+    chatToasts,
+    dismissChatToast,
+    openChatTarget,
   } = useRescue();
 
   // Initialize push notifications & vibration alerts
