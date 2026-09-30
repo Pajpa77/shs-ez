@@ -2156,7 +2156,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         if (!history || history.length < 2) return;
 
         // Check if user already has an archived track from previous phase
-        const archivedForUser = currentOperation?.archivedTracks?.find((at) => at.userId === userId);
+        const archivedForUserRaw = currentOperation?.archivedTracks?.find((at) => at.userId === userId);
+   const archivedForUser = archivedForUserRaw ? { ...archivedForUserRaw, points: archivedForUserRaw.points.filter(pt => !pt.operationId || pt.operationId === currentOperation.id) } : undefined;
         let activeHistory = history;
         let isPhase2 = false;
 

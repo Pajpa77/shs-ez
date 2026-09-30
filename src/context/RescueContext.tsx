@@ -2897,7 +2897,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             color: trackColor,
             phaseLabel: `Einsatzspur (${targetUser.callSign || 'Sucher'})`,
             recordedAt: new Date().toISOString(),
-            points: [...locState.trackHistory],
+            points: [...locState.trackHistory].filter(p => p.operationId === (typeof targetOp !== 'undefined' ? targetOp.id : (typeof op !== 'undefined' ? op.id : currentOperation?.id))),
           });
           updateOperation(currentOperation.id, {
             archivedTracks: updatedArchived,
@@ -3989,6 +3989,8 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     const updatedArchived = [...existingArchived];
     (Object.entries(userLocations) as [string, UserLocationState][]).forEach(([userId, locState]) => {
       if (locState?.trackHistory && locState.trackHistory.length > 1) {
+          const validPoints = locState.trackHistory.filter(pt => pt.operationId === targetOp?.id || pt.operationId === op.id || !pt.operationId);
+          if (validPoints.length < 2) return;
         const user = allUsers.find((u) => u.id === userId);
         // Only skip archiving if an existing entry already covers the same or MORE points for this user
         const existingForUser = updatedArchived.filter(t => t.userId === userId);
@@ -4003,7 +4005,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             color,
             phaseLabel: `Suchphase vor Pause (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
             recordedAt: now,
-            points: [...locState.trackHistory],
+            points: [...locState.trackHistory].filter(p => p.operationId === (typeof targetOp !== 'undefined' ? targetOp.id : (typeof op !== 'undefined' ? op.id : currentOperation?.id))),
           });
         }
       }
@@ -4294,7 +4296,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 color: getUserTrackColor(user || userId, allUsers),
                 phaseLabel: `Suchphase 1 (${new Date(op.createdAt).toLocaleDateString()})`,
                 recordedAt: now,
-                points: [...locState.trackHistory],
+                points: [...locState.trackHistory].filter(p => p.operationId === (typeof targetOp !== 'undefined' ? targetOp.id : (typeof op !== 'undefined' ? op.id : currentOperation?.id))),
               });
             }
           }
@@ -4317,8 +4319,11 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
           completedAt: now,
           updatedAt: now,
           outcome: outcome || (op.type === 'exercise' ? 'exercise_completed' : 'person_alive'),
-          closingNotes: notes ? (op.closingNotes ? `${op.closingNotes}\n\n[Ergänzung ${new Date().toLocaleDateString()}]: ${notes}` : notes) : op.closingNotes,
-          notes: notes ? `${op.notes ? `${op.notes}\n` : ''}${notes}` : op.notes,
+          closingNotes: notes ? (op.closingNotes ? `${op.closingNotes}
+
+[Ergänzung ${new Date().toLocaleDateString()}]: ${notes}` : notes) : op.closingNotes,
+          notes: notes ? `${op.notes ? `${op.notes}
+` : ''}${notes}` : op.notes,
           archivedTracks: updatedArchived,
           archivedChatMessages: opChat.length > 0 ? opChat : op.archivedChatMessages,
           mapSnapshotUrl: finalSnapshot || op.mapSnapshotUrl || '',
@@ -4459,7 +4464,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             color,
             phaseLabel: op.completedAt ? `Suchphase 1 (${new Date(op.completedAt).toLocaleDateString('de-DE')})` : 'Phase 1',
             recordedAt: now,
-            points: [...locState.trackHistory],
+            points: [...locState.trackHistory].filter(p => p.operationId === (typeof targetOp !== 'undefined' ? targetOp.id : (typeof op !== 'undefined' ? op.id : currentOperation?.id))),
           });
         }
       }
@@ -4675,6 +4680,15 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     }
 
     deletedOpIdsRef.current.add(id);
+    setUserLocations((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach(uid => {
+        if (next[uid]?.trackHistory) {
+          next[uid].trackHistory = next[uid].trackHistory.filter(pt => pt.operationId !== id);
+        }
+      });
+      return next;
+    });
 
     // Delete from Firestore Cloud Database
     safeFirestoreWrite(
