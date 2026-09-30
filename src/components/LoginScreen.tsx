@@ -213,10 +213,13 @@ export const LoginScreen: React.FC = () => {
       if (user.role === 'observer') {
         const isLead =
           isUserAdminOrEL(user) ||
+          isFirstAdmin(user) ||
+          user.isAdmin ||
+          user.canLeadOperations ||
           user.username.toLowerCase().includes('admin') ||
           user.username.toLowerCase().includes('leitung') ||
           user.name.toLowerCase().includes('admin');
-        const defaultLeadRole: UserRole = user.username.toLowerCase().includes('admin') ? 'admin' : 'einsatzleitung';
+        const defaultLeadRole: UserRole = (isFirstAdmin(user) || user.isAdmin || user.username.toLowerCase().includes('admin')) ? 'admin' : 'einsatzleitung';
         updateUser(user.id, { role: isLead ? defaultLeadRole : 'responder', operationalRole: opRole });
       } else {
         updateUser(user.id, { operationalRole: opRole });
@@ -376,8 +379,17 @@ export const LoginScreen: React.FC = () => {
     setForceLogoutTarget(null);
 
     // Observer accounts skip the role picker – finalize directly as observer.
+    const isTempObserver = foundUser.role === 'observer' && (
+      isFirstAdmin(foundUser) || 
+      foundUser.isAdmin || 
+      foundUser.canLeadOperations ||
+      foundUser.username.toLowerCase().includes('admin') ||
+      foundUser.username.toLowerCase().includes('leitung') ||
+      foundUser.name.toLowerCase().includes('admin')
+    );
+
     // For multiple ops show op picker, for single op finalize immediately.
-    if (foundUser.role === 'observer') {
+    if (foundUser.role === 'observer' && !isTempObserver) {
       if (activeOperations.length > 1) {
         setVerifiedUser(foundUser);
         setPendingSessionMode('observer');
@@ -560,7 +572,7 @@ export const LoginScreen: React.FC = () => {
 
           <div className="pt-6 mt-6 border-t border-blue-700/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-blue-200 font-mono">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-cyan-300">v4.8.0</span>
+              <span className="font-bold text-cyan-300">v4.9.0</span>
               <button
                 type="button"
                 onClick={() => {
