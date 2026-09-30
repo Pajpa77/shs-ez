@@ -489,7 +489,7 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
             </div>
 
             <div
-              className="grid gap-2 p-3 bg-slate-100 dark:bg-slate-950/80 rounded-xl border border-slate-200 dark:border-slate-800 max-h-48 overflow-y-auto"
+              className="grid gap-2 p-3 bg-slate-100 dark:bg-slate-950/80 rounded-xl border border-slate-200 dark:border-slate-800 overflow-y-auto flex-1"
               style={{
                 gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
               }}

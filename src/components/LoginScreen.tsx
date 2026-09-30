@@ -699,7 +699,7 @@ export const LoginScreen: React.FC = () => {
                         Es sind mehrere Einsätze/Übungen gleichzeitig aktiv. Bitte wähle deinen:
                       </p>
 
-                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                      <div className="space-y-2 overflow-y-auto flex-1 pr-1">
                         {activeOperations.map((op) => {
                           const isExercise = op.type === 'exercise';
                           return (

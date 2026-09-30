@@ -527,7 +527,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
             </span>
           </div>
 
-          <div className="space-y-2.5 max-h-[680px] overflow-y-auto pr-0.5">
+          <div className="space-y-2.5 overflow-y-auto flex-1 pr-0.5">
             {allOperations.map((op) => {
               const isSel = selectedOp && op.id === selectedOp.id;
               const opIsExercise = op.type === 'exercise';
@@ -1133,7 +1133,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block font-mono">
                     Funk- und Chatprotokoll:
                   </span>
-                  <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-300 dark:border-slate-700 overflow-hidden max-h-96 overflow-y-auto">
+                  <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-300 dark:border-slate-700 overflow-hidden overflow-y-auto flex-1">
                     {selectedOp.archivedChatMessages && selectedOp.archivedChatMessages.length > 0 ? (
                       <div className="divide-y divide-slate-700/50">
                         {selectedOp.archivedChatMessages.map(msg => {
@@ -1313,7 +1313,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                 </div>
 
                 {/* Protocol Timeline Entries */}
-                <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
+                <div className="space-y-2.5 overflow-y-auto flex-1 pr-1">
                   {filteredLogs.length === 0 ? (
                     <div className="p-8 text-center text-slate-500 font-mono text-xs bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
                       Keine Protokolleinträge für diese Filterung gefunden.
@@ -1612,7 +1612,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                     Für diesen Einsatz wurden keine gesonderten Chat-Nachrichten im Archiv erfasst.
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-[600px] overflow-y-auto p-1">
+                  <div className="space-y-2 overflow-y-auto flex-1 p-1">
                     {selectedOp.archivedChatMessages.map((msg) => (
                       <div
                         key={msg.id}
@@ -1722,7 +1722,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                       Einsatzkräfte aktivieren (Nur Online-Nutzer anzeigen):
                     </label>
                   </div>
-                  <div className="max-h-40 overflow-y-auto bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-2 space-y-1.5 font-mono text-[11px] custom-scrollbar">
+                  <div className="overflow-y-auto flex-1 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-2 space-y-1.5 font-mono text-[11px] custom-scrollbar">
                     {(() => {
                       const onlineUsers = allUsers.filter(u => u.isActive);
                       if (onlineUsers.length === 0) {

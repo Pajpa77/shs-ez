@@ -511,7 +511,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto text-xs">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
           {/* Owner Protection Notification Banner */}
           {isTargetOwnerProtected && (
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-amber-950/80 border-2 border-amber-500/80 text-amber-200 text-xs font-mono flex items-start gap-3 shadow-lg">

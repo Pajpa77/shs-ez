@@ -1737,7 +1737,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             <span>🏢 Kräfte in der EZ:</span>
             <span class="px-1.5 py-0.2 bg-indigo-900/80 text-indigo-200 rounded font-mono text-[10px]">${ezResponders.length}</span>
           </div>
-          <div class="space-y-1 max-h-32 overflow-y-auto pr-1">
+          <div class="space-y-1 overflow-y-auto flex-1 pr-1">
             ${ezResponders.map(r => `
               <div class="flex items-center justify-between bg-slate-800/90 px-1.5 py-1 rounded text-[11px] border border-slate-700/60">
                 <div class="font-medium text-slate-200 flex items-center gap-1">
@@ -3163,7 +3163,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             if (e.target === e.currentTarget) setIsLayersOpenMobile(false);
           }}
         >
-          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl p-4 w-full max-w-sm max-h-[85vh] overflow-y-auto shadow-2xl space-y-3.5 text-slate-200 animate-in slide-in-from-bottom duration-200">
+          <div className="bg-[#1E293B] border border-slate-700 rounded-2xl p-4 w-full max-w-sm overflow-y-auto flex-1 shadow-2xl space-y-3.5 text-slate-200 animate-in slide-in-from-bottom duration-200">
             <div className="flex items-center justify-between pb-2 border-b border-slate-700">
               <span className="flex items-center gap-2 font-bold text-white text-xs uppercase tracking-wider font-mono">
                 <Layers className="w-4 h-4 text-blue-400" />
@@ -3346,7 +3346,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                     {(trackSummaries.reduce((sum, t) => sum + t.distanceMeters, 0) / 1000).toFixed(1)} km
                   </span>
                 </div>
-                <div className="max-h-36 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
+                <div className="overflow-y-auto flex-1 space-y-1 pr-1 scrollbar-thin">
                   {trackSummaries.map((item) => (
                     <div
                       key={`${item.userId}-${item.phaseLabel || 'track'}`}
@@ -3416,7 +3416,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         <div
           ref={sidebarDragRef}
           style={sidebarPos ? { position: 'fixed', left: `${sidebarPos.x}px`, top: `${sidebarPos.y}px`, zIndex: 950 } : undefined}
-          className={`hidden md:flex ${sidebarPos ? '' : 'absolute top-4 left-4 z-[900]'} flex-col gap-2 max-w-[290px] w-[290px] max-h-[calc(100vh-140px)] overflow-y-auto pr-1 select-none scrollbar-thin transition-all ${isSidebarDragging ? 'shadow-2xl shadow-blue-500/20 scale-[1.01]' : ''}`}
+          className={`hidden md:flex ${sidebarPos ? '' : 'absolute top-4 left-4 z-[900]'} flex-col gap-2 max-w-[290px] w-[290px] overflow-y-auto flex-1 pr-1 select-none scrollbar-thin transition-all ${isSidebarDragging ? 'shadow-2xl shadow-blue-500/20 scale-[1.01]' : ''}`}
         >
           {/* Header Tab Bar */}
           <div
@@ -3636,7 +3636,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   Noch keine Suchspuren aufgezeichnet. Einsatzkräfte mit Status Grün zeichnen automatisch ihre Wege auf.
                 </div>
               ) : (
-                <div className="space-y-1.5 max-h-[320px] overflow-y-auto pr-0.5 scrollbar-thin">
+                <div className="space-y-1.5 overflow-y-auto flex-1 pr-0.5 scrollbar-thin">
                   {trackSummaries.map((item) => {
                     const distKm = (item.distanceMeters / 1000).toFixed(2);
                     const distLabel = item.distanceMeters >= 1000 ? `${distKm} km` : `${Math.round(item.distanceMeters)} m`;
@@ -3884,7 +3884,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             </div>
 
               {/* Scrollable Body */}
-              <div className="p-3.5 space-y-2.5 text-xs max-h-[min(380px,calc(100vh-280px))] overflow-y-auto scrollbar-thin">
+              <div className="p-3.5 space-y-2.5 text-xs overflow-y-auto flex-1 scrollbar-thin">
                 {/* Status indicator */}
                 <div className="flex items-center justify-between bg-slate-900/60 p-2.5 rounded-lg border border-slate-700/80">
                   <span className="text-slate-400 font-mono text-[11px]">STATUS:</span>
@@ -4041,7 +4041,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             </div>
 
               {/* Scrollable Body */}
-              <div className="p-3.5 space-y-2.5 text-xs max-h-[min(380px,calc(100vh-280px))] overflow-y-auto scrollbar-thin">
+              <div className="p-3.5 space-y-2.5 text-xs overflow-y-auto flex-1 scrollbar-thin">
                 <div className="grid grid-cols-2 gap-2 bg-slate-900/60 p-2.5 rounded-xl border border-slate-700/80">
                   <div>
                     <span className="text-slate-400 text-[10px] block font-mono">KFZ-KENNZEICHEN</span>
@@ -4484,7 +4484,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                         {ezNavData.ezResponders.length} aktiv
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 overflow-y-auto flex-1 pr-1">
                       {ezNavData.ezResponders.map((resp) => (
                         <div
                           key={resp.id}
@@ -4759,7 +4759,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             if (e.target === e.currentTarget) setIsWeatherModalOpenMobile(false);
           }}
         >
-          <div className="w-full max-w-sm max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
+          <div className="w-full max-w-sm overflow-y-auto flex-1 animate-in slide-in-from-bottom duration-200">
             <TacticalWeatherOverlay
               lat={weatherTarget.lat}
               lng={weatherTarget.lng}

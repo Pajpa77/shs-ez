@@ -581,7 +581,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-6rem)] sm:max-h-[80vh] overflow-y-auto text-xs">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-6rem)] sm:overflow-y-auto flex-1 text-xs">
           {formError && (
             <div className="p-3 rounded-xl bg-red-950/90 border border-red-600 text-red-300 text-xs font-mono flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />
@@ -1268,7 +1268,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto flex-1 pr-1">
                 {allUsers.map((u) => {
                   const isChecked = selectedResponders.includes(u.id);
                   return (

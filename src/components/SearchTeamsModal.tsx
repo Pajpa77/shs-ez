@@ -381,7 +381,7 @@ export const SearchTeamsModal: React.FC<SearchTeamsModalProps> = ({ isOpen, onCl
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5 font-mono uppercase tracking-wider text-[11px]">
                   Weitere Sucher (eingeloggte aktive Einsatzkräfte):
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-2 bg-white dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 overflow-y-auto flex-1 p-2 bg-white dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800">
                   {activeUsers.map((u) => {
                     const isSelected = memberUserIds.includes(u.id);
                     const isLeader = u.id === leaderUserId;
@@ -432,7 +432,7 @@ export const SearchTeamsModal: React.FC<SearchTeamsModalProps> = ({ isOpen, onCl
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5 font-mono uppercase tracking-wider text-[11px]">
                   Zuteilung zu Suchsektoren (Mehrfach-Auswahl möglich):
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 bg-white dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto flex-1 p-2 bg-white dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800">
                   {sectors.map((sec) => {
                     const isSelected = sectorIds.includes(sec.id);
                     return (

@@ -204,7 +204,7 @@ export const MissionLog: React.FC = () => {
             </button>
 
             {showArchivedChat && (
-              <div className="mt-2.5 p-3 rounded-xl bg-slate-100 dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 max-h-64 overflow-y-auto space-y-2 text-xs">
+              <div className="mt-2.5 p-3 rounded-xl bg-slate-100 dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800 overflow-y-auto flex-1 space-y-2 text-xs">
                 {relevantChat.map((msg) => (
                   <div key={msg.id} className="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 space-y-1">
                     <div className="flex items-center justify-between text-[11px]">

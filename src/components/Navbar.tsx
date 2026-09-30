@@ -323,9 +323,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [activeTab, selectedArchiveOpId, currentOperation, allOperations]);
 
   return (
-    <header className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-5 bg-[#1E293B] border-b border-slate-700 shadow-lg shrink-0 sticky top-0 z-[4000] text-slate-200">
+    <header className="min-h-[3.5rem] sm:min-h-[4rem] h-auto flex flex-wrap sm:flex-nowrap items-center justify-between px-2 sm:px-5 py-2 bg-[#1E293B] border-b border-slate-700 shadow-lg shrink-0 sticky top-0 z-[4000] text-slate-200 gap-y-1.5 gap-x-1">
       {/* Brand & Central SHS Leitstellen Menu Button */}
-      <div className="flex items-center gap-1.5 sm:gap-4 min-w-0">
+      <div className="flex items-center flex-wrap gap-1.5 sm:gap-4 min-w-0 flex-1">
         {/* Interactive White SHS Button / Admin Hub */}
         <div className="relative">
           <button
@@ -358,7 +358,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="fixed inset-0 z-[2100]"
                 onClick={() => setShowSarAdminMenu(false)}
               />
-              <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain bg-[#1E293B] border border-slate-600 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md">
+              <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain flex flex-col bg-[#1E293B] border border-slate-600 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md">
                 {/* Menu Header */}
                 <div className="flex items-center justify-between px-2 py-1.5 border-b border-slate-700/80 mb-2">
                   <div className="flex items-center gap-2 min-w-0">
@@ -875,7 +875,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="fixed inset-0 z-[2100]"
                     onClick={() => setShowOpDropdown(false)}
                   />
-                  <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150">
+                  <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain flex flex-col bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150">
                     <div className="flex items-center justify-between font-bold text-slate-300 px-2 py-1 border-b border-slate-700 uppercase tracking-wider text-[10px] font-mono">
                       <span>Einsatz-Auswahl & Status</span>
                       {isAdmin && onOpenCreateOperationModal && (
@@ -1209,7 +1209,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               {showResponderListDropdown && (
                 <>
                   <div className="fixed inset-0 z-[2100]" onClick={() => setShowResponderListDropdown(false)} />
-                  <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150 space-y-2">
+                  <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain flex flex-col bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150 space-y-2">
                     <div className="flex items-center justify-between font-bold text-slate-300 px-1 border-b border-slate-700 uppercase tracking-wider text-[10px] font-mono pb-1">
                       <span>Einsatzkräfte & Bereitschaft</span>
                       <span className="text-blue-400">{allUsers.filter(u => u.isActive).length} aktiv</span>
@@ -1620,7 +1620,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="fixed inset-0 z-[2100]"
                 onClick={() => setShowUserDropdown(false)}
               />
-              <div className="fixed sm:absolute top-14 sm:top-full right-2 sm:right-0 left-2 sm:left-auto sm:w-80 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-4.5rem)] overflow-y-auto overscroll-contain bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150">
+              <div className="fixed sm:absolute top-14 sm:top-full right-2 sm:right-0 left-2 sm:left-auto sm:w-80 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain flex flex-col bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150">
                 <div className="px-2 py-1.5 border-b border-slate-700 mb-2">
                   <div className="font-bold text-white text-sm flex items-center gap-1.5">
                     <span>{currentUser?.name}</span>

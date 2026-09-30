@@ -619,7 +619,7 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
                         Eingeloggte aktive User ({activeUsersUnique.length})
                       </span>
                     </div>
-                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                    <div className="space-y-1.5 overflow-y-auto flex-1 pr-1">
                       {activeUsersUnique.length > 0 ? (
                         activeUsersUnique.map((u) => (
                           <div key={u.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700/60 text-xs">
@@ -651,7 +651,7 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
                         Betrachter / Beobachter ({observerUsersUnique.length})
                       </span>
                     </div>
-                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                    <div className="space-y-1.5 overflow-y-auto flex-1 pr-1">
                       {observerUsersUnique.length > 0 ? (
                         observerUsersUnique.map((u) => (
                           <div key={u.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700/60 text-xs">

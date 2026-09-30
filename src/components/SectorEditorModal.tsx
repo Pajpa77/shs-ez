@@ -264,7 +264,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="p-5 space-y-4 max-h-[calc(100vh-6rem)] sm:max-h-[80vh] overflow-y-auto text-xs">
+        <form onSubmit={handleSave} className="p-5 space-y-4 max-h-[calc(100vh-6rem)] sm:overflow-y-auto flex-1 text-xs">
           {errorMsg && (
             <div className="p-3 rounded-xl bg-red-950/90 border border-red-600 text-red-300 text-xs font-mono flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />
@@ -363,7 +363,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
             </label>
 
             {currentOperation?.teams && currentOperation.teams.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1 bg-white dark:bg-slate-900/60 rounded-xl border border-slate-300 dark:border-slate-700">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto flex-1 p-1 bg-white dark:bg-slate-900/60 rounded-xl border border-slate-300 dark:border-slate-700">
                 {currentOperation.teams.map((team) => {
                   const isSelected = assignedTeamIds.includes(team.id);
                   const leader = allUsers.find((u) => u.id === team.leaderUserId);
@@ -422,7 +422,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
               className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-black dark:text-slate-100 text-xs focus:outline-none focus:border-blue-500 mb-2 font-mono"
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto p-1 bg-white dark:bg-slate-900/60 rounded-xl border border-slate-300 dark:border-slate-700">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto flex-1 p-1 bg-white dark:bg-slate-900/60 rounded-xl border border-slate-300 dark:border-slate-700">
               {allUsers.map((user) => {
                 const isAssigned = assignedUserIds.includes(user.id);
                 return (

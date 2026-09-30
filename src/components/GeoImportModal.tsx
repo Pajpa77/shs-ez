@@ -286,7 +286,7 @@ export const GeoImportModal: React.FC<GeoImportModalProps> = ({
                       Werden als aktive Sektoren angelegt
                     </span>
                   </div>
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  <div className="space-y-1.5 overflow-y-auto flex-1 pr-1">
                     {importResult.sectors.map((sec) => {
                       const isChecked = selectedSectorIds.has(sec.id);
                       return (
@@ -327,7 +327,7 @@ export const GeoImportModal: React.FC<GeoImportModalProps> = ({
                       Werden als Referenzspuren auf Karte gelegt
                     </span>
                   </div>
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  <div className="space-y-1.5 overflow-y-auto flex-1 pr-1">
                     {importResult.tracks.map((trk) => {
                       const isChecked = selectedTrackIds.has(trk.id);
                       return (
@@ -368,7 +368,7 @@ export const GeoImportModal: React.FC<GeoImportModalProps> = ({
                       Werden als Fundstellen / POIs angelegt
                     </span>
                   </div>
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  <div className="space-y-1.5 overflow-y-auto flex-1 pr-1">
                     {importResult.waypoints.map((wpt) => {
                       const isChecked = selectedWptIds.has(wpt.id);
                       return (
