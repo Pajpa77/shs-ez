@@ -1239,6 +1239,8 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                       <span>{copiedOfficialReport ? 'Bericht kopiert!' : 'Gesamtbericht kopieren'}</span>
                     </button>
 
+                    {isAdmin && (
+                    <>
                     <button
                       onClick={handleExportCsv}
                       disabled={!selectedOp?.logs || selectedOp.logs.length === 0}
@@ -1273,6 +1275,8 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                       )}
                       <span>{isExportingPdf ? 'Erzeuge PDF...' : 'Drucken / PDF'}</span>
                     </button>
+                    </>
+                    )}
 
                     {isAdmin && (
                       <button
@@ -2442,7 +2446,27 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
                 <tbody>
                   {selectedOp.archivedChatMessages.map((msg, idx) => {
                     const sender = allUsers.find(u => u.id === msg.senderId);
-                    return (
+                  
+  const handleDownloadSnapshot = async (e: React.MouseEvent, url: string, filename: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Download failed', error);
+      window.open(url, '_blank');
+    }
+  };
+  return (
                       <tr key={msg.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                         <td className="p-2 border-r border-black font-mono whitespace-nowrap">
                           {new Date(msg.timestamp).toLocaleTimeString('de-DE')}

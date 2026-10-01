@@ -102,7 +102,11 @@ const MainApp: React.FC = () => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       // Standard confirmation prompt when closing/reloading tab or navigating away
-      event.returnValue = 'WARNUNG: Einsatz-App aktiv! Beim Schließen dieser Seite wird das GPS-Tracking und die Verbindung zur Einsatzzentrale beendet. Möchtest du wirklich fortfahren?'; 
+      if (isOperationActive) {
+        event.returnValue = 'WARNUNG: Einsatz-App aktiv! Beim Schließen dieser Seite wird das GPS-Tracking und die Verbindung zur Einsatzzentrale beendet. Möchtest du wirklich fortfahren?'; 
+      } else {
+        event.returnValue = 'WARNUNG: Bereitschaft aktiv! Möchtest du die App wirklich verlassen?';
+      }
       return event.returnValue;
     };
 
@@ -118,11 +122,20 @@ const MainApp: React.FC = () => {
     const handlePopState = (event: PopStateEvent) => {
       // Re-push state so page doesn't exit on back button/gesture in pocket
       pushDummyHistoryState();
-      setActiveAlertNotification({
-        title: '🛡️ Einsatz aktiv – App geschützt',
-        message: 'Ein Schließen oder Verlassen der App durch Wischgesten oder Zurück-Tasten wurde verhindert, um dein GPS-Tracking nicht zu unterbrechen.',
-        timestamp: new Date().toLocaleTimeString(),
-      });
+      
+      if (isOperationActive) {
+        setActiveAlertNotification({
+          title: '🛡️ Einsatz aktiv – App geschützt',
+          message: 'Ein Schließen oder Verlassen der App durch Wischgesten oder Zurück-Tasten wurde verhindert, um dein GPS-Tracking nicht zu unterbrechen.',
+          timestamp: new Date().toLocaleTimeString(),
+        });
+      } else {
+        setActiveAlertNotification({
+          title: '🛡️ Bereitschaft – App geschützt',
+          message: 'Ein versehentliches Schließen der App durch Wischgesten wurde verhindert. Bitte beende die App regulär, falls gewünscht.',
+          timestamp: new Date().toLocaleTimeString(),
+        });
+      }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload, { capture: true });
@@ -132,7 +145,7 @@ const MainApp: React.FC = () => {
       window.removeEventListener('beforeunload', handleBeforeUnload, { capture: true });
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [currentUser, setActiveAlertNotification]);
+  }, [currentUser, setActiveAlertNotification, isOperationActive]);
 
   // Activate Wake Lock & Background GPS Heartbeat whenever user is logged in
   const isTrackingActive = Boolean(currentUser || isOperationActive || activeTrackingTest);

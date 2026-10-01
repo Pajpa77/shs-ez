@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { OperationLogEntry } from '../types';
+import { OperationLogEntry, isUserAdmin } from '../types';
 import {
   FileText,
   Clock,
@@ -25,6 +25,7 @@ import {
 
 export const MissionLog: React.FC = () => {
   const { currentOperation, updateOperation, currentUser, chatMessages, findings, userLocations } = useRescue();
+  const isAdmin = currentUser ? isUserAdmin(currentUser) : false;
   const [manualNote, setManualNote] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -289,7 +290,27 @@ export const MissionLog: React.FC = () => {
           const isEnd = log.category === 'end' || log.text.includes('BEENDET');
           const isStatus = log.category === 'status';
 
-          return (
+        
+  const handleDownloadSnapshot = async (e: React.MouseEvent, url: string, filename: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Download failed', error);
+      window.open(url, '_blank');
+    }
+  };
+  return (
             <div
               key={log.id}
               className={`p-4 rounded-2xl border transition shadow flex items-start gap-3.5 ${
@@ -393,7 +414,8 @@ export const MissionLog: React.FC = () => {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <a
+                {isAdmin && (
+<a
                   href={selectedSnapshot}
                   download={`lagekarte-snapshot-${currentOperation.id}.jpg`}
                   className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-400 dark:border-slate-600 rounded-lg text-xs font-mono font-bold transition text-slate-900 dark:text-slate-200 flex items-center gap-1.5"
@@ -401,6 +423,7 @@ export const MissionLog: React.FC = () => {
                   <Download className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Download</span>
                 </a>
+)}
                 <button
                   type="button"
                   onClick={() => setSelectedSnapshot(null)}

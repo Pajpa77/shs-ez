@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User } from '../types';
+import { User, isUserAdmin } from '../types';
+import { useRescue } from '../context/RescueContext';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
 import { X, Download, Copy, Printer, Check, CreditCard, QrCode as QrIcon, Barcode as BarIcon } from 'lucide-react';
@@ -51,6 +52,8 @@ function generateCode128Pattern(text: string): string {
 }
 
 export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose }) => {
+  const { currentUser } = useRescue();
+  const isAdmin = currentUser ? isUserAdmin(currentUser) : false;
   const [activeTab, setActiveTab] = useState<'barcode' | 'qrcode'>('barcode');
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
@@ -220,19 +223,23 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose 
           {activeTab === 'barcode' && (
             <div className="flex flex-col items-center space-y-3 w-full">
               <div 
-                onClick={handleDownloadPNG}
-                className="p-4 bg-white rounded-2xl border-2 border-slate-300 shadow-xl max-w-full overflow-x-auto cursor-pointer hover:scale-[1.02] hover:border-blue-500 transition-all duration-200 group relative"
-                title="Klicke auf den Strichcode, um ihn sofort als PNG-Bildspeichern"
+                onClick={isAdmin ? handleDownloadPNG : undefined}
+                className={`p-4 bg-white rounded-2xl border-2 border-slate-300 shadow-xl max-w-full overflow-x-auto transition-all duration-200 group relative ${isAdmin ? 'cursor-pointer hover:scale-[1.02] hover:border-blue-500' : ''}`}
+                title={isAdmin ? "Klicke auf den Strichcode, um ihn sofort als PNG-Bildspeichern" : undefined}
               >
                 <canvas ref={barcodeCanvasRef} className="max-w-full h-auto block pointer-events-none" />
-                <div className="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 rounded-2xl transition flex items-center justify-center font-bold text-blue-900 text-xs font-mono">
-                  💾 Klick = PNG Speichern
-                </div>
+                {isAdmin && (
+                  <div className="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 rounded-2xl transition flex items-center justify-center font-bold text-blue-900 text-xs font-mono">
+                    💾 Klick = PNG Speichern
+                  </div>
+                )}
               </div>
-              <p className="text-[11px] text-emerald-400 font-mono font-semibold text-center flex items-center gap-1">
-                <span>💡 Tipp:</span>
-                <span>Klicke direkt auf den Strichcode, um ihn als PNG-Bilddatei herunterzuladen.</span>
-              </p>
+              {isAdmin && (
+                <p className="text-[11px] text-emerald-400 font-mono font-semibold text-center flex items-center gap-1">
+                  <span>💡 Tipp:</span>
+                  <span>Klicke direkt auf den Strichcode, um ihn als PNG-Bilddatei herunterzuladen.</span>
+                </p>
+              )}
             </div>
           )}
 
@@ -240,9 +247,9 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose 
           {activeTab === 'qrcode' && (
             <div className="flex flex-col items-center space-y-3">
               <div 
-                onClick={handleDownloadPNG}
-                className="p-4 bg-white rounded-2xl border-2 border-slate-300 shadow-xl cursor-pointer hover:scale-[1.02] hover:border-blue-500 transition-all duration-200 group relative"
-                title="Klicke auf den QR-Code, um ihn sofort als PNG-Bild zu speichern"
+                onClick={isAdmin ? handleDownloadPNG : undefined}
+                className={`p-4 bg-white rounded-2xl border-2 border-slate-300 shadow-xl transition-all duration-200 group relative ${isAdmin ? 'cursor-pointer hover:scale-[1.02] hover:border-blue-500' : ''}`}
+                title={isAdmin ? "Klicke auf den QR-Code, um ihn sofort als PNG-Bild zu speichern" : undefined}
               >
                 {qrDataUrl ? (
                   <img src={qrDataUrl} alt="QR Code" className="w-56 h-56 block pointer-events-none" />
@@ -251,14 +258,18 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose 
                     Wird generiert…
                   </div>
                 )}
-                <div className="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 rounded-2xl transition flex items-center justify-center font-bold text-blue-900 text-xs font-mono">
-                  💾 Klick = PNG Speichern
-                </div>
+                {isAdmin && (
+                  <div className="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 rounded-2xl transition flex items-center justify-center font-bold text-blue-900 text-xs font-mono">
+                    💾 Klick = PNG Speichern
+                  </div>
+                )}
               </div>
-              <p className="text-[11px] text-emerald-400 font-mono font-semibold text-center flex items-center gap-1">
-                <span>💡 Tipp:</span>
-                <span>Klicke direkt auf den QR-Code, um ihn als PNG-Bilddatei herunterzuladen.</span>
-              </p>
+              {isAdmin && (
+                <p className="text-[11px] text-emerald-400 font-mono font-semibold text-center flex items-center gap-1">
+                  <span>💡 Tipp:</span>
+                  <span>Klicke direkt auf den QR-Code, um ihn als PNG-Bilddatei herunterzuladen.</span>
+                </p>
+              )}
             </div>
           )}
 
@@ -270,6 +281,7 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose 
             Code-Inhalt: <strong className="text-blue-400 font-bold">{barcodeValue}</strong>
           </div>
 
+          {isAdmin && (
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopyToClipboard}
@@ -288,6 +300,7 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose 
               <span>Als PNG Speichern</span>
             </button>
           </div>
+          )}
         </div>
 
       </div>

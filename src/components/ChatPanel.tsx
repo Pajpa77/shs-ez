@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { User, ChatMessage, SearchTeam, SearchOperation, isFirstAdmin } from '../types';
+import { User, ChatMessage, SearchTeam, SearchOperation, isFirstAdmin, isUserAdmin, isUserEL } from '../types';
 import {
   Send,
   Radio,
@@ -578,7 +578,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       if (activeChannel === 'all') {
         return msg.channel === 'all';
       } else if (activeChannel === 'admins') {
-        return msg.channel === 'admins';
+        return isAdmin ? msg.channel === 'admins' : false;
+      } else if (activeChannel === 'ez_contact') {
+        if (msg.channel !== 'ez_contact') return false;
+        if (isAdmin) return true;
+        const sender = allUsers.find(u => u.id === msg.senderId);
+        const senderIsAdmin = sender ? (sender.role === 'admin' || sender.role === 'einsatzleitung' || sender.isAdmin) : false;
+        return msg.senderId === currentUser.id || senderIsAdmin;
       } else if (activeChannel.startsWith('sec-') || activeChannel.startsWith('team-')) {
         return msg.channel === activeChannel;
       } else {
@@ -653,6 +659,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
   const activeChannelLabel =
     activeChannel === 'all'
       ? '📢 Einsatzfunk'
+      : activeChannel === 'ez_contact'
+      ? '📞 Kontakt zur EZ'
       : activeChannel === 'admins'
       ? '🛡️ Führungskanal'
       : activeTeam
@@ -733,6 +741,26 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
               <button
                 type="button"
+                onClick={() => selectChannel('ez_contact')}
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition cursor-pointer text-left ${
+                  activeChannel === 'ez_contact'
+                    ? 'bg-amber-600 text-white font-bold shadow ring-1 ring-amber-400'
+                    : 'bg-slate-800/80 hover:bg-slate-700/80 text-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <span className="text-lg shrink-0">📞</span>
+                  <div className="truncate">
+                    <div className="font-bold leading-tight uppercase text-sm">Kontakt zur EZ</div>
+                    <div className="text-[10px] opacity-75 mt-0.5">Direkter Draht zur Einsatzleitung</div>
+                  </div>
+                </div>
+                {activeChannel === 'ez_contact' && <ChevronRight className="w-4 h-4 shrink-0 opacity-70" />}
+              </button>
+
+              {isAdmin && (
+              <button
+                type="button"
                 onClick={() => selectChannel('admins')}
                 className={`w-full flex items-center justify-between p-3 rounded-xl transition cursor-pointer text-left ${
                   activeChannel === 'admins'
@@ -749,6 +777,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 </div>
                 {activeChannel === 'admins' && <ChevronRight className="w-4 h-4 shrink-0 opacity-70" />}
               </button>
+              )}
             </div>
 
             {/* Sector & Team Channels */}
@@ -958,7 +987,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           </div>
         ) : (
           <div className="h-9 w-9 rounded-xl bg-slate-900 border border-slate-600 text-blue-400 flex items-center justify-center text-lg shrink-0">
-            {activeChannel === 'all' ? '📢' : activeChannel === 'admins' ? '🛡️' : activeTeam ? '👥' : activeSector ? '🧭' : '💬'}
+            {activeChannel === 'all' ? '📢' : activeChannel === 'ez_contact' ? '📞' : activeChannel === 'admins' ? '🛡️' : activeTeam ? '👥' : activeSector ? '🧭' : '💬'}
           </div>
         )}
 
@@ -967,6 +996,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           <h3 className="font-extrabold text-sm text-white truncate uppercase">
             {activeChannel === 'all'
               ? 'Gesamter Einsatzfunk'
+              : activeChannel === 'ez_contact'
+              ? 'Kontakt zur Einsatzleitung'
               : activeChannel === 'admins'
               ? 'Führungskanal EL'
               : activeTeam
@@ -986,6 +1017,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
             ) : (
               activeChannel === 'all'
                 ? `${activeUsersCount} Einsatzkräfte online`
+                : activeChannel === 'ez_contact'
+                ? 'Nachrichten sind nur für die Einsatzleitung sichtbar'
                 : activeChannel === 'admins'
                 ? 'Geschützter Führungskanal der Einsatzleitung'
                 : activeTeam
@@ -1159,6 +1192,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
             placeholder={`An ${
               activeChannel === 'all'
                 ? 'alle Einheiten'
+                : activeChannel === 'ez_contact'
+                ? 'Einsatzzentrale'
                 : activeChannel === 'admins'
                 ? 'Einsatzleitung'
                 : activeSector
