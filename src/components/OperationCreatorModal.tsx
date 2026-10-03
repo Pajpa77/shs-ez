@@ -104,6 +104,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
   const [description, setDescription] = useState('');
   const [medicalConditions, setMedicalConditions] = useState('');
   const [policeCaseId, setPoliceCaseId] = useState('');
+  const [lpbProfile, setLpbProfile] = useState<string>('');
   const [photoUrl, setPhotoUrl] = useState('');
   const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -168,6 +169,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
           setDescription(mp.description || '');
           setMedicalConditions(Array.isArray(mp.medicalConditions) ? mp.medicalConditions.join(', ') : '');
           setPoliceCaseId(mp.policeCaseId || '');
+          setLpbProfile(mp.lpbProfile || '');
           setPhotoUrl(mp.photoUrl || '');
 
           if (mp.homeAddress) {

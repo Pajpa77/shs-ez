@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import mpegts from 'mpegts.js';
 import { Video, X, Maximize2, Minimize2, RadioTower, GripVertical } from 'lucide-react';
 import { useDraggable } from '../hooks/useDraggable';
 
@@ -9,6 +10,37 @@ interface DroneFeedWidgetProps {
 export const DroneFeedWidget: React.FC<DroneFeedWidgetProps> = ({ onClose }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const { dragRef, position, dragProps } = useDraggable({ storageKey: 'drone_feed_widget' });
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<any>(null); // mpegts.Player types might be missing
+
+  useEffect(() => {
+    if (mpegts.getFeatureList().mseLivePlayback) {
+      if (videoRef.current) {
+        // Connect to local Node Media Server on Port 8000 via WS-FLV
+        // In production, localhost should be replaced by window.location.hostname
+        const wsUrl = `ws://${window.location.hostname}:8000/live/drone.flv`;
+        
+        const player = mpegts.createPlayer({
+          type: 'flv',
+          isLive: true,
+          url: wsUrl, 
+          hasAudio: false,
+        });
+        player.attachMediaElement(videoRef.current);
+        player.load();
+        
+        // Auto-play might be blocked by browsers, but muted usually works
+        player.play().catch(e => console.log('Autoplay blocked', e));
+        playerRef.current = player;
+      }
+    }
+    return () => {
+      if (playerRef.current) {
+        playerRef.current.destroy();
+        playerRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div 
@@ -56,20 +88,17 @@ export const DroneFeedWidget: React.FC<DroneFeedWidgetProps> = ({ onClose }) => 
            <div className="text-[10px] font-mono text-red-500 bg-black/60 px-2 py-1 rounded mb-2 border border-red-500/30">LIVE ◉</div>
            <div className="w-12 h-12 border-2 border-slate-600 border-t-white rounded-full animate-spin mb-4"></div>
            <span className="text-xs font-mono text-slate-300">Warte auf Videosignal...</span>
-           <span className="text-[9px] font-mono text-slate-500 mt-1">Server: rtmp://shs-ez.test/drone</span>
+           <span className="text-[9px] font-mono text-slate-500 mt-1">Server: rtmp://&lt;SERVER-IP&gt;:1935/live/drone</span>
         </div>
         
         {/* Dummy Video loop for demonstration */}
         <video 
+          ref={videoRef}
           autoPlay 
-          loop 
           muted 
           playsInline
-          className="w-full h-full object-cover opacity-60"
-        >
-          {/* Public domain aerial video from pixabay */}
-          <source src="https://cdn.pixabay.com/video/2021/08/17/85378-589632870_tiny.mp4" type="video/mp4" />
-        </video>
+          className="w-full h-full object-cover relative z-30"
+        ></video>
         
         {/* Tactical Crosshair Overlay */}
         <div className="absolute inset-0 pointer-events-none z-10 flex items-center justify-center opacity-30">

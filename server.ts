@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
+import NodeMediaServer from 'node-media-server';
 
 dotenv.config();
 
@@ -34,6 +35,24 @@ async function startServer() {
     });
   }
 
+  // Setup Node Media Server (RTMP Ingest + HTTP-FLV Out)
+  const nmsConfig = {
+    rtmp: {
+      port: 1935,
+      chunk_size: 60000,
+      gop_cache: true,
+      ping: 30,
+      ping_timeout: 60
+    },
+    http: {
+      port: 8000,
+      allow_origin: '*'
+    }
+  };
+  
+  const nms = new NodeMediaServer(nmsConfig);
+  nms.run();
+  
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`[SERVER] Rescuetrack Engine running on http://localhost:${PORT}`);
   });

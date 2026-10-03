@@ -253,6 +253,7 @@ export interface MissingPerson {
   specialRisks?: string;
   emergencyContact?: string;
   policeCaseId?: string;
+  lpbProfile?: 'dementia' | 'child_1_3' | 'child_4_6' | 'autistic' | 'despondent' | 'hiker';
 }
 
 export type FindingCategory =

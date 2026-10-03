@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import L from 'leaflet';
+import * as turf from '@turf/turf';
 import { captureTacticalMapScreenshot } from '../lib/mapSnapshotHelper';
 import { useRescue } from '../context/RescueContext';
 import {
@@ -21,6 +22,7 @@ import {
 import { VEREINSBUERO_LOCATION, saveSavedVereinsbueroLocation, getSavedVereinsbueroLocation } from '../mockData';
 import { computeTrackSummaries } from '../lib/trackHelper';
 import { TacticalWeatherOverlay } from './TacticalWeatherOverlay';
+import { fetchRescueWeather } from '../lib/weatherService';
 import {
   Layers,
   MapPin,
@@ -50,7 +52,7 @@ import {
   ExternalLink,
   Copy,
   X,
-  CloudSun,
+  CloudSun, Wind,
   FileText,
   GripVertical,
   Move,
@@ -132,6 +134,26 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c;
+}
+
+function computeDestinationPoint(lat: number, lng: number, distanceMeters: number, bearingDegrees: number): [number, number] {
+  const R = 6371e3;
+  const d = distanceMeters;
+  const lat1 = (lat * Math.PI) / 180;
+  const lng1 = (lng * Math.PI) / 180;
+  const brng = (bearingDegrees * Math.PI) / 180;
+
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(d / R) + Math.cos(lat1) * Math.sin(d / R) * Math.cos(brng)
+  );
+  const lng2 =
+    lng1 +
+    Math.atan2(
+      Math.sin(brng) * Math.sin(d / R) * Math.cos(lat1),
+      Math.cos(d / R) - Math.sin(lat1) * Math.sin(lat2)
+    );
+
+  return [(lat2 * 180) / Math.PI, (lng2 * 180) / Math.PI];
 }
 
 interface TileLayerConfig {
@@ -249,6 +271,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   // Map state - Default to OpenStreetMap for maximum clarity of street names & paths
   const [activeBaseMap, setActiveBaseMap] = useState<'osm' | 'hybrid' | 'satellite' | 'topo'>('osm');
   const [showTracks, setShowTracks] = useState(true);
+  const [showCoverage, setShowCoverage] = useState(false);
+  const [playbackTime, setPlaybackTime] = useState<number | null>(null);
   const [showSectors, setShowSectors] = useState(true);
   const [showResponders, setShowResponders] = useState(!isArchiveMode);
   const [showInactiveResponders, setShowInactiveResponders] = useState(false);
@@ -256,6 +280,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const [showFalseAlarms, setShowFalseAlarms] = useState(false);
   const [showRadiusRings, setShowRadiusRings] = useState(!isArchiveMode);
   const [showWeatherOverlay, setShowWeatherOverlay] = useState(true);
+  const [showAero, setShowAero] = useState(false);
+  const [showScentCone, setShowScentCone] = useState(true);
   const [isWeatherModalOpenMobile, setIsWeatherModalOpenMobile] = useState(false);
   const [isLayersOpenMobile, setIsLayersOpenMobile] = useState(false);
   const [isGeoImportOpen, setIsGeoImportOpen] = useState(false);
@@ -1346,13 +1372,82 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
     // 1. PLS & Range Rings
     if (pls) {
+      if (showScentCone && showWeatherOverlay) {
+        fetchRescueWeather(pls.lat, pls.lng).then(weather => {
+          if (!plsLayerRef.current) return;
+          const wDir = weather.current.windDirection;
+          const wSpd = weather.current.windSpeed;
+          // Wind comes from wDir. Scent travels towards wDir + 180
+          const scentDir = (wDir + 180) % 360;
+          // Length of cone depends on wind speed (e.g. 1500m for 10km/h wind)
+          const coneLength = Math.max(500, Math.min(3000, wSpd * 100)); 
+          
+          const p1 = computeDestinationPoint(pls.lat, pls.lng, coneLength, scentDir - 15);
+          const p2 = computeDestinationPoint(pls.lat, pls.lng, coneLength, scentDir + 15);
+          
+          const scentConePoly = L.polygon([
+            [pls.lat, pls.lng],
+            p1,
+            p2
+          ], {
+            color: '#f59e0b',
+            weight: 1,
+            fillColor: '#f59e0b',
+            fillOpacity: 0.15,
+            dashArray: '4, 4',
+            interactive: false
+          });
+          
+          scentConePoly.bindTooltip('Witterungskegel (Scent Cone)<br/>' + wSpd + ' km/h Wind', { className: 'tactical-tooltip', sticky: true });
+          plsLayerRef.current.addLayer(scentConePoly);
+        }).catch(e => console.warn('Could not fetch weather for scent cone', e));
+      }
+
       if (showRadiusRings) {
         // Range rings: 500m, 1000m, 2000m
-        const rings = [
-          { radius: 500, label: '500m Kernzone', color: '#ef4444', dash: '4, 4', opacity: 0.35 },
-          { radius: 1000, label: '1.000m Nahbereich', color: '#f59e0b', dash: '6, 6', opacity: 0.25 },
-          { radius: 2000, label: '2.000m Erweiterter Suchbereich', color: '#3b82f6', dash: '8, 8', opacity: 0.15 },
-        ];
+        
+          let rings = [
+            { radius: 500, label: '500m Kernzone', color: '#ef4444', dash: '4, 4', opacity: 0.35 },
+            { radius: 1000, label: '1.000m Nahbereich', color: '#f59e0b', dash: '6, 6', opacity: 0.25 },
+            { radius: 2000, label: '2.000m Erweiterter Suchbereich', color: '#3b82f6', dash: '8, 8', opacity: 0.15 },
+          ];
+          
+          if (currentOperation.missingPerson?.lpbProfile) {
+            const lpb = currentOperation.missingPerson.lpbProfile;
+            const LPB_CONFIG: Record<string, typeof rings> = {
+              'dementia': [
+                { radius: 1000, label: 'Demenz: 25% (1km)', color: '#ef4444', dash: '4, 4', opacity: 0.35 },
+                { radius: 2000, label: 'Demenz: 50% (2km)', color: '#f59e0b', dash: '6, 6', opacity: 0.25 },
+                { radius: 4000, label: 'Demenz: 75% (4km)', color: '#3b82f6', dash: '8, 8', opacity: 0.15 }
+              ],
+              'child_1_3': [
+                { radius: 200, label: 'Kind 1-3: 25% (200m)', color: '#ef4444', dash: '4, 4', opacity: 0.35 },
+                { radius: 500, label: 'Kind 1-3: 50% (500m)', color: '#f59e0b', dash: '6, 6', opacity: 0.25 },
+                { radius: 1000, label: 'Kind 1-3: 75% (1km)', color: '#3b82f6', dash: '8, 8', opacity: 0.15 }
+              ],
+              'child_4_6': [
+                { radius: 500, label: 'Kind 4-6: 25% (500m)', color: '#ef4444', dash: '4, 4', opacity: 0.35 },
+                { radius: 1000, label: 'Kind 4-6: 50% (1km)', color: '#f59e0b', dash: '6, 6', opacity: 0.25 },
+                { radius: 2000, label: 'Kind 4-6: 75% (2km)', color: '#3b82f6', dash: '8, 8', opacity: 0.15 }
+              ],
+              'autistic': [
+                { radius: 1000, label: 'Autismus: 25% (1km)', color: '#ef4444', dash: '4, 4', opacity: 0.35 },
+                { radius: 2000, label: 'Autismus: 50% (2km)', color: '#f59e0b', dash: '6, 6', opacity: 0.25 },
+                { radius: 3000, label: 'Autismus: 75% (3km)', color: '#3b82f6', dash: '8, 8', opacity: 0.15 }
+              ],
+              'despondent': [
+                { radius: 500, label: 'Suizidal: 25% (500m)', color: '#ef4444', dash: '4, 4', opacity: 0.35 },
+                { radius: 1500, label: 'Suizidal: 50% (1.5km)', color: '#f59e0b', dash: '6, 6', opacity: 0.25 },
+                { radius: 3000, label: 'Suizidal: 75% (3km)', color: '#3b82f6', dash: '8, 8', opacity: 0.15 }
+              ],
+              'hiker': [
+                { radius: 2000, label: 'Wanderer: 25% (2km)', color: '#ef4444', dash: '4, 4', opacity: 0.35 },
+                { radius: 4000, label: 'Wanderer: 50% (4km)', color: '#f59e0b', dash: '6, 6', opacity: 0.25 },
+                { radius: 8000, label: 'Wanderer: 75% (8km)', color: '#3b82f6', dash: '8, 8', opacity: 0.15 }
+              ]
+            };
+            if (LPB_CONFIG[lpb]) rings = LPB_CONFIG[lpb];
+          }
 
         rings.forEach((r) => {
           const circle = L.circle([pls.lat, pls.lng], {
@@ -2345,7 +2440,75 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     }
   }, [userLocations, allUsers, currentOperation, showTracks, showInactiveResponders, isArchiveMode, activeTrackingTest, externalImportedTracks]);
 
-  // Render Active Responders / Units Pins (with Spiderfy radial layout for co-located responders)
+  // Render Coverage Check
+    useEffect(() => {
+      if (!coverageLayerRef.current) return;
+      coverageLayerRef.current.clearLayers();
+      if (!showCoverage || !currentOperation) return;
+
+      const sectors = currentOperation.sectors || [];
+      if (sectors.length === 0) return;
+
+      try {
+        // Collect all track line strings
+        const allTrackFeatures = [];
+        Object.values(userLocations).forEach(locState => {
+          if (locState.history && locState.history.length > 1) {
+            const coords = locState.history.map(pt => [pt.lng, pt.lat]);
+            allTrackFeatures.push(turf.lineString(coords));
+          }
+        });
+        
+        if (currentOperation.archivedTracks) {
+          currentOperation.archivedTracks.forEach(trk => {
+            if (trk.points && trk.points.length > 1) {
+               const coords = trk.points.map(pt => [pt.lng, pt.lat]);
+               allTrackFeatures.push(turf.lineString(coords));
+            }
+          });
+        }
+        
+        let unionedBuffers = null;
+        if (allTrackFeatures.length > 0) {
+           const buffers = allTrackFeatures.map(f => turf.buffer(f, 20, { units: 'meters' })); // 20m Sichtweite
+           unionedBuffers = buffers[0];
+           for (let i = 1; i < buffers.length; i++) {
+             if (!buffers[i]) continue;
+             const united = turf.union(turf.featureCollection([unionedBuffers, buffers[i]]));
+             if (united) unionedBuffers = united;
+           }
+        }
+        
+        sectors.forEach(sector => {
+           if (!sector.polygon || sector.polygon.length < 3) return;
+           const closedPoly = [...sector.polygon, sector.polygon[0]].map(p => [p[1], p[0]]);
+           let searchPoly = turf.polygon([closedPoly]);
+           
+           if (unionedBuffers) {
+             const diff = turf.difference(turf.featureCollection([searchPoly, unionedBuffers]));
+             if (diff) {
+                // draw difference
+                const geoJsonLayer = L.geoJSON(diff, {
+                  style: { color: '#ef4444', weight: 0, fillOpacity: 0.5, fillColor: '#ef4444' },
+                  interactive: false
+                });
+                coverageLayerRef.current?.addLayer(geoJsonLayer);
+             }
+           } else {
+             // draw full sector
+             const geoJsonLayer = L.geoJSON(searchPoly, {
+                style: { color: '#ef4444', weight: 0, fillOpacity: 0.5, fillColor: '#ef4444' },
+                interactive: false
+             });
+             coverageLayerRef.current?.addLayer(geoJsonLayer);
+           }
+        });
+      } catch (e) {
+         console.error("Coverage calculation failed", e);
+      }
+    }, [showCoverage, currentOperation, userLocations]);
+
+    // Render Active Responders / Units Pins (with Spiderfy radial layout for co-located responders)
   useEffect(() => {
     if (!respondersLayerRef.current) return;
     respondersLayerRef.current.clearLayers();
@@ -2705,6 +2868,19 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   }, [currentOperation, showFindings, showFalseAlarms, onOpenFindingDetails, onOpenFindingDetail, activeTrackingTest]);
 
   // Center on selected user when they change & ensure responders layer is active
+  useEffect(() => {
+    if (!mapInstanceRef.current || !aeroLayerRef.current) return;
+    if (showAero) {
+      if (!mapInstanceRef.current.hasLayer(aeroLayerRef.current)) {
+        mapInstanceRef.current.addLayer(aeroLayerRef.current);
+      }
+    } else {
+      if (mapInstanceRef.current.hasLayer(aeroLayerRef.current)) {
+        mapInstanceRef.current.removeLayer(aeroLayerRef.current);
+      }
+    }
+  }, [showAero]);
+  
   useEffect(() => {
     if (!mapInstanceRef.current || !selectedUser) return;
     setShowResponders(true); // Always activate responders layer so they can be seen!
@@ -3130,8 +3306,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             </button>
 
 
-            <button
-              onClick={() => setIsWeatherModalOpenMobile(true)}
+            <button onClick={() => setShowAero(!showAero)} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer font-mono ${showAero ? 'bg-indigo-600 text-white' : 'bg-slate-800/80 text-indigo-400 hover:text-white border border-indigo-500/40'}`}>Luftraum</button>
+              <button
+                onClick={() => setIsWeatherModalOpenMobile(true)}
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer font-mono ${
                 isWeatherModalOpenMobile
                   ? 'bg-amber-600 text-white'
@@ -3551,7 +3728,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               {/* Toggle to view weather overlay */}
               <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-700/80">
                 <span className="text-slate-400 font-mono text-[10px] flex items-center gap-1">
-                  <CloudSun className="w-3 h-3 text-amber-400" />
+                  <Wind className="w-3 h-3 text-amber-500 ml-2" /> 
+                    <button onClick={() => setShowScentCone(!showScentCone)} className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono transition cursor-pointer ${showScentCone ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-400'}`}>Scent Cone</button>
+                  </span>
+                  <span className="text-slate-400 font-mono text-[10px] flex items-center gap-1">
+                    <CloudSun className="w-3 h-3 text-amber-400" />
                   Einsatz-Wetter:
                 </span>
                 <button
@@ -4730,6 +4911,39 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         </div>
       )}
 
+      {/* TIME SLIDER PLAYBACK UI (Only in Archive Mode or if explicitly activated by EL) */}
+      {isArchiveMode && currentOperation && currentOperation.status !== 'planned' && (
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-[1000] w-11/12 max-w-2xl bg-slate-900/90 backdrop-blur border border-slate-700 p-3 rounded-2xl shadow-2xl">
+           <div className="flex items-center gap-3">
+             <button 
+               onClick={() => setPlaybackTime(null)}
+               className="px-3 py-1.5 bg-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-bold"
+             >
+               Live / Vollständig
+             </button>
+             
+             <div className="flex-1 flex flex-col">
+               <div className="flex justify-between text-[10px] text-slate-400 font-mono mb-1">
+                 <span>{new Date(currentOperation.createdAt).toLocaleTimeString()}</span>
+                 <span className="text-amber-400 font-bold">
+                   {playbackTime ? new Date(playbackTime).toLocaleTimeString() : 'Ende'}
+                 </span>
+                 <span>{currentOperation.completedAt ? new Date(currentOperation.completedAt).toLocaleTimeString() : 'Jetzt'}</span>
+               </div>
+               
+               <input 
+                 type="range"
+                 min={new Date(currentOperation.createdAt).getTime()}
+                 max={currentOperation.completedAt ? new Date(currentOperation.completedAt).getTime() : Date.now()}
+                 value={playbackTime || (currentOperation.completedAt ? new Date(currentOperation.completedAt).getTime() : Date.now())}
+                 onChange={(e) => setPlaybackTime(Number(e.target.value))}
+                 className="w-full accent-amber-500"
+               />
+             </div>
+           </div>
+        </div>
+      )}
+      
       {/* DESKTOP / TABLET FLOATING WEATHER OVERLAY (Top-Right of Map, Draggable) */}
       {!isMobileScreen && showWeatherOverlay && (
         <div
