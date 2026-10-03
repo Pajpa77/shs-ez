@@ -265,6 +265,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     }
   }, [currentOperation?.id]);
 
+  const isAdmin = currentUser ? (isUserAdmin(currentUser) || isUserEL(currentUser)) : false;
+
   useEffect(() => {
     if (activeChatTarget) {
       setMainTab('channels');
@@ -312,14 +314,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     }
     prevMessagesLengthRef.current = chatMessages.length;
   }, [chatMessages, activeChannel, autoPlayAudio, currentUser?.id, playAlertSound, markChatAsRead]);
-
-  if (!currentUser) {
-    return (
-      <div className="p-8 text-center text-slate-400 font-mono">
-        Bitte melden Sie sich an, um den Funkchat zu nutzen.
-      </div>
-    );
-  }
 
   // --- Voice / CB Funk Recording logic ---
   const startRecording = async () => {
@@ -412,6 +406,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         const base64Audio = reader.result as string;
         const isDirect =
           activeChannel !== 'all' &&
+          activeChannel !== 'ez_contact' &&
           activeChannel !== 'admins' &&
           activeChannel !== 'general' &&
           !activeChannel.startsWith('sec-') &&
@@ -533,6 +528,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
   const effectiveOperation = allOperations.find((o) => o.id === selectedOpId) || currentOperation || null;
 
+  const currentUserId = currentUser?.id || '';
+
   // Split messages by type according to user requirements:
   // 1. Logbuch messages: Login / Logout logs
   const logbookMessages = useMemo(() => {
@@ -540,8 +537,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       (m) =>
         m.channel === 'system' ||
         m.channel === 'logs' ||
-        m.text.includes('hat sich soeben eingeloggt') ||
-        m.text.includes('hat das System verlassen')
+        (typeof m.text === 'string' && (
+          m.text.includes('hat sich soeben eingeloggt') ||
+          m.text.includes('hat das System verlassen')
+        ))
     );
   }, [chatMessages]);
 
@@ -550,11 +549,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     return chatMessages.filter(
       (m) =>
         m.isAlert ||
-        m.text.includes('EINSATZ REAKTIVIERT') ||
-        m.text.includes('EINSATZ BEENDET') ||
-        m.text.includes('EINSATZ PAUSIERT') ||
-        m.text.includes('EINSATZ WIEDERAUFGENOMMEN') ||
-        m.text.includes('REALEINSATZ')
+        (typeof m.text === 'string' && (
+          m.text.includes('EINSATZ REAKTIVIERT') ||
+          m.text.includes('EINSATZ BEENDET') ||
+          m.text.includes('EINSATZ PAUSIERT') ||
+          m.text.includes('EINSATZ WIEDERAUFGENOMMEN') ||
+          m.text.includes('REALEINSATZ')
+        ))
     );
   }, [chatMessages]);
 
@@ -565,8 +566,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       if (
         msg.channel === 'system' ||
         msg.channel === 'logs' ||
-        msg.text.includes('hat sich soeben eingeloggt') ||
-        msg.text.includes('hat das System verlassen')
+        (typeof msg.text === 'string' && (
+          msg.text.includes('hat sich soeben eingeloggt') ||
+          msg.text.includes('hat das System verlassen')
+        ))
       ) {
         return false;
       }
@@ -584,19 +587,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         if (isAdmin) return true;
         const sender = allUsers.find(u => u.id === msg.senderId);
         const senderIsAdmin = sender ? (sender.role === 'admin' || sender.role === 'einsatzleitung' || sender.isAdmin) : false;
-        return msg.senderId === currentUser.id || senderIsAdmin;
+        return msg.senderId === currentUserId || senderIsAdmin;
       } else if (activeChannel.startsWith('sec-') || activeChannel.startsWith('team-')) {
         return msg.channel === activeChannel;
       } else {
         // Direct 1:1 chat
         return (
-          (msg.senderId === currentUser.id && msg.recipientId === activeChannel) ||
-          (msg.senderId === activeChannel && msg.recipientId === currentUser.id) ||
+          (msg.senderId === currentUserId && msg.recipientId === activeChannel) ||
+          (msg.senderId === activeChannel && msg.recipientId === currentUserId) ||
           msg.channel === activeChannel
         );
       }
     });
-  }, [chatMessages, activeScope, effectiveOperation, activeChannel, currentUser.id]);
+  }, [chatMessages, activeScope, effectiveOperation, activeChannel, currentUserId, isAdmin, allUsers]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -604,6 +607,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
     const isDirect =
       activeChannel !== 'all' &&
+      activeChannel !== 'ez_contact' &&
       activeChannel !== 'admins' &&
       activeChannel !== 'general' &&
       !activeChannel.startsWith('sec-') &&
@@ -639,7 +643,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
   const activeUsersCount = scopedUsers.filter((u) => u.isActive).length;
 
   const filteredResponders = scopedUsers
-    .filter((u) => u.id !== currentUser.id)
+    .filter((u) => u.id !== currentUserId)
     .filter((u) => {
       if (!userSearchQuery.trim()) return true;
       const q = userSearchQuery.toLowerCase();
@@ -1049,7 +1053,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           </div>
         ) : (
           activeChannelMessages.map((msg, index) => {
-            const isMe = msg.senderId === currentUser.id;
+            const isMe = msg.senderId === currentUserId;
             const prevMsg = activeChannelMessages[index - 1];
             const isSameSender = prevMsg && prevMsg.senderId === msg.senderId;
 
@@ -1215,6 +1219,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       </form>
     </div>
   );
+
+  if (!currentUser) {
+    return (
+      <div className="p-8 text-center text-slate-400 font-mono">
+        Bitte melden Sie sich an, um den Funkchat zu nutzen.
+      </div>
+    );
+  }
 
   return (
     <div

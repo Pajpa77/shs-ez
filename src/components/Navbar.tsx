@@ -324,9 +324,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [activeTab, selectedArchiveOpId, currentOperation, allOperations]);
 
   return (
-    <header className="min-h-[3.5rem] sm:min-h-[4rem] h-auto flex flex-wrap sm:flex-nowrap items-center justify-between px-2 sm:px-5 py-2 bg-[#1E293B] border-b border-slate-700 shadow-lg shrink-0 sticky top-0 z-[4000] text-slate-200 gap-y-1.5 gap-x-1">
+    <header className="h-14 sm:h-16 flex items-center justify-between px-2 sm:px-4 bg-[#1E293B] border-b border-slate-700 shadow-lg shrink-0 sticky top-0 z-[4000] text-slate-200 gap-1.5 sm:gap-3">
       {/* Brand & Central SHS Leitstellen Menu Button */}
-      <div className="flex items-center flex-wrap gap-1.5 sm:gap-4 min-w-0 flex-1">
+      <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1 overflow-hidden">
         {/* Interactive White SHS Button / Admin Hub */}
         <div className="relative">
           <button
@@ -839,7 +839,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   return next;
                 });
               }}
-              className="text-xs sm:text-sm md:text-base font-bold leading-tight uppercase tracking-wider text-white hover:text-blue-300 transition cursor-pointer truncate text-left"
+              className="hidden md:inline-block text-xs sm:text-sm md:text-base font-bold leading-tight uppercase tracking-wider text-white hover:text-blue-300 transition cursor-pointer truncate text-left"
               title="SHS EZ Hauptmenü öffnen"
             >
               SHS EZ
@@ -1322,7 +1322,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5 min-w-0">
+          <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5 min-w-0">
             {activeTab === 'archive' ? (
               <button
                 type="button"
@@ -1412,7 +1412,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Right Controls: Actions, Telemetry & User Profile */}
-      <div className="flex items-center gap-1.5 sm:gap-2.5">
+      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
 
         {/* Network Status Indicator */}
         <div
@@ -1484,7 +1484,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             setTimeout(() => setJustRefreshed(false), 2500);
           }}
           disabled={isRefreshing}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-mono font-bold transition cursor-pointer shadow-sm ${
+          className={`flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg border text-[10px] font-mono font-bold transition cursor-pointer shadow-sm shrink-0 ${
             justRefreshed
               ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500'
               : 'bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border-blue-700/60'
@@ -1523,7 +1523,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {onOpenShareAppModal && (
           <button
             onClick={onOpenShareAppModal}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer text-[10px] font-mono font-bold shadow-sm shrink-0"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer text-[10px] font-mono font-bold shadow-sm shrink-0"
             title="App per QR-Code oder Direktlink an andere Einsatzkräfte teilen"
           >
             <Share2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
@@ -1536,7 +1536,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {!Capacitor.isNativePlatform() && (
           <button
             onClick={() => setIsPocketMode(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600 transition cursor-pointer text-[10px] font-mono font-bold shadow-sm shrink-0"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600 transition cursor-pointer text-[10px] font-mono font-bold shadow-sm shrink-0"
             title="Hosentaschen-Modus (Bildschirm verdunkeln und sperren für Akku-sparendes Tracking)"
           >
             <span className="hidden sm:inline whitespace-nowrap">HOSENTASCHE</span>
@@ -1548,7 +1548,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="relative">
           <button
             onClick={() => setActiveTab('chat')}
-            className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[10px] font-mono font-bold transition cursor-pointer shadow-sm shrink-0 ${
+            className={`relative flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg border text-[10px] font-mono font-bold transition cursor-pointer shadow-sm shrink-0 ${
               activeTab === 'chat'
                 ? 'bg-blue-700 text-white border-blue-500'
                 : unreadChatCount > 0
@@ -1582,7 +1582,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 return next;
               });
             }}
-            className="flex items-center gap-2 sm:gap-2.5 px-2.5 py-1 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer text-left shadow-sm shrink-0"
+            className="flex items-center gap-1 sm:gap-2 p-1 sm:px-2 sm:py-1 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer text-left shadow-sm shrink-0"
           >
             <div className="text-right hidden sm:block">
               <p className="text-xs sm:text-sm font-bold text-white flex items-center gap-1 justify-end">
@@ -1676,6 +1676,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <span>⚙️</span> Mein Profil, Ausrüstung & KFZ
                   </button>
+
+                  {!Capacitor.isNativePlatform() && (
+                    <button
+                      onClick={() => {
+                        setIsPocketMode(true);
+                        setShowUserDropdown(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-slate-100 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 transition cursor-pointer text-left font-bold"
+                    >
+                      <span>🔒</span> Hosentaschen-Modus
+                    </button>
+                  )}
 
                   <button
                     onClick={() => {
