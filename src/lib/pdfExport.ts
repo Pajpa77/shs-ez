@@ -197,7 +197,7 @@ export const generateOperationPDF = async (
       }
       if (userLocations) {
         Object.entries(userLocations).forEach(([uid, loc]) => {
-          if (loc.activeTrack && loc.activeTrack.length >= 2) usersWithTracks.add(uid);
+          if (loc.trackHistory && loc.trackHistory.length >= 2) usersWithTracks.add(uid);
         });
       }
 

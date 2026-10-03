@@ -267,6 +267,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const plsLayerRef = useRef<L.FeatureGroup | null>(null);
   const drawLayerRef = useRef<L.FeatureGroup | null>(null);
   const ezLayerRef = useRef<L.FeatureGroup | null>(null);
+  const aeroLayerRef = useRef<L.TileLayer | null>(null);
+  const coverageLayerRef = useRef<L.LayerGroup | null>(null);
 
   // Map state - Default to OpenStreetMap for maximum clarity of street names & paths
   const [activeBaseMap, setActiveBaseMap] = useState<'osm' | 'hybrid' | 'satellite' | 'topo'>('osm');
@@ -961,6 +963,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     // Initialize layer groups
     sectorsLayerRef.current = L.featureGroup().addTo(map);
     tracksLayerRef.current = L.featureGroup().addTo(map);
+      coverageLayerRef.current = L.layerGroup().addTo(map);
     respondersLayerRef.current = L.featureGroup().addTo(map);
     findingsLayerRef.current = L.featureGroup().addTo(map);
     plsLayerRef.current = L.featureGroup().addTo(map);
@@ -2453,8 +2456,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         // Collect all track line strings
         const allTrackFeatures = [];
         Object.values(userLocations).forEach(locState => {
-          if (locState.history && locState.history.length > 1) {
-            const coords = locState.history.map(pt => [pt.lng, pt.lat]);
+          if (locState.trackHistory && locState.trackHistory.length > 1) {
+            const coords = locState.trackHistory.map(pt => [pt.lng, pt.lat]);
             allTrackFeatures.push(turf.lineString(coords));
           }
         });

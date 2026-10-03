@@ -186,7 +186,7 @@ export async function generateTacticalMapWithRealMap(
       const isPhase2 = op.archivedTracks && op.archivedTracks.length > 0;
       Object.entries(userLocations).forEach(([uId, locState]) => {
         if (filterUserId && uId !== filterUserId) return;
-        const activePoints = (locState.activeTrack || []).filter(
+        const activePoints = (locState.trackHistory || []).filter(
           (p) => typeof p.lat === 'number' && typeof p.lng === 'number'
         );
         if (activePoints.length >= 2) {

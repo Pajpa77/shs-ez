@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.shsez.app',
-  appName: 'SHS EZ',
+  appId: 'de.shs.einsatzzentrale',
+  appName: 'SHS-EZ',
   webDir: 'dist'
 };
 
