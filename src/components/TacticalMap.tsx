@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import L from 'leaflet';
 import * as turf from '@turf/turf';
 import { captureTacticalMapScreenshot } from '../lib/mapSnapshotHelper';
@@ -964,7 +964,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     sectorsLayerRef.current = L.featureGroup().addTo(map);
     tracksLayerRef.current = L.featureGroup().addTo(map);
       coverageLayerRef.current = L.layerGroup().addTo(map);
-    aeroLayerRef.current = L.tileLayer('https://{s}.tile.maps.openaip.net/geowebcache/service/tms/1.0.0/openaip_basemap@EPSG%3A900913@png/{z}/{x}/{y}.png', { maxZoom: 14, minZoom: 4, tms: true, opacity: 0.6, attribution: 'openAIP Data' });
+    aeroLayerRef.current = L.tileLayer('https://nwy-tiles-api.prod.newaydata.com/tiles/{z}/{x}/{y}.png?path=latest/aero/latest', { maxZoom: 14, minZoom: 4, tms: true, opacity: 0.6, attribution: 'openAIP Data' });
     respondersLayerRef.current = L.featureGroup().addTo(map);
     findingsLayerRef.current = L.featureGroup().addTo(map);
     plsLayerRef.current = L.featureGroup().addTo(map);
@@ -3674,6 +3674,26 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 >
                   {showSectors ? <Eye className="w-3 h-3 text-blue-400" /> : <EyeOff className="w-3 h-3" />}
                   Sektoren ({currentOperation?.sectors.length || 0})
+                </button>
+
+                <button
+                  onClick={() => setShowCoverage((v) => !v)}
+                  className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition text-left cursor-pointer font-medium text-[11px] ${
+                    showCoverage ? 'bg-red-500/20 text-red-300 border border-red-400' : 'bg-slate-800/80 text-slate-400 hover:text-slate-200 border border-slate-700'
+                  }`}
+                >
+                  {showCoverage ? <Eye className="w-3 h-3 text-red-400" /> : <EyeOff className="w-3 h-3" />}
+                  Lücken-Analyse
+                </button>
+
+                <button
+                  onClick={() => setShowAero((v) => !v)}
+                  className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition text-left cursor-pointer font-medium text-[11px] ${
+                    showAero ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400' : 'bg-slate-800/80 text-slate-400 hover:text-slate-200 border border-slate-700'
+                  }`}
+                >
+                  {showAero ? <Eye className="w-3 h-3 text-indigo-400" /> : <EyeOff className="w-3 h-3" />}
+                  Luftraum (Aero)
                 </button>
 
                 <button

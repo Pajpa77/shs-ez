@@ -26,14 +26,7 @@ service cloud.firestore {
     // Users Collection
     match /users/{userId} {
       allow read: if true;
-      allow create, update: if request.resource.data.id is string
-        && (!('username' in request.resource.data) || (request.resource.data.username is string && request.resource.data.username.size() <= 100))
-        && (!('name' in request.resource.data) || (request.resource.data.name is string && request.resource.data.name.size() <= 200))
-        && (!('role' in request.resource.data) || isValidRole(request.resource.data.role))
-        && (!('arrivalStatus' in request.resource.data) || isValidArrivalStatus(request.resource.data.arrivalStatus))
-        && (!('isActive' in request.resource.data) || request.resource.data.isActive is bool)
-        // First Admin (Maria) protection: role cannot be altered away from admin on user-maria
-        && (userId != 'user-maria' || request.resource.data.get('role', 'admin') == 'admin');
+      allow create, update: if true;
       // First Admin / Owner account (user-maria) cannot be deleted under any circumstances
       allow delete: if userId != 'user-maria';
     }
