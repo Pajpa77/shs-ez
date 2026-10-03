@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+﻿import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import L from 'leaflet';
 import * as turf from '@turf/turf';
 import { captureTacticalMapScreenshot } from '../lib/mapSnapshotHelper';
@@ -3370,8 +3370,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 }`}
               >
                 <span>Sektoren ({currentOperation?.sectors.length || 0})</span>
-                {showSectors ? <Eye className="w-3.5 h-3.5 text-blue-400" /> : <EyeOff className="w-3.5 h-3.5" />}
-              </button>
+                  {showSectors ? <Eye className="w-3.5 h-3.5 text-blue-400" /> : <EyeOff className="w-3.5 h-3.5" />}
+                </button>
+                <button onClick={() => setShowCoverage((v) => !v)} className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition text-left cursor-pointer font-semibold text-xs ${showCoverage ? "bg-red-500/20 text-red-300 border border-red-400" : "bg-slate-800/80 text-slate-400 hover:text-slate-200 border border-slate-700"}`}>
+                  <span>Lücken-Analyse</span>
+                  {showCoverage ? <Eye className="w-3.5 h-3.5 text-red-400" /> : <EyeOff className="w-3.5 h-3.5" />}
+                </button>
 
               <button
                 onClick={() => setShowTracks((v) => !v)}
@@ -5012,3 +5016,5 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     </div>
   );
 };
+
+

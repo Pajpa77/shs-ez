@@ -30,7 +30,7 @@ export const DroneFeedWidget: React.FC<DroneFeedWidgetProps> = ({ onClose }) => 
         player.load();
         
         // Auto-play might be blocked by browsers, but muted usually works
-        player.play().catch(e => console.log('Autoplay blocked', e));
+        player.play();
         playerRef.current = player;
       }
     }

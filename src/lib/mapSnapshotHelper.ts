@@ -1,3 +1,4 @@
+import L from 'leaflet';
 import html2canvas from 'html2canvas';
 import { SearchOperation, UserLocationState, TrackingTestSession, GpsPoint, getUserTrackColor, User } from '../types';
 
@@ -159,7 +160,7 @@ export async function generateTacticalMapWithRealMap(
           const d = L.latLng(validPoints[i - 1].lat, validPoints[i - 1].lng).distanceTo(
             L.latLng(validPoints[i].lat, validPoints[i].lng)
           );
-          const tDiff = validPoints[i].timestamp - validPoints[i - 1].timestamp;
+          const tDiff = new Date(validPoints[i].timestamp).getTime() - new Date(validPoints[i - 1].timestamp).getTime();
           if (d <= 1200 && tDiff <= 15 * 60 * 1000) totalDist += d;
         }
 
@@ -195,7 +196,7 @@ export async function generateTacticalMapWithRealMap(
             const d = L.latLng(activePoints[i - 1].lat, activePoints[i - 1].lng).distanceTo(
               L.latLng(activePoints[i].lat, activePoints[i].lng)
             );
-            const tDiff = activePoints[i].timestamp - activePoints[i - 1].timestamp;
+            const tDiff = new Date(activePoints[i].timestamp).getTime() - new Date(activePoints[i - 1].timestamp).getTime();
             if (d <= 1200 && tDiff <= 15 * 60 * 1000) totalDist += d;
           }
 
@@ -645,11 +646,7 @@ export async function generateTacticalMapWithRealMap(
  * Clean vector fallback if offline or DOM unmounted.
  * Renders on a clean, light topographic schema, NEVER a pitch-black grid!
  */
-export function generateTacticalCanvasFallback(
-  op: SearchOperation,
-  userLocations?: Record<string, UserLocationState>,
-  allUsers?: User[]
-): string {
+export function generateTacticalCanvasFallback(op: SearchOperation, userLocations?: Record<string, UserLocationState>, allUsers?: User[], filterUserId?: string): string {
   const width = 1400;
   const height = 920;
   const canvas = document.createElement('canvas');
