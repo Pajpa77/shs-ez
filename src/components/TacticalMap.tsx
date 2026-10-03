@@ -964,7 +964,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     sectorsLayerRef.current = L.featureGroup().addTo(map);
     tracksLayerRef.current = L.featureGroup().addTo(map);
       coverageLayerRef.current = L.layerGroup().addTo(map);
-    aeroLayerRef.current = L.tileLayer('https://nwy-tiles-api.prod.newaydata.com/tiles/{z}/{x}/{y}.png?path=latest/aero/latest', { maxZoom: 14, minZoom: 4, tms: true, opacity: 0.6, attribution: 'openAIP Data' });
+    aeroLayerRef.current = L.tileLayer('https://nwy-tiles-api.prod.newaydata.com/tiles/{z}/{x}/{y}.png?path=latest/aero/latest', { maxZoom: 14, minZoom: 4, tms: false, opacity: 0.6, attribution: 'openFlightMaps' });
     respondersLayerRef.current = L.featureGroup().addTo(map);
     findingsLayerRef.current = L.featureGroup().addTo(map);
     plsLayerRef.current = L.featureGroup().addTo(map);
