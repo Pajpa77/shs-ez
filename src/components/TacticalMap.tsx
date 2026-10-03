@@ -964,6 +964,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     sectorsLayerRef.current = L.featureGroup().addTo(map);
     tracksLayerRef.current = L.featureGroup().addTo(map);
       coverageLayerRef.current = L.layerGroup().addTo(map);
+    aeroLayerRef.current = L.tileLayer('https://{s}.tile.maps.openaip.net/geowebcache/service/tms/1.0.0/openaip_basemap@EPSG%3A900913@png/{z}/{x}/{y}.png', { maxZoom: 14, minZoom: 4, tms: true, opacity: 0.6, attribution: 'openAIP Data' });
     respondersLayerRef.current = L.featureGroup().addTo(map);
     findingsLayerRef.current = L.featureGroup().addTo(map);
     plsLayerRef.current = L.featureGroup().addTo(map);
@@ -3274,7 +3275,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       {/* MOBILE FLOATING ACTION BAR (Top, compact, unobstructed view for smartphone searchers in portrait and landscape) */}
       {isMobileScreen && (
-        <div className="absolute top-2 left-2 z-[900] flex items-center gap-1.5 pointer-events-none">
+        <div className="absolute top-2 left-2 z-[900] flex flex-wrap items-center gap-1.5 pointer-events-none w-full max-w-[calc(100vw-24px)]">
           <div className="flex items-center gap-1.5 pointer-events-auto bg-[#1E293B]/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-xl">
             <button
               onClick={handleCenterOnMe}
