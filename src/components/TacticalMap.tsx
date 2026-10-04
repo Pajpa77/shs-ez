@@ -283,6 +283,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const [showRadiusRings, setShowRadiusRings] = useState(!isArchiveMode);
   const [showWeatherOverlay, setShowWeatherOverlay] = useState(true);
   const [showAero, setShowAero] = useState(false);
+  const [aeroLegendOpen, setAeroLegendOpen] = useState(false);
   const [showScentCone, setShowScentCone] = useState(true);
   const [isWeatherModalOpenMobile, setIsWeatherModalOpenMobile] = useState(false);
   const [isLayersOpenMobile, setIsLayersOpenMobile] = useState(false);
@@ -4941,6 +4942,57 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* LUFTRAUM-LEGENDE (nur wenn Aero-Layer aktiv, einklappbar, neben Zoom-Buttons) */}
+      {showAero && (
+        <div className="absolute bottom-6 right-14 z-[900] max-w-[calc(100vw-5rem)] select-none">
+          {!aeroLegendOpen ? (
+            <button
+              onClick={() => setAeroLegendOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-950/90 hover:bg-indigo-900 border border-indigo-500/60 text-indigo-200 text-[10px] font-bold font-mono shadow-lg cursor-pointer backdrop-blur"
+              title="Erklärung der Luftraumkarte anzeigen"
+            >
+              ✈️ Luftraum-Legende ▴
+            </button>
+          ) : (
+            <div className="w-72 max-h-[55vh] overflow-y-auto bg-slate-900/95 backdrop-blur-md border border-indigo-500/60 rounded-xl shadow-2xl p-2.5 text-[10px] text-slate-300 font-mono">
+              <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-700">
+                <span className="font-bold text-indigo-300 uppercase tracking-wider">✈️ Luftraum-Legende</span>
+                <button
+                  onClick={() => setAeroLegendOpen(false)}
+                  className="px-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer font-bold"
+                  title="Legende einklappen"
+                >
+                  ▾
+                </button>
+              </div>
+
+              <div className="space-y-1">
+                <div className="font-bold text-slate-400 uppercase text-[9px]">Lufträume</div>
+                <div><b className="text-red-400">CTR</b> – Kontrollzone um Flughäfen (meist ab Boden). Drohne nur mit Freigabe!</div>
+                <div><b className="text-sky-400">C / D</b> – kontrollierter Luftraum (Freigabe durch Flugsicherung nötig)</div>
+                <div><b className="text-slate-200">E</b> – kontrollierter Luftraum ohne Freigabepflicht für Sichtflug</div>
+                <div><b className="text-red-400">ED-R</b> – Flugbeschränkungsgebiet (z.B. Militär, Gefängnis, Industrie)</div>
+                <div><b className="text-orange-400">ED-D</b> – Gefahrengebiet (zeitweise aktiv)</div>
+                <div><b className="text-amber-300">RMZ / TMZ</b> – Funk- bzw. Transponderpflicht</div>
+              </div>
+
+              <div className="space-y-1 mt-2 pt-1.5 border-t border-slate-700">
+                <div className="font-bold text-slate-400 uppercase text-[9px]">Höhenangaben (Ober-/Untergrenze)</div>
+                <div><b className="text-slate-200">GND</b> = ab Boden · <b className="text-slate-200">AGL</b> = über Grund</div>
+                <div><b className="text-slate-200">MSL</b> = über Meeresspiegel (Fuß)</div>
+                <div><b className="text-slate-200">FL 100</b> = Flugfläche ≈ 10.000 ft</div>
+                <div className="text-slate-500">1.000 ft ≈ 300 m</div>
+              </div>
+
+              <div className="mt-2 pt-1.5 border-t border-slate-700 text-amber-300/90 leading-snug">
+                ⚠️ Drohneneinsatz: Für verbindliche Prüfung &amp; Freigaben <a href="https://maptool-dipul.dfs.de/" target="_blank" rel="noopener noreferrer" className="underline text-amber-200 hover:text-white">dipul-Karte (DFS)</a> nutzen.
+              </div>
+              <div className="mt-1 text-slate-500 text-[9px]">Quelle: openFlightMaps · Details nur bis Zoomstufe ~12 scharf</div>
+            </div>
+          )}
         </div>
       )}
 
