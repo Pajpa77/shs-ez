@@ -3,6 +3,8 @@ import { useRescue } from '../context/RescueContext';
 import { User, EquipmentType, UserRole, isUserAdmin, isUserEL, isUserAdminOrEL, isFirstAdmin } from '../types';
 import { getOpTheme } from './Navbar';
 import { SniffingDogAnimation } from './SniffingDogAnimation';
+import { db, isFirebaseConfigured } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import {
   Shield,
   User as UserIcon,
@@ -301,7 +303,7 @@ export const LoginScreen: React.FC = () => {
     }
   };
 
-  const handleVerifyCredentials = (e: React.FormEvent) => {
+  const handleVerifyCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setForceLogoutTarget(null);
@@ -322,7 +324,7 @@ export const LoginScreen: React.FC = () => {
       return;
     }
 
-    const foundUser = allUsers.find(
+    let foundUser = allUsers.find(
       (u) =>
         u.username.toLowerCase() === targetUser.toLowerCase() ||
         (u.callSign && u.callSign.toLowerCase() === targetUser.toLowerCase()) ||
@@ -333,6 +335,21 @@ export const LoginScreen: React.FC = () => {
     if (!foundUser) {
       handleFailedAttempt();
       return;
+    }
+
+    // Workaround für "altes/neues Passwort" Problem (Race Condition PWA vs. Firestore)
+    // Wenn wir online sind, ziehen wir das Benutzerprofil vor dem Passwortcheck direkt live aus Firestore!
+    if (isFirebaseConfigured) {
+      try {
+        const docRef = doc(db, 'users', foundUser.id);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const cloudData = snap.data();
+          foundUser = { ...foundUser, ...cloudData } as User;
+        }
+      } catch (err) {
+        console.warn("Konnte Live-Passwort nicht verifizieren, nutze Cache", err);
+      }
     }
 
     // Check password BEFORE session check
