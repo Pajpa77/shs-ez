@@ -18,8 +18,8 @@ export const SniffingDogAnimation: React.FC = () => {
           className="animate-rainbow-dog-glow overflow-visible"
         >
           <defs>
-            {/* Dynamic Neon Green Gradient */}
-            <linearGradient id="neonGreenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            {/* Dynamic Neon Pink Gradient */}
+            <linearGradient id="neonPinkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#ec4899" />
               <stop offset="50%" stopColor="#ff1493" />
               <stop offset="100%" stopColor="#ff00ff" />
