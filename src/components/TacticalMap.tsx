@@ -284,6 +284,13 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const [showWeatherOverlay, setShowWeatherOverlay] = useState(true);
   const [showAero, setShowAero] = useState(false);
   const [aeroLegendOpen, setAeroLegendOpen] = useState(false);
+  
+  const {
+    dragRef: aeroLegendDragRef,
+    position: aeroLegendPos,
+    dragProps: aeroLegendDragProps,
+  } = useDraggable({ storageKey: 'aero_legend_widget' });
+
   const [showScentCone, setShowScentCone] = useState(true);
   const [isWeatherModalOpenMobile, setIsWeatherModalOpenMobile] = useState(false);
   const [isLayersOpenMobile, setIsLayersOpenMobile] = useState(false);
@@ -4945,19 +4952,24 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         </div>
       )}
 
-      {/* LUFTRAUM-LEGENDE (nur wenn Aero-Layer aktiv, einklappbar, neben Zoom-Buttons) */}
+      {/* LUFTRAUM-LEGENDE (nur wenn Aero-Layer aktiv, verschiebbar) */}
       {showAero && (
-        <div className="absolute bottom-6 right-14 z-[900] max-w-[calc(100vw-5rem)] select-none">
+        <div
+          ref={aeroLegendDragRef}
+          {...aeroLegendDragProps}
+          style={aeroLegendPos ? { position: 'fixed', left: `${aeroLegendPos.x}px`, top: `${aeroLegendPos.y}px`, zIndex: 900 } : undefined}
+          className={`${aeroLegendPos ? '' : 'absolute bottom-20 right-2 sm:bottom-6 sm:right-14 z-[900]'} max-w-[calc(100vw-2rem)] select-none animate-in fade-in zoom-in-95 duration-200 touch-none cursor-grab active:cursor-grabbing`}
+        >
           {!aeroLegendOpen ? (
             <button
               onClick={() => setAeroLegendOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-950/90 hover:bg-indigo-900 border border-indigo-500/60 text-indigo-200 text-[10px] font-bold font-mono shadow-lg cursor-pointer backdrop-blur"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-950/90 hover:bg-indigo-900 border border-indigo-500/60 text-indigo-200 text-[10px] font-bold font-mono shadow-lg cursor-pointer backdrop-blur pointer-events-auto"
               title="Erklärung der Luftraumkarte anzeigen"
             >
               ✈️ Luftraum-Legende ▴
             </button>
           ) : (
-            <div className="w-72 max-h-[55vh] overflow-y-auto bg-slate-900/95 backdrop-blur-md border border-indigo-500/60 rounded-xl shadow-2xl p-2.5 text-[10px] text-slate-300 font-mono">
+            <div className="w-72 max-h-[55vh] overflow-y-auto bg-slate-900/95 backdrop-blur-md border border-indigo-500/60 rounded-xl shadow-2xl p-2.5 text-[10px] text-slate-300 font-mono pointer-events-auto relative">
               <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-700">
                 <span className="font-bold text-indigo-300 uppercase tracking-wider">✈️ Luftraum-Legende</span>
                 <button

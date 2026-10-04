@@ -1,4 +1,4 @@
-﻿import { Capacitor } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { User, isFirstAdmin, isUserAdmin, isUserEL, isUserAdminOrEL, getUserTrackColor } from '../types';
@@ -61,7 +61,7 @@ export const getOpTheme = (
 ): OpStatusTheme => {
   if (!op) {
     return {
-      type: 'standby', colorName: 'WeiÃŸ', emoji: 'ðŸ¾', label: 'Bereitschaft (Kein Einsatz)',
+      type: 'standby', colorName: 'Weiß', emoji: '🐾', label: 'Bereitschaft (Kein Einsatz)',
       dotBg: 'bg-white', pingBg: 'bg-white', animatePing: false,
       ring: 'ring-white/50 shadow-[0_0_10px_rgba(255,255,255,0.25)]',
       border: 'border-slate-300', text: 'text-slate-200',
@@ -72,7 +72,7 @@ export const getOpTheme = (
   if (op.type === 'exercise') {
     if (op.status === 'active') {
       return {
-        type: 'exercise', colorName: 'Gelb', emoji: 'ðŸŸ¡', label: op.title,
+        type: 'exercise', colorName: 'Gelb', emoji: '🟡', label: op.title,
         dotBg: 'bg-yellow-400', pingBg: 'bg-yellow-300', animatePing: true,
         ring: 'ring-yellow-400/60 shadow-[0_0_15px_rgba(250,204,21,0.5)]',
         border: 'border-yellow-400', text: 'text-yellow-300',
@@ -80,7 +80,7 @@ export const getOpTheme = (
       };
     } else if (op.status === 'paused') {
       return {
-        type: 'exercise', colorName: 'Orange', emoji: 'ðŸŸ ', label: op.title,
+        type: 'exercise', colorName: 'Orange', emoji: '🟠', label: op.title,
         dotBg: 'bg-orange-500', pingBg: 'bg-orange-400', animatePing: true,
         ring: 'ring-orange-500/60 shadow-[0_0_15px_rgba(249,115,22,0.5)]',
         border: 'border-orange-500', text: 'text-orange-300',
@@ -88,7 +88,7 @@ export const getOpTheme = (
       };
     } else if (op.status === 'planned') {
       return {
-        type: 'planned', colorName: 'Bereitschaft', emoji: 'ðŸŸ¢', label: op.title,
+        type: 'planned', colorName: 'Bereitschaft', emoji: '🟢', label: op.title,
         dotBg: 'bg-emerald-500', pingBg: 'bg-emerald-400', animatePing: true,
         ring: 'ring-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.5)]',
         border: 'border-emerald-500', text: 'text-emerald-300',
@@ -99,7 +99,7 @@ export const getOpTheme = (
 
   if (op.status === 'active') {
     return {
-      type: 'operation', colorName: 'Blau', emoji: 'ðŸ”µ', label: op.title,
+      type: 'operation', colorName: 'Blau', emoji: '🔵', label: op.title,
       dotBg: 'bg-blue-500', pingBg: 'bg-blue-400', animatePing: true,
       ring: 'ring-blue-500/60 shadow-[0_0_15px_rgba(59,130,246,0.5)]',
       border: 'border-blue-500', text: 'text-blue-300',
@@ -109,7 +109,7 @@ export const getOpTheme = (
   
   if (op.status === 'paused') {
     return {
-      type: 'operation', colorName: 'Rot', emoji: 'ðŸ”´', label: op.title,
+      type: 'operation', colorName: 'Rot', emoji: '🔴', label: op.title,
       dotBg: 'bg-red-500', pingBg: 'bg-red-400', animatePing: true,
       ring: 'ring-red-500/60 shadow-[0_0_15px_rgba(239,68,68,0.5)]',
       border: 'border-red-500', text: 'text-red-300',
@@ -119,7 +119,7 @@ export const getOpTheme = (
 
   if (op.status === 'planned') {
     return {
-      type: 'planned', colorName: 'Bereitschaft', emoji: 'ðŸŸ¢', label: op.title,
+      type: 'planned', colorName: 'Bereitschaft', emoji: '🟢', label: op.title,
       dotBg: 'bg-emerald-500', pingBg: 'bg-emerald-400', animatePing: true,
       ring: 'ring-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.5)]',
       border: 'border-emerald-500', text: 'text-emerald-300',
@@ -128,7 +128,7 @@ export const getOpTheme = (
   }
 
   return {
-    type: 'archived', colorName: 'Grau', emoji: 'ðŸ—ƒï¸', label: op.title,
+    type: 'archived', colorName: 'Grau', emoji: '🗃️', label: op.title,
     dotBg: 'bg-slate-500', pingBg: 'bg-slate-400', animatePing: false,
     ring: 'ring-slate-500/60 shadow-[0_0_10px_rgba(100,116,139,0.3)]',
     border: 'border-slate-500', text: 'text-slate-400',
@@ -292,7 +292,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         return {
           type: 'archived',
           colorName: 'Grau',
-          emoji: 'ðŸ—ƒï¸',
+          emoji: '🗃️',
           label: archivedOp ? 'Archiv: ' + archivedOp.title : 'Einsatzarchiv',
           dotBg: 'bg-slate-500',
           pingBg: 'bg-slate-400',
@@ -307,8 +307,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (!currentOperation) {
       return {
         type: 'standby',
-        colorName: 'WeiÃŸ',
-        emoji: 'âšª',
+        colorName: 'Weiß',
+        emoji: '⚪',
         label: 'Bereitschaft (Kein aktiver Einsatz)',
         dotBg: 'bg-slate-100',
         pingBg: 'bg-white',
@@ -342,7 +342,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               });
             }}
             className={`w-9 h-9 sm:w-11 sm:h-11 bg-white hover:bg-slate-100 active:scale-95 rounded-xl flex items-center justify-center font-black text-slate-950 shadow-md border border-slate-300 tracking-wider text-xs sm:text-sm shrink-0 cursor-pointer transition-all duration-200 relative group ring-2 ${currentOpTheme.ring}`}
-            title={`SHS EZ â€¢ ${currentOpTheme.emoji} ${currentOpTheme.label} (Klicken fÃ¼r MenÃ¼)`}
+            title={`SHS EZ • ${currentOpTheme.emoji} ${currentOpTheme.label} (Klicken für Menü)`}
           >
             <span className="font-black tracking-widest text-slate-950">SHS</span>
             {currentOpTheme.animatePing && (
@@ -395,7 +395,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {isAdmin && currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && (
                   <div className="mb-2 p-2 rounded-xl bg-slate-900/95 border border-amber-500/50 flex items-center justify-between font-mono">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-base shrink-0">{isEZ ? 'ðŸ¢' : 'ðŸš¶'}</span>
+                      <span className="text-base shrink-0">{isEZ ? '🏢' : '🚶'}</span>
                       <div className="min-w-0">
                         <div className="font-bold text-white text-[11px] truncate">
                           {isEZ ? 'Status: In der EZ' : 'Status: Sucher'}
@@ -415,12 +415,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                       }`}
                       title={isEZ ? 'Zu Sucher wechseln (Spur aufzeichnen)' : 'In die EZ wechseln (Spur pausieren)'}
                     >
-                      {isEZ ? 'ðŸš¶ Zu Sucher' : 'ðŸ¢ Zu EZ'}
+                      {isEZ ? '🚶 Zu Sucher' : '🏢 Zu EZ'}
                     </button>
                   </div>
                 )}
 
-                {/* â”€â”€ MENÃœ FÃœR ADMIN & EINSATZLEITUNG â”€â”€ */}
+                {/* ── MENÜ FÜR ADMIN & EINSATZLEITUNG ── */}
                 {isAdmin ? (
                   <div className="space-y-2.5 font-sans">
                     {/* 1. Aktueller Einsatz & Steuerung */}
@@ -450,9 +450,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 onOpenOperationDetailModal();
                               }}
                               className="py-1.5 px-2 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-200 border border-blue-800/80 transition flex items-center justify-center gap-1 cursor-pointer font-bold"
-                              title="Einsatzdossier und Vermisstenprofil Ã¶ffnen"
+                              title="Einsatzdossier und Vermisstenprofil öffnen"
                             >
-                              <span>ðŸ“‹</span>
+                              <span>📋</span>
                               <span>Dossier</span>
                             </button>
                           )}
@@ -467,7 +467,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               className="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-200 border border-slate-700 transition flex items-center justify-center gap-1 cursor-pointer font-bold"
                               title="Einsatz bearbeiten"
                             >
-                              <span>âœï¸</span>
+                              <span>✏️</span>
                               <span>Editieren</span>
                             </button>
                           )}
@@ -482,7 +482,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               className="py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 font-bold transition flex items-center justify-center gap-1 cursor-pointer uppercase"
                               title="Geplanten Einsatz jetzt starten"
                             >
-                              <span>ðŸš€</span>
+                              <span>🚀</span>
                               <span>Starten</span>
                             </button>
                           ) : currentOperation.status === 'active' ? (
@@ -499,7 +499,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               className="py-1.5 px-2 rounded-lg bg-amber-950/60 hover:bg-amber-900 text-amber-200 border border-amber-800 transition flex items-center justify-center gap-1 cursor-pointer font-bold"
                               title="Einsatz pausieren"
                             >
-                              <span>â¸ï¸</span>
+                              <span>⏸️</span>
                               <span>Pausieren</span>
                             </button>
                           ) : currentOperation.status === 'paused' ? (
@@ -512,7 +512,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               className="py-1.5 px-2 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 text-emerald-200 border border-emerald-800 transition flex items-center justify-center gap-1 cursor-pointer font-bold"
                               title="Einsatz fortsetzen"
                             >
-                              <span>â–¶ï¸</span>
+                              <span>▶️</span>
                               <span>Fortsetzen</span>
                             </button>
                           ) : null}
@@ -527,7 +527,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               className="py-1.5 px-2 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-800 transition flex items-center justify-center gap-1 cursor-pointer font-bold"
                               title="Einsatz beenden"
                             >
-                              <span>ðŸ›‘</span>
+                              <span>🛑</span>
                               <span>Beenden</span>
                             </button>
                           )}
@@ -542,7 +542,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             }}
                             className="w-full py-1.5 px-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition flex items-center justify-center gap-1.5 font-mono text-[11px] cursor-pointer"
                           >
-                            <span>âž•</span>
+                            <span>➕</span>
                             <span>Anderen / Neuen Einsatz anlegen</span>
                           </button>
                         )}
@@ -557,7 +557,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           }}
                           className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono font-bold text-xs shadow-lg transition cursor-pointer"
                         >
-                          <span className="text-base">âž•</span>
+                          <span className="text-base">➕</span>
                           <span>Neuen Einsatz anlegen</span>
                         </button>
                       )
@@ -579,7 +579,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         }`}
                       >
                         <div className="flex items-center justify-between w-full mb-1">
-                          <span className="text-base">ðŸ›¡ï¸</span>
+                          <span className="text-base">🛡️</span>
                           {activeTab === 'admin' && (
                             <span className="text-[9px] bg-amber-500 text-slate-950 px-1 rounded font-bold">Aktiv</span>
                           )}
@@ -598,7 +598,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           }}
                           className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-200 text-left transition cursor-pointer flex flex-col justify-between"
                         >
-                          <div className="text-base mb-1">ðŸ‘¥</div>
+                          <div className="text-base mb-1">👥</div>
                           <div className="font-bold text-xs text-white">Accounts</div>
                           <div className="text-[10px] text-slate-400">Helfer &amp; Rollen</div>
                         </button>
@@ -614,7 +614,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           }}
                           className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-200 text-left transition cursor-pointer flex flex-col justify-between"
                         >
-                          <div className="text-base mb-1">ðŸ“±</div>
+                          <div className="text-base mb-1">📱</div>
                           <div className="font-bold text-xs text-white">App Teilen</div>
                           <div className="text-[10px] text-slate-400">QR-Code Helfer</div>
                         </button>
@@ -630,7 +630,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           }}
                           className="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-200 text-left transition cursor-pointer flex flex-col justify-between"
                         >
-                          <div className="text-base mb-1">ðŸªª</div>
+                          <div className="text-base mb-1">🪪</div>
                           <div className="font-bold text-xs text-white">Strichcodes</div>
                           <div className="text-[10px] text-slate-400">Ausweise PDF</div>
                         </button>
@@ -638,7 +638,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                   </div>
                 ) : (
-                  /* â”€â”€ VEREINFACHTE HELFER-ANSICHT FÃœR NICHT-ADMINS (SUCHER) â”€â”€ */
+                  /* ── VEREINFACHTE HELFER-ANSICHT FÜR NICHT-ADMINS (SUCHER) ── */
                   <div className="space-y-1.5 font-sans">
                     {/* 1. Vermissten-Dossier & Infos */}
                     {currentOperation && onOpenOperationDetailModal && (
@@ -650,7 +650,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-blue-950/60 hover:bg-blue-900/80 text-blue-100 hover:text-white border border-blue-700/80 hover:border-blue-400 transition cursor-pointer text-left group shadow"
                       >
                         <div className="w-9 h-9 rounded-lg bg-blue-600/30 border border-blue-500/50 text-blue-300 flex items-center justify-center text-base shrink-0 group-hover:scale-105 transition">
-                          ðŸ“‹
+                          📋
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-bold text-xs flex items-center justify-between">
@@ -668,7 +668,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     {currentOperation && (
                       <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 flex items-center gap-3">
                         <div className="w-9 h-9 rounded-lg bg-emerald-600/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center text-base shrink-0">
-                          ðŸ“
+                          📍
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-[10px] font-mono text-slate-400 uppercase font-bold">Mein Suchbereich</div>
@@ -688,13 +688,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <span>Mein Status</span>
                           <span className="font-bold">
                             {!(currentOperation?.status === 'active' || currentOperation?.status === 'paused') ? (
-                              <span className="text-slate-300">ðŸ‘¤ Eingeloggt (Bereitschaft)</span>
+                              <span className="text-slate-300">👤 Eingeloggt (Bereitschaft)</span>
                             ) : currentUser?.arrivalStatus === 'ready' || currentUser?.arrivalStatus === 'ez_reached' ? (
-                              <span className="text-emerald-400">ðŸŸ¢ Bereit in EZ / Feld</span>
+                              <span className="text-emerald-400">🟢 Bereit in EZ / Feld</span>
                             ) : currentUser?.arrivalStatus === 'near_ez' ? (
-                              <span className="text-amber-300">ðŸŸ¡ Im Einsatzbereich (â‰¤500m)</span>
+                              <span className="text-amber-300">🟡 Im Einsatzbereich (≤500m)</span>
                             ) : (
-                              <span className="text-rose-400">ðŸš¨ In Anfahrt (&gt;500m)</span>
+                              <span className="text-rose-400">🚨 In Anfahrt (&gt;500m)</span>
                             )}
                           </span>
                         </div>
@@ -712,7 +712,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
                             }`}
                           >
-                            ðŸš¨ Anfahrt
+                            🚨 Anfahrt
                           </button>
                           <button
                             type="button"
@@ -727,7 +727,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
                             }`}
                           >
-                            ðŸŸ¡ Im Gebiet
+                            🟡 Im Gebiet
                           </button>
                           <button
                             type="button"
@@ -742,12 +742,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
                             }`}
                           >
-                            ðŸŸ¢ Bereit
+                            🟢 Bereit
                           </button>
                         </div>
                       </div>
 
-                    {/* 4. Mein Profil, AusrÃ¼stung & KFZ */}
+                    {/* 4. Mein Profil, Ausrüstung & KFZ */}
                     {onOpenProfileModal && (
                       <button
                         onClick={() => {
@@ -757,12 +757,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                         className="w-full flex items-center gap-3 p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/80 transition cursor-pointer text-left font-bold"
                       >
                         <div className="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 flex items-center justify-center text-sm shrink-0">
-                          âš™ï¸
+                          ⚙️
                         </div>
                         <div className="flex-1">
-                          <div className="font-bold text-xs">Mein Profil &amp; AusrÃ¼stung</div>
+                          <div className="font-bold text-xs">Mein Profil &amp; Ausrüstung</div>
                           <div className="text-[10px] text-slate-400 font-mono">
-                            Funkrufname: {currentUser?.callSign} â€¢ KFZ: {currentUser?.licensePlate || 'k.A.'}
+                            Funkrufname: {currentUser?.callSign} • KFZ: {currentUser?.licensePlate || 'k.A.'}
                           </div>
                         </div>
                       </button>
@@ -778,7 +778,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         className="w-full flex items-center gap-3 p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/80 transition cursor-pointer text-left font-bold"
                       >
                         <div className="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 flex items-center justify-center text-sm shrink-0">
-                          ðŸ“±
+                          📱
                         </div>
                         <div className="flex-1">
                           <div className="font-bold text-xs">App teilen / Helfer vor Ort</div>
@@ -798,7 +798,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     }}
                     className="p-1.5 rounded-lg bg-blue-950/40 hover:bg-blue-900/60 text-blue-300 border border-blue-800/60 cursor-pointer font-bold"
                   >
-                    ðŸ“Š Berichte
+                    📊 Berichte
                   </button>
                   <button
                     onClick={() => {
@@ -807,7 +807,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     }}
                     className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 cursor-pointer"
                   >
-                    ðŸ“œ Tagebuch
+                    📜 Tagebuch
                   </button>
                   <button
                     onClick={() => {
@@ -816,7 +816,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     }}
                     className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 cursor-pointer"
                   >
-                    ðŸ“¦ Archiv
+                    📦 Archiv
                   </button>
                 </div>
               </div>
@@ -840,7 +840,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 });
               }}
               className="hidden md:inline-block text-xs sm:text-sm md:text-base font-bold leading-tight uppercase tracking-wider text-white hover:text-blue-300 transition cursor-pointer truncate text-left"
-              title="SHS EZ HauptmenÃ¼ Ã¶ffnen"
+              title="SHS EZ Hauptmenü öffnen"
             >
               SHS EZ
             </button>
@@ -854,7 +854,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setShowResponderListDropdown(false);
                 }}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer text-[10px] font-mono font-bold shadow-sm shrink-0"
-                title="Einsatz wechseln oder archivierte EinsÃ¤tze ansehen"
+                title="Einsatz wechseln oder archivierte Einsätze ansehen"
               >
                 <span className="flex items-center gap-1.5">
                   <span className={`w-2 h-2 rounded-full ${currentOpTheme.dotBg} shrink-0`} />
@@ -863,7 +863,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       ? 'ARCHIV'
                       : currentOperation
                       ? `#${currentOperation.id.slice(-4).toUpperCase()}`
-                      : 'EINSÃ„TZE'}
+                      : 'EINSÄTZE'}
                   </span>
                 </span>
                 <ChevronDown className="w-3 h-3 text-blue-400 shrink-0" />
@@ -893,7 +893,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
 
                     <div className="space-y-2 my-1.5 pr-1">
-                      {/* Section 1: Aktive EinsÃ¤tze & Bereitschaft */}
+                      {/* Section 1: Aktive Einsätze & Bereitschaft */}
                       <div>
                         <div className="text-[10px] font-bold text-emerald-400 uppercase font-mono px-2 py-1 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
@@ -904,7 +904,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         </div>
                         {allOperations.filter((o) => o.status === 'active' || o.status === 'planned' || o.status === 'paused').length === 0 ? (
                           <div className="px-3 py-2 bg-slate-900/60 rounded-xl text-[11px] text-slate-400 font-mono text-center border border-slate-800">
-                            Kein Einsatz lÃ¤uft. (Bereitschaft)
+                            Kein Einsatz läuft. (Bereitschaft)
                           </div>
                         ) : (
                           <div className="space-y-1">
@@ -938,12 +938,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                                         </span>
                                       </div>
                                       <div className="text-[10px] text-slate-400 mt-0.5 font-mono truncate">
-                                        Vermisst: {op.missingPerson?.name || 'Unbekannt'} â€¢ #{op.id.slice(-4).toUpperCase()}
+                                        Vermisst: {op.missingPerson?.name || 'Unbekannt'} • #{op.id.slice(-4).toUpperCase()}
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-1.5 shrink-0">
                                       <span className={`text-[9px] uppercase font-mono px-2 py-0.5 rounded font-bold border ${opTheme.badge}`}>
-                                        {op.status === 'planned' ? 'Bereit' : op.type === 'exercise' ? 'Ãœbung' : 'Aktiv'}
+                                        {op.status === 'planned' ? 'Bereit' : op.type === 'exercise' ? 'Übung' : 'Aktiv'}
                                       </span>
                                       {op.status === 'planned' && isAdmin && (
                                         <button
@@ -979,9 +979,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             showConfirmModal({
-                                            title: 'Einsatz endgÃ¼ltig lÃ¶schen',
-                                            message: `MÃ¶chten Sie den Einsatz "${op.title}" wirklich endgÃ¼ltig lÃ¶schen?\n\nAlle Sektoren, Funde und Protokolle werden unwiderruflich gelÃ¶scht.`,
-                                            confirmLabel: 'EndgÃ¼ltig lÃ¶schen',
+                                            title: 'Einsatz endgültig löschen',
+                                            message: `Möchten Sie den Einsatz "${op.title}" wirklich endgültig löschen?\n\nAlle Sektoren, Funde und Protokolle werden unwiderruflich gelöscht.`,
+                                            confirmLabel: 'Endgültig löschen',
                                             isDanger: true,
                                             onConfirm: () => {
                                               deleteOperation(op.id);
@@ -989,7 +989,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                           });
                                           }}
                                           className="p-1 text-slate-400 hover:text-red-400 hover:bg-red-950/60 rounded border border-transparent hover:border-red-800 transition cursor-pointer"
-                                          title="Einsatz lÃ¶schen"
+                                          title="Einsatz löschen"
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />
                                         </button>
@@ -1002,13 +1002,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                         )}
                       </div>
 
-                      {/* Section 2: Beendete EinsÃ¤tze im Archiv */}
+                      {/* Section 2: Beendete Einsätze im Archiv */}
                       {allOperations.filter((o) => o.status === 'completed').length > 0 && (
                         <div className="pt-2 border-t border-slate-700/80">
                           <div className="text-[10px] font-bold text-slate-400 uppercase font-mono px-2 py-1 flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
                               <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                              <span>ðŸ“¦ Archivierte EinsÃ¤tze ({allOperations.filter((o) => o.status === 'completed').length})</span>
+                              <span>📦 Archivierte Einsätze ({allOperations.filter((o) => o.status === 'completed').length})</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <button
@@ -1018,7 +1018,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 }}
                                 className="text-emerald-400 hover:underline text-[9px] font-bold"
                               >
-                                ðŸ“Š Berichte
+                                📊 Berichte
                               </button>
                               <button
                                 onClick={() => {
@@ -1027,7 +1027,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 }}
                                 className="text-blue-400 hover:underline text-[9px]"
                               >
-                                Alle Ã¶ffnen
+                                Alle öffnen
                               </button>
                             </div>
                           </div>
@@ -1056,14 +1056,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                                   >
                                     <div className="truncate flex-1 mr-2">
                                       <div className="font-medium text-xs text-slate-300 truncate flex items-center gap-1.5">
-                                        <span>ðŸ”´</span>
+                                        <span>🔴</span>
                                         <span className="truncate">{op.title}</span>
                                         <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-red-950/80 border border-red-800 text-red-400 font-bold shrink-0">
                                           Rot
                                         </span>
                                       </div>
                                       <div className="text-[10px] text-slate-500 font-mono truncate">
-                                        Beendet: {op.completedAt ? new Date(op.completedAt).toLocaleDateString() : 'Archiv'} â€¢ #{op.id.slice(-4).toUpperCase()}
+                                        Beendet: {op.completedAt ? new Date(op.completedAt).toLocaleDateString() : 'Archiv'} • #{op.id.slice(-4).toUpperCase()}
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-1.5 shrink-0">
@@ -1078,7 +1078,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                               e.stopPropagation();
                                               showConfirmModal({
                                               title: 'Einsatz reaktivieren',
-                                              message: `MÃ¶chten Sie den Einsatz "${op.title}" reaktivieren und eine neue Suchphase starten?\n\nBisherige Sektoren & GPS-Suchspuren bleiben erhalten.`,
+                                              message: `Möchten Sie den Einsatz "${op.title}" reaktivieren und eine neue Suchphase starten?\n\nBisherige Sektoren & GPS-Suchspuren bleiben erhalten.`,
                                               confirmLabel: 'Reaktivieren',
                                               isDanger: false,
                                               onConfirm: () => {
@@ -1100,9 +1100,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               showConfirmModal({
-                                              title: 'Archivierten Einsatz lÃ¶schen',
-                                              message: `MÃ¶chten Sie den archivierten Einsatz "${op.title}" wirklich endgÃ¼ltig lÃ¶schen?`,
-                                              confirmLabel: 'LÃ¶schen',
+                                              title: 'Archivierten Einsatz löschen',
+                                              message: `Möchten Sie den archivierten Einsatz "${op.title}" wirklich endgültig löschen?`,
+                                              confirmLabel: 'Löschen',
                                               isDanger: true,
                                               onConfirm: () => {
                                                 deleteOperation(op.id);
@@ -1110,7 +1110,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                             });
                                             }}
                                             className="p-1 text-slate-400 hover:text-red-400 hover:bg-red-950/60 rounded border border-transparent hover:border-red-800 transition cursor-pointer"
-                                            title="Einsatz lÃ¶schen"
+                                            title="Einsatz löschen"
                                           >
                                             <Trash2 className="w-3.5 h-3.5" />
                                           </button>
@@ -1140,7 +1140,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               className="py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 text-[10px] font-bold transition flex items-center justify-center gap-1 font-mono cursor-pointer uppercase"
                               title="Geplanten Einsatz jetzt starten"
                             >
-                              ðŸš€ Starten
+                              🚀 Starten
                             </button>
                           ) : currentOperation.status === 'active' ? (
                             <button
@@ -1155,7 +1155,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               className="py-1.5 px-2 rounded-lg bg-slate-50 dark:bg-amber-600/30 hover:bg-slate-50 dark:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/40 text-[10px] font-bold transition flex items-center justify-center gap-1 font-mono cursor-pointer"
                               title="Laufenden Einsatz pausieren"
                             >
-                              â¸ï¸ Pausieren
+                              ⏸️ Pausieren
                             </button>
                           ) : currentOperation.status === 'paused' ? (
                             <button
@@ -1166,7 +1166,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               className="py-1.5 px-2 rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-[10px] font-bold transition flex items-center justify-center gap-1 font-mono cursor-pointer"
                               title="Pausierten Einsatz fortsetzen"
                             >
-                              â–¶ï¸ Fortsetzen
+                              ▶️ Fortsetzen
                             </button>
                           ) : null}
 
@@ -1179,7 +1179,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               className="py-1.5 px-2 rounded-lg bg-red-600/30 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 text-[10px] font-bold transition flex items-center justify-center gap-1 font-mono cursor-pointer"
                               title="Einsatz beenden"
                             >
-                              ðŸ›‘ Beenden
+                              🛑 Beenden
                             </button>
                           )}
                         </div>
@@ -1200,10 +1200,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setShowUserDropdown(false);
                 }}
                 className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer text-[10px] font-mono font-bold shadow-sm shrink-0"
-                title="EinsatzkrÃ¤fte & Bereitschaftsliste Ã¶ffnen"
+                title="Einsatzkräfte & Bereitschaftsliste öffnen"
               >
-                <span className="hidden sm:inline">ðŸ‘¥ EinsatzkrÃ¤fte ({allUsers.filter(u => u.isActive).length})</span>
-                <span className="sm:hidden">ðŸ‘¥ {allUsers.filter(u => u.isActive).length}</span>
+                <span className="hidden sm:inline">👥 Einsatzkräfte ({allUsers.filter(u => u.isActive).length})</span>
+                <span className="sm:hidden">👥 {allUsers.filter(u => u.isActive).length}</span>
                 <ChevronDown className="w-3 h-3 text-blue-400 shrink-0" />
               </button>
 
@@ -1212,7 +1212,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="fixed inset-0 z-[2100]" onClick={() => setShowResponderListDropdown(false)} />
                   <div className="fixed sm:absolute top-14 sm:top-full left-2 sm:left-0 right-2 sm:right-auto sm:w-96 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain flex flex-col bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl p-3 z-[2200] text-xs animate-in fade-in zoom-in-95 duration-150 space-y-2">
                     <div className="flex items-center justify-between font-bold text-slate-300 px-1 border-b border-slate-700 uppercase tracking-wider text-[10px] font-mono pb-1">
-                      <span>EinsatzkrÃ¤fte & Bereitschaft</span>
+                      <span>Einsatzkräfte & Bereitschaft</span>
                       <span className="text-blue-400">{allUsers.filter(u => u.isActive).length} aktiv</span>
                     </div>
 
@@ -1220,10 +1220,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="bg-indigo-950/60 border border-indigo-500/40 rounded-xl p-2 flex items-center justify-between text-[11px] font-mono">
                       <div className="min-w-0 mr-2">
                         <div className="text-[9px] text-indigo-300 font-bold uppercase">
-                          {currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') ? 'ðŸš¨ Aktive Einsatz-EZ' : 'ðŸ¢ VereinsbÃ¼ro Aschersleben'}
+                          {currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') ? '🚨 Aktive Einsatz-EZ' : '🏢 Vereinsbüro Aschersleben'}
                         </div>
                         <div className="text-slate-200 truncate font-semibold text-[10px]">
-                          {(currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && currentOperation.headquartersLocation?.address) ? currentOperation.headquartersLocation.address : 'Hohe StraÃŸe 15, Aschersleben'}
+                          {(currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && currentOperation.headquartersLocation?.address) ? currentOperation.headquartersLocation.address : 'Hohe Straße 15, Aschersleben'}
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -1260,7 +1260,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold text-[10px] shrink-0 no-underline flex items-center gap-1 shadow-sm"
                               title={`Route zur EZ (${targetAddr}) in Google Maps / Navi starten`}
                             >
-                              ðŸ§­ Navi
+                              🧭 Navi
                             </a>
                           );
                         })()}
@@ -1305,7 +1305,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                   )}
                                 </div>
                                 <div className="text-[9px] text-slate-400 font-mono truncate">
-                                  KFZ: {user.licensePlate || 'k.A.'} â€¢ Akku: {user.batteryLevel ?? 100}%
+                                  KFZ: {user.licensePlate || 'k.A.'} • Akku: {user.batteryLevel ?? 100}%
                                 </div>
                               </div>
                             </div>
@@ -1333,10 +1333,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setShowResponderListDropdown(false);
                 }}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800/70 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-600/60 transition cursor-pointer text-left shadow-sm group font-mono text-[10px] sm:text-xs font-bold shrink-0"
-                title="Archivierte EinsÃ¤tze anzeigen (Klicken zum Wechseln)"
+                title="Archivierte Einsätze anzeigen (Klicken zum Wechseln)"
               >
                 <span className="w-2 h-2 rounded-full bg-slate-500 shrink-0" />
-                <span className="font-bold text-slate-300">ARCHIV ðŸ—ƒï¸</span>
+                <span className="font-bold text-slate-300">ARCHIV 🗃️</span>
                 <span className="text-slate-300/80 text-[10px] hidden sm:inline truncate max-w-[160px]">
                   {currentOpTheme.label}
                 </span>
@@ -1350,7 +1350,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }
                 }}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer group shadow-sm text-left max-w-[210px] sm:max-w-[340px] text-[10px] font-mono font-bold shrink-0"
-                title="ðŸ“‹ Einsatzdetails & Vermisstensteckbrief anzeigen (Klicken fÃ¼r Foto, Details & Bearbeitung)"
+                title="📋 Einsatzdetails & Vermisstensteckbrief anzeigen (Klicken für Foto, Details & Bearbeitung)"
               >
                 <span className="flex items-center gap-1 shrink-0">
                   <span
@@ -1359,7 +1359,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     }`}
                   />
                   <span className="font-bold tracking-tight font-mono text-[9px] text-blue-400 group-hover:text-blue-200 hidden sm:inline">
-                    {isExercise ? 'ÃœBUNG:' : `${currentOpTheme.colorName.toUpperCase()}:`}
+                    {isExercise ? 'ÜBUNG:' : `${currentOpTheme.colorName.toUpperCase()}:`}
                   </span>
                 </span>
 
@@ -1372,7 +1372,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   />
                 ) : (
                   <span className="w-4 h-4 rounded-full bg-blue-900/60 text-blue-300 border border-blue-700/60 flex items-center justify-center text-[9px] shrink-0">
-                    ðŸ‘¤
+                    👤
                   </span>
                 )}
 
@@ -1387,7 +1387,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
 
                 <span className="text-[9px] font-mono text-blue-400 opacity-80 group-hover:opacity-100 shrink-0 ml-0.5">
-                  â„¹ï¸ Details
+                  ℹ️ Details
                 </span>
               </button>
             ) : (
@@ -1400,11 +1400,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setShowResponderListDropdown(false);
                 }}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer text-left shadow-sm group font-mono text-[10px] sm:text-xs font-bold shrink-0"
-                title="Bereitschaftsmodus - Klicken zum WÃ¤hlen oder Starten eines Einsatzes"
+                title="Bereitschaftsmodus - Klicken zum Wählen oder Starten eines Einsatzes"
               >
                 <span className="w-2 h-2 rounded-full bg-slate-200 shrink-0 shadow-sm" />
                 <span className="font-bold text-slate-200 hidden sm:inline">Bereitschaft</span>
-                <span className="text-blue-300/70 text-[10px] hidden sm:inline">(Kein aktiver Einsatz âšª)</span>
+                <span className="text-blue-300/70 text-[10px] hidden sm:inline">(Kein aktiver Einsatz ⚪)</span>
               </button>
             )}
           </div>
@@ -1453,7 +1453,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             cloudSyncStatus === 'connected'
               ? 'Firebase Firestore Cloud-Sync ist aktiv'
               : cloudSyncStatus === 'quota_exceeded'
-              ? 'TÃ¤gliches Firestore Free-Tier Schreiblimit erreicht. Lokaler Multi-Tab-Funk & Speicherung aktiv.'
+              ? 'Tägliches Firestore Free-Tier Schreiblimit erreicht. Lokaler Multi-Tab-Funk & Speicherung aktiv.'
               : 'Offline-Modus aktiv'
           }
         >
@@ -1489,7 +1489,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500'
               : 'bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border-blue-700/60'
           }`}
-          title="Manuelle Synchronisation: Daten, KrÃ¤fte & EinsÃ¤tze aus der Cloud ohne Seiten-Reload neu einlesen"
+          title="Manuelle Synchronisation: Daten, Kräfte & Einsätze aus der Cloud ohne Seiten-Reload neu einlesen"
         >
           <RefreshCw
             className={`w-3.5 h-3.5 shrink-0 ${
@@ -1501,7 +1501,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           />
           <span className="hidden sm:inline whitespace-nowrap">
-            {isRefreshing ? 'SYNCHRONISIERE...' : justRefreshed ? 'AKTUALISIERT âœ“' : 'SYNC'}
+            {isRefreshing ? 'SYNCHRONISIERE...' : justRefreshed ? 'AKTUALISIERT ✓' : 'SYNC'}
           </span>
         </button>
 
@@ -1524,7 +1524,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onOpenShareAppModal}
             className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border border-blue-700/60 transition cursor-pointer text-[10px] font-mono font-bold shadow-sm shrink-0"
-            title="App per QR-Code oder Direktlink an andere EinsatzkrÃ¤fte teilen"
+            title="App per QR-Code oder Direktlink an andere Einsatzkräfte teilen"
           >
             <Share2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
             <span className="hidden md:inline whitespace-nowrap">TEILEN / QR</span>
@@ -1537,7 +1537,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => setIsPocketMode(true)}
             className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600 transition cursor-pointer text-[10px] font-mono font-bold shadow-sm shrink-0"
-            title="Hosentaschen-Modus (Bildschirm verdunkeln und sperren fÃ¼r Akku-sparendes Tracking)"
+            title="Hosentaschen-Modus (Bildschirm verdunkeln und sperren für Akku-sparendes Tracking)"
           >
             <span className="hidden sm:inline whitespace-nowrap">HOSENTASCHE</span>
             <span className="sm:hidden">LOCK</span>
@@ -1555,7 +1555,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? 'bg-red-950/80 hover:bg-red-900 text-red-200 border-red-600/80'
                 : 'bg-blue-950/70 hover:bg-blue-900 text-blue-300 hover:text-white border-blue-700/60'
             }`}
-            title={unreadChatCount > 0 ? `${unreadChatCount} ungelesene Nachrichten` : 'Einsatzfunk / Chat Ã¶ffnen'}
+            title={unreadChatCount > 0 ? `${unreadChatCount} ungelesene Nachrichten` : 'Einsatzfunk / Chat öffnen'}
           >
             <MessageSquare className="w-3.5 h-3.5 shrink-0" />
             <span className="hidden sm:inline whitespace-nowrap">FUNK</span>
@@ -1587,7 +1587,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="text-right hidden sm:block">
               <p className="text-xs sm:text-sm font-bold text-white flex items-center gap-1 justify-end">
                 <span>{currentUser?.name || 'Benutzer'}</span>
-                {isFirstAdmin(currentUser) && <span title="First Admin & App-Owner (unantastbar)">ðŸ‘‘</span>}
+                {isFirstAdmin(currentUser) && <span title="First Admin & App-Owner (unantastbar)">👑</span>}
               </p>
               <p className="text-[10px] text-emerald-400 font-medium uppercase font-mono tracking-wide">
                 {isFirstAdmin(currentUser)
@@ -1627,13 +1627,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>{currentUser?.name}</span>
                     {isFirstAdmin(currentUser) && (
                       <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-mono font-bold">
-                        ðŸ‘‘ OWNER
+                        👑 OWNER
                       </span>
                     )}
                   </div>
                   <div className="text-blue-400 font-mono text-[11px]">{currentUser?.callSign}</div>
                   <div className="text-slate-400 text-[10px] mt-0.5 font-mono">
-                    KFZ: {currentUser?.licensePlate || 'k.A.'} â€¢ {isFirstAdmin(currentUser) ? 'First Admin & App-Owner (unantastbar)' : currentUser?.role === 'admin' ? 'ELZ (Admin)' : 'Einsatzkraft'}
+                    KFZ: {currentUser?.licensePlate || 'k.A.'} • {isFirstAdmin(currentUser) ? 'First Admin & App-Owner (unantastbar)' : currentUser?.role === 'admin' ? 'ELZ (Admin)' : 'Einsatzkraft'}
                   </div>
                 </div>
 
@@ -1641,7 +1641,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {isAdmin && currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && (
                   <div className="mb-2 p-2 rounded-xl bg-slate-900/95 border border-amber-500/50 flex items-center justify-between font-mono">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-base shrink-0">{isEZ ? 'ðŸ¢' : 'ðŸš¶'}</span>
+                      <span className="text-base shrink-0">{isEZ ? '🏢' : '🚶'}</span>
                       <div className="min-w-0">
                         <div className="font-bold text-white text-[11px] truncate">
                           {isEZ ? 'Status: In der EZ' : 'Status: Sucher'}
@@ -1661,7 +1661,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       }`}
                       title={isEZ ? 'Zu Sucher wechseln (Spur aufzeichnen)' : 'In die EZ wechseln (Spur pausieren)'}
                     >
-                      {isEZ ? 'ðŸš¶ Zu Sucher' : 'ðŸ¢ Zu EZ'}
+                      {isEZ ? '🚶 Zu Sucher' : '🏢 Zu EZ'}
                     </button>
                   </div>
                 )}
@@ -1674,7 +1674,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     }}
                     className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-slate-100 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 transition cursor-pointer text-left font-bold"
                   >
-                    <span>âš™ï¸</span> Mein Profil, AusrÃ¼stung & KFZ
+                    <span>⚙️</span> Mein Profil, Ausrüstung & KFZ
                   </button>
 
                   {!Capacitor.isNativePlatform() && (
@@ -1685,7 +1685,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       }}
                       className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-slate-100 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 transition cursor-pointer text-left font-bold"
                     >
-                      <span>ðŸ”’</span> Hosentaschen-Modus
+                      <span>🔒</span> Hosentaschen-Modus
                     </button>
                   )}
 
