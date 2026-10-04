@@ -4979,7 +4979,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             >
               <button
                 onClick={() => setAeroLegendOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-950/90 hover:bg-indigo-900 border border-indigo-500/60 text-indigo-200 text-[10px] font-bold font-mono shadow-lg cursor-pointer backdrop-blur pointer-events-none"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-950/90 hover:bg-indigo-900 border border-indigo-500/60 text-indigo-200 text-[10px] font-bold font-mono shadow-lg cursor-pointer backdrop-blur pointer-events-auto"
                 title="Erklärung der Luftraumkarte anzeigen"
               >
                 ✈️ Luftraum-Legende ▴
