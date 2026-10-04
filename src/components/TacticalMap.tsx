@@ -4970,35 +4970,45 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         <div
           ref={aeroLegendDragRef}
           style={aeroLegendPos ? { position: 'fixed', left: `${aeroLegendPos.x}px`, top: `${aeroLegendPos.y}px`, zIndex: 900 } : undefined}
-          className={`${aeroLegendPos ? '' : 'absolute bottom-20 right-2 sm:bottom-6 sm:right-14 z-[900]'} max-w-[calc(100vw-2rem)] select-none animate-in fade-in zoom-in-95 duration-200 pointer-events-none`}
+          className={`${aeroLegendPos ? '' : 'absolute bottom-20 left-1/2 -translate-x-1/2 sm:bottom-6 sm:left-auto sm:-translate-x-0 sm:right-14 z-[900]'} max-w-[calc(100vw-2rem)] select-none animate-in fade-in zoom-in-95 duration-200 pointer-events-none`}
         >
           {!aeroLegendOpen ? (
-            <div
-              {...aeroLegendDragProps}
-              className="touch-none cursor-grab active:cursor-grabbing pointer-events-auto"
-            >
+            <div className="flex items-center bg-slate-900/95 backdrop-blur-md border border-indigo-500/60 rounded-xl shadow-2xl overflow-hidden pointer-events-auto">
+              <div
+                {...aeroLegendDragProps}
+                className="p-1.5 bg-slate-800/80 text-slate-400 hover:text-white cursor-grab active:cursor-grabbing touch-none shrink-0 flex items-center justify-center border-r border-indigo-500/40"
+                title="Legende verschieben"
+              >
+                <GripVertical className="w-4 h-4" />
+              </div>
               <button
                 onClick={() => setAeroLegendOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-950/90 hover:bg-indigo-900 border border-indigo-500/60 text-indigo-200 text-[10px] font-bold font-mono shadow-lg cursor-pointer backdrop-blur pointer-events-auto"
+                className="px-3 py-2 text-[10px] font-bold text-indigo-200 font-mono hover:text-white transition cursor-pointer flex items-center gap-1.5"
                 title="Erklärung der Luftraumkarte anzeigen"
               >
-                ✈️ Luftraum-Legende ▴
+                ✈️ Luftraum-Legende 🔼
               </button>
             </div>
           ) : (
-            <div className="w-72 max-h-[55vh] flex flex-col bg-slate-900/95 backdrop-blur-md border border-indigo-500/60 rounded-xl shadow-2xl text-[10px] text-slate-300 font-mono pointer-events-auto relative">
-              <div 
-                {...aeroLegendDragProps}
-                className="flex items-center justify-between p-2.5 pb-2 border-b border-slate-700 touch-none cursor-grab active:cursor-grabbing"
-              >
-                <span className="font-bold text-indigo-300 uppercase tracking-wider pointer-events-none">✈️ Drohnen-Geozonen (dipul)</span>
-                <button
-                  onClick={() => setAeroLegendOpen(false)}
-                  className="px-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer font-bold pointer-events-auto"
-                  title="Legende einklappen"
+            <div className="w-72 max-h-[55vh] flex flex-col bg-slate-900/95 backdrop-blur-md border border-indigo-500/60 rounded-xl shadow-2xl text-[10px] text-slate-300 font-mono pointer-events-auto relative overflow-hidden">
+              <div className="flex items-center border-b border-slate-700 bg-slate-800/40">
+                <div 
+                  {...aeroLegendDragProps}
+                  className="p-2.5 text-slate-400 hover:text-white cursor-grab active:cursor-grabbing touch-none shrink-0 flex items-center justify-center border-r border-slate-700"
+                  title="Legende verschieben"
                 >
-                  ▾
-                </button>
+                  <GripVertical className="w-4 h-4" />
+                </div>
+                <div className="flex-1 flex items-center justify-between px-2.5 py-2">
+                  <span className="font-bold text-indigo-300 uppercase tracking-wider pointer-events-none">✈️ Drohnen-Geozonen (dipul)</span>
+                  <button
+                    onClick={() => setAeroLegendOpen(false)}
+                    className="px-1.5 py-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer font-bold pointer-events-auto"
+                    title="Legende einklappen"
+                  >
+                    🔽
+                  </button>
+                </div>
               </div>
 
               <div className="p-2.5 overflow-y-auto space-y-1.5 overscroll-contain">
