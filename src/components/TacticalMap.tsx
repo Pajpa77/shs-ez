@@ -3302,7 +3302,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       {/* MOBILE FLOATING ACTION BAR (Top, compact, unobstructed view for smartphone searchers in portrait and landscape) */}
       {isMobileScreen && (
         <div className="absolute top-2 left-2 z-[900] flex flex-wrap items-center gap-1.5 pointer-events-none w-full max-w-[calc(100vw-24px)]">
-          <div className="flex items-center gap-1.5 pointer-events-auto bg-[#1E293B]/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-xl">
+          <div className="flex flex-wrap items-center gap-1.5 pointer-events-auto bg-[#1E293B]/95 backdrop-blur-md p-1.5 rounded-xl border border-slate-700 shadow-xl">
             <button
               onClick={handleCenterOnMe}
               className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white rounded-lg text-xs font-bold transition cursor-pointer border border-blue-500/40 font-mono"
@@ -4969,32 +4969,39 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       {showAero && (
         <div
           ref={aeroLegendDragRef}
-          {...aeroLegendDragProps}
           style={aeroLegendPos ? { position: 'fixed', left: `${aeroLegendPos.x}px`, top: `${aeroLegendPos.y}px`, zIndex: 900 } : undefined}
-          className={`${aeroLegendPos ? '' : 'absolute bottom-20 right-2 sm:bottom-6 sm:right-14 z-[900]'} max-w-[calc(100vw-2rem)] select-none animate-in fade-in zoom-in-95 duration-200 touch-none cursor-grab active:cursor-grabbing`}
+          className={`${aeroLegendPos ? '' : 'absolute bottom-20 right-2 sm:bottom-6 sm:right-14 z-[900]'} max-w-[calc(100vw-2rem)] select-none animate-in fade-in zoom-in-95 duration-200 pointer-events-none`}
         >
           {!aeroLegendOpen ? (
-            <button
-              onClick={() => setAeroLegendOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-950/90 hover:bg-indigo-900 border border-indigo-500/60 text-indigo-200 text-[10px] font-bold font-mono shadow-lg cursor-pointer backdrop-blur pointer-events-auto"
-              title="Erklärung der Luftraumkarte anzeigen"
+            <div
+              {...aeroLegendDragProps}
+              className="touch-none cursor-grab active:cursor-grabbing pointer-events-auto"
             >
-              ✈️ Luftraum-Legende ▴
-            </button>
+              <button
+                onClick={() => setAeroLegendOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-950/90 hover:bg-indigo-900 border border-indigo-500/60 text-indigo-200 text-[10px] font-bold font-mono shadow-lg cursor-pointer backdrop-blur pointer-events-none"
+                title="Erklärung der Luftraumkarte anzeigen"
+              >
+                ✈️ Luftraum-Legende ▴
+              </button>
+            </div>
           ) : (
-            <div className="w-72 max-h-[55vh] overflow-y-auto bg-slate-900/95 backdrop-blur-md border border-indigo-500/60 rounded-xl shadow-2xl p-2.5 text-[10px] text-slate-300 font-mono pointer-events-auto relative">
-              <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-700">
-                <span className="font-bold text-indigo-300 uppercase tracking-wider">✈️ Drohnen-Geozonen (dipul)</span>
+            <div className="w-72 max-h-[55vh] flex flex-col bg-slate-900/95 backdrop-blur-md border border-indigo-500/60 rounded-xl shadow-2xl text-[10px] text-slate-300 font-mono pointer-events-auto relative">
+              <div 
+                {...aeroLegendDragProps}
+                className="flex items-center justify-between p-2.5 pb-2 border-b border-slate-700 touch-none cursor-grab active:cursor-grabbing"
+              >
+                <span className="font-bold text-indigo-300 uppercase tracking-wider pointer-events-none">✈️ Drohnen-Geozonen (dipul)</span>
                 <button
                   onClick={() => setAeroLegendOpen(false)}
-                  className="px-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer font-bold"
+                  className="px-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer font-bold pointer-events-auto"
                   title="Legende einklappen"
                 >
                   ▾
                 </button>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="p-2.5 overflow-y-auto space-y-1.5 overscroll-contain">
                 <div className="font-bold text-slate-400 uppercase text-[9px] mb-1">Was bedeutet die Einfärbung?</div>
                 <div className="flex gap-2 items-start">
                   <div className="w-4 h-4 bg-red-500/40 border border-red-500 shrink-0 mt-0.5"></div>
@@ -5007,10 +5014,10 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 </div>
               </div>
 
-              <div className="mt-2 pt-1.5 border-t border-slate-700 text-amber-300/90 leading-snug">
+              <div className="p-2.5 pt-0 mt-2 border-t border-slate-700 text-amber-300/90 leading-snug">
                 ⚠️ Für tagesaktuelle Details (NOTAMs) und Klick-Abfragen auf Zonen: <a href="https://maptool-dipul.dfs.de/" target="_blank" rel="noopener noreferrer" className="underline text-amber-200 hover:text-white">Offizielles dipul-Maptool öffnen</a>.
               </div>
-              <div className="mt-1 text-slate-500 text-[9px]">Quelle: DFS Deutsche Flugsicherung GmbH / dipul (CC BY-ND 4.0)</div>
+              <div className="p-2.5 pt-0 mt-0 text-slate-500 text-[9px]">Quelle: DFS Deutsche Flugsicherung GmbH / dipul (CC BY-ND 4.0)</div>
             </div>
           )}
         </div>

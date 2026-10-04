@@ -20,37 +20,37 @@ export const SniffingDogAnimation: React.FC = () => {
           <defs>
             {/* Dynamic Neon Green Gradient */}
             <linearGradient id="neonGreenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#10b981" />
-              <stop offset="50%" stopColor="#22c55e" />
-              <stop offset="100%" stopColor="#39ff14" />
+              <stop offset="0%" stopColor="#ec4899" />
+              <stop offset="50%" stopColor="#ff1493" />
+              <stop offset="100%" stopColor="#ff00ff" />
             </linearGradient>
 
             <style>{`
               /* Ground Line Animated Neon Gradient Shift */
               @keyframes rainbowGroundShift {
                 0% {
-                  background: linear-gradient(90deg, #10b981, #22c55e, #39ff14, #22c55e, #10b981);
+                  background: linear-gradient(90deg, #ec4899, #ff1493, #ff00ff, #ff1493, #ec4899);
                   background-size: 200% 100%;
                   background-position: 0% 50%;
-                  box-shadow: 0 0 16px rgba(57, 255, 20, 0.95);
+                  box-shadow: 0 0 16px rgba(255, 0, 255, 0.95);
                 }
                 50% {
                   background-position: 100% 50%;
-                  box-shadow: 0 0 22px rgba(34, 197, 94, 0.98);
+                  box-shadow: 0 0 22px rgba(255, 20, 147, 0.98);
                 }
                 100% {
                   background-position: 200% 50%;
-                  box-shadow: 0 0 16px rgba(57, 255, 20, 0.95);
+                  box-shadow: 0 0 16px rgba(255, 0, 255, 0.95);
                 }
               }
 
               /* Dynamic Neon Green Glow for Dog Vector */
               @keyframes neonGreenGlow {
                 0%, 100% {
-                  filter: drop-shadow(0 0 16px rgba(57, 255, 20, 0.8));
+                  filter: drop-shadow(0 0 16px rgba(255, 0, 255, 0.8));
                 }
                 50% {
-                  filter: drop-shadow(0 0 22px rgba(57, 255, 20, 1));
+                  filter: drop-shadow(0 0 22px rgba(255, 0, 255, 1));
                 }
               }
 
@@ -97,7 +97,7 @@ export const SniffingDogAnimation: React.FC = () => {
                 70%      { transform: translateY(-1px) rotate(-1.5deg); }
               }
 
-              /* Nose Sniffing Twitching Animation (Schnüffelnase) */
+              /* Nose Sniffing Twitching Animation (SchnÃ¼ffelnase) */
               @keyframes noseSniffTwitch {
                 0%, 100% { transform: scale(1); }
                 25%      { transform: scale(1.2) translate(-0.8px, -0.5px); }
@@ -181,11 +181,11 @@ export const SniffingDogAnimation: React.FC = () => {
           </defs>
 
           {/* SCENT PARTICLES AT NOSE IN NEON RAINBOW GRADIENT */}
-          <circle cx="24" cy="116" r="2.4" fill="url(#neonGreenGrad)" className="sniff-dot-1" />
-          <circle cx="18" cy="111" r="3.0" fill="url(#neonGreenGrad)" className="sniff-dot-2" />
+          <circle cx="24" cy="116" r="2.4" fill="url(#neonPinkGrad)" className="sniff-dot-1" />
+          <circle cx="18" cy="111" r="3.0" fill="url(#neonPinkGrad)" className="sniff-dot-2" />
 
           {/* REALISTIC MULTI-PATH VECTOR STROKES IN NEON RAINBOW GRADIENT */}
-          <g stroke="url(#neonGreenGrad)" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
+          <g stroke="url(#neonPinkGrad)" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
             
             {/* BACKGROUND LEGS */}
             <g className="anim-leg-br" opacity="0.55">
@@ -218,7 +218,7 @@ export const SniffingDogAnimation: React.FC = () => {
               <path d="M148 70 C136 82 130 96 124 112 L140 112" />
             </g>
 
-            {/* INDEPENDENT SNIFFING HEAD, EARS & PROMINENT ANIMATED SCHNÜFFELNASE */}
+            {/* INDEPENDENT SNIFFING HEAD, EARS & PROMINENT ANIMATED SCHNÃœFFELNASE */}
             <g className="anim-head">
               {/* Head & Muzzle contour */}
               <path
@@ -234,16 +234,16 @@ export const SniffingDogAnimation: React.FC = () => {
 
               {/* Expressive Eye */}
               <g stroke="none">
-                <ellipse cx="46" cy="58" rx="3.5" ry="5.5" fill="url(#neonGreenGrad)" />
+                <ellipse cx="46" cy="58" rx="3.5" ry="5.5" fill="url(#neonPinkGrad)" />
                 <ellipse cx="44.5" cy="58.5" rx="2" ry="3" fill="#0F172A" />
-                <ellipse cx="47" cy="56" rx="1" ry="1.5" fill="url(#neonGreenGrad)" />
+                <ellipse cx="47" cy="56" rx="1" ry="1.5" fill="url(#neonPinkGrad)" />
               </g>
 
-              {/* Prominent Animated Schnüffelnase */}
+              {/* Prominent Animated SchnÃ¼ffelnase */}
               <g className="anim-sniff-nose" stroke="none">
-                <ellipse cx="25" cy="91" rx="4.8" ry="3.4" fill="url(#neonGreenGrad)" />
+                <ellipse cx="25" cy="91" rx="4.8" ry="3.4" fill="url(#neonPinkGrad)" />
                 <ellipse cx="24" cy="91.5" rx="1.8" ry="1.2" fill="#0F172A" />
-                <circle cx="26.2" cy="89.8" r="0.9" fill="url(#neonGreenGrad)" />
+                <circle cx="26.2" cy="89.8" r="0.9" fill="url(#neonPinkGrad)" />
               </g>
             </g>
           </g>
