@@ -977,7 +977,20 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       aeroPane.style.zIndex = '350';
       aeroPane.style.pointerEvents = 'none';
     }
-    aeroLayerRef.current = L.tileLayer('https://nwy-tiles-api.prod.newaydata.com/tiles/{z}/{x}/{y}.png?path=latest/aero/latest', { pane: 'aeroPane', maxNativeZoom: 12, maxZoom: 22, minZoom: 4, opacity: 0.75, attribution: 'openFlightMaps' });
+    
+    // Offizielle Geozonen der DFS (dipul) über öffentlichen WMS
+    const dipulLayers = 'bahnanlagen,behoerden,binnenwasserstrassen,bundesautobahnen,bundesstrassen,diplomatische_vertretungen,ffh-gebiete,flugbeschraenkungsgebiete,flughaefen,flugplaetze,freibaeder,haengegleiter,inaktive_temporaere_betriebseinschraenkungen,industrieanlagen,internationale_organisationen,justizvollzugsanstalten,kontrollzonen,kraftwerke,krankenhaeuser,labore,militaerische_anlagen,modellflugplaetze,nationalparks,naturschutzgebiete,polizei,schifffahrtsanlagen,seewasserstrassen,sicherheitsbehoerden,stromleitungen,temporaere_betriebseinschraenkungen,umspannwerke,vogelschutzgebiete,windkraftanlagen,wohngrundstuecke';
+    
+    aeroLayerRef.current = L.tileLayer.wms('https://uas-betrieb.de/geoservices/dipul/wms', { 
+      pane: 'aeroPane', 
+      layers: dipulLayers,
+      format: 'image/png',
+      transparent: true,
+      maxZoom: 22, 
+      minZoom: 4, 
+      opacity: 0.65, 
+      attribution: '&copy; <a href="https://dipul.de">DFS / dipul</a> (CC BY-ND 4.0)' 
+    });
     respondersLayerRef.current = L.featureGroup().addTo(map);
     findingsLayerRef.current = L.featureGroup().addTo(map);
     plsLayerRef.current = L.featureGroup().addTo(map);
@@ -4971,7 +4984,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           ) : (
             <div className="w-72 max-h-[55vh] overflow-y-auto bg-slate-900/95 backdrop-blur-md border border-indigo-500/60 rounded-xl shadow-2xl p-2.5 text-[10px] text-slate-300 font-mono pointer-events-auto relative">
               <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-700">
-                <span className="font-bold text-indigo-300 uppercase tracking-wider">✈️ Luftraum-Legende</span>
+                <span className="font-bold text-indigo-300 uppercase tracking-wider">✈️ Drohnen-Geozonen (dipul)</span>
                 <button
                   onClick={() => setAeroLegendOpen(false)}
                   className="px-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-700 cursor-pointer font-bold"
@@ -4981,28 +4994,23 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 </button>
               </div>
 
-              <div className="space-y-1">
-                <div className="font-bold text-slate-400 uppercase text-[9px]">Lufträume</div>
-                <div><b className="text-red-400">CTR</b> – Kontrollzone um Flughäfen (meist ab Boden). Drohne nur mit Freigabe!</div>
-                <div><b className="text-sky-400">C / D</b> – kontrollierter Luftraum (Freigabe durch Flugsicherung nötig)</div>
-                <div><b className="text-slate-200">E</b> – kontrollierter Luftraum ohne Freigabepflicht für Sichtflug</div>
-                <div><b className="text-red-400">ED-R</b> – Flugbeschränkungsgebiet (z.B. Militär, Gefängnis, Industrie)</div>
-                <div><b className="text-orange-400">ED-D</b> – Gefahrengebiet (zeitweise aktiv)</div>
-                <div><b className="text-amber-300">RMZ / TMZ</b> – Funk- bzw. Transponderpflicht</div>
-              </div>
-
-              <div className="space-y-1 mt-2 pt-1.5 border-t border-slate-700">
-                <div className="font-bold text-slate-400 uppercase text-[9px]">Höhenangaben (Ober-/Untergrenze)</div>
-                <div><b className="text-slate-200">GND</b> = ab Boden · <b className="text-slate-200">AGL</b> = über Grund</div>
-                <div><b className="text-slate-200">MSL</b> = über Meeresspiegel (Fuß)</div>
-                <div><b className="text-slate-200">FL 100</b> = Flugfläche ≈ 10.000 ft</div>
-                <div className="text-slate-500">1.000 ft ≈ 300 m</div>
+              <div className="space-y-1.5">
+                <div className="font-bold text-slate-400 uppercase text-[9px] mb-1">Was bedeutet die Einfärbung?</div>
+                <div className="flex gap-2 items-start">
+                  <div className="w-4 h-4 bg-red-500/40 border border-red-500 shrink-0 mt-0.5"></div>
+                  <div><b className="text-red-400">Rote Zonen</b> zeigen geografische Gebiete nach § 21h LuftVO an. Hier bestehen grundsätzliche Betriebsverbote oder Einschränkungen für Drohnen.</div>
+                </div>
+                <div>Beispiele: Naturschutzgebiete, Bundesstraßen, Industrie, Menschenansammlungen, Flughäfen.</div>
+                
+                <div className="mt-2 pt-2 border-t border-slate-700">
+                  <b className="text-emerald-400">BOS-Privileg:</b> Als Behörde oder Organisation mit Sicherheitsaufgaben (z.B. Feuerwehr, Polizei, Rettungsdienst, anerkannte Suchhundestaffel im Einsatz) dürft ihr unter bestimmten Voraussetzungen (zur Erfüllung der Aufgaben) von diesen Verboten abweichen (§ 21k LuftVO).
+                </div>
               </div>
 
               <div className="mt-2 pt-1.5 border-t border-slate-700 text-amber-300/90 leading-snug">
-                ⚠️ Drohneneinsatz: Für verbindliche Prüfung &amp; Freigaben <a href="https://maptool-dipul.dfs.de/" target="_blank" rel="noopener noreferrer" className="underline text-amber-200 hover:text-white">dipul-Karte (DFS)</a> nutzen.
+                ⚠️ Für tagesaktuelle Details (NOTAMs) und Klick-Abfragen auf Zonen: <a href="https://maptool-dipul.dfs.de/" target="_blank" rel="noopener noreferrer" className="underline text-amber-200 hover:text-white">Offizielles dipul-Maptool öffnen</a>.
               </div>
-              <div className="mt-1 text-slate-500 text-[9px]">Quelle: openFlightMaps · Details nur bis Zoomstufe ~12 scharf</div>
+              <div className="mt-1 text-slate-500 text-[9px]">Quelle: DFS Deutsche Flugsicherung GmbH / dipul (CC BY-ND 4.0)</div>
             </div>
           )}
         </div>
