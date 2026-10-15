@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { SearchOperation, EquipmentType, User } from '../types';
+import { SearchOperation, EquipmentType, User, isUserAdminOrEL } from '../types';
 import {
   X,
   User as UserIcon,
@@ -11,6 +11,7 @@ import {
   Calendar,
   AlertTriangle,
   Edit3,
+  Play,
   ZoomIn,
   HeartPulse,
   Phone,
@@ -45,7 +46,7 @@ const EQUIPMENT_LABELS: Record<EquipmentType, { label: string; icon: string }> =
 interface OperationDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onOpenEditOperation?: () => void;
+  onOpenEditOperation?: (op?: SearchOperation) => void;
   onNavigateToMapPoint?: (lat: number, lng: number) => void;
   operation?: SearchOperation | null;
 }
@@ -57,7 +58,7 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
   onNavigateToMapPoint,
   operation: propOp,
 }) => {
-  const { currentOperation, currentUser, findings, allUsers } = useRescue();
+  const { currentOperation, currentUser, findings, allUsers, updateOperation, setCurrentOperationId } = useRescue();
   const [isPhotoZoomed, setIsPhotoZoomed] = useState(false);
 
   if (!isOpen) return null;
@@ -86,7 +87,7 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
   }
 
   const mp = op.missingPerson;
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'einsatzleitung' || Boolean(currentUser?.isAdmin) || Boolean(currentUser?.canLeadOperations);
+  const isAdmin = isUserAdminOrEL(currentUser);
   const isExercise = op.type === 'exercise';
   const opFindings = findings.filter((f) => f.operationId === op.id);
   const activeRespondersCount = allUsers.filter((u) => u.isActive).length;
@@ -109,10 +110,12 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
                 className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-lg font-bold shrink-0 border ${
                   isExercise
                     ? 'bg-slate-50 dark:bg-amber-500/20 text-amber-400 border-amber-500/40'
+                    : op.status === 'planned'
+                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
                     : 'bg-red-500/20 text-red-400 border-red-500/40 animate-pulse'
                 }`}
               >
-                {isExercise ? '🟠' : '🔴'}
+                {isExercise ? '🟠' : op.status === 'planned' ? '🔵' : '🔴'}
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -120,10 +123,14 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
                     className={`text-[9px] sm:text-[10px] uppercase font-mono px-2 py-0.5 rounded font-bold ${
                       op.status === 'active'
                         ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                        : op.status === 'planned'
+                        ? 'bg-blue-950 text-blue-300 border border-blue-800'
+                        : op.status === 'paused'
+                        ? 'bg-amber-950 text-amber-300 border border-amber-800'
                         : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700'
                     }`}
                   >
-                    {op.status === 'active' ? 'Laufender Einsatz' : 'Archiviert'}
+                    {op.status === 'active' ? 'Laufender Einsatz' : op.status === 'planned' ? 'Geplant (Bereitschaft)' : op.status === 'paused' ? 'Pausiert' : 'Archiviert'}
                   </span>
                   <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                     #{op.id.slice(-4).toUpperCase()}
@@ -141,12 +148,27 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              {isAdmin && op.status === 'planned' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateOperation(op.id, { status: 'active' });
+                    setCurrentOperationId(op.id);
+                    onClose();
+                  }}
+                  className="px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-md uppercase"
+                  title="Geplanten Einsatz jetzt starten"
+                >
+                  <Play className="w-3.5 h-3.5" />
+                  <span>Starten</span>
+                </button>
+              )}
               {isAdmin && onOpenEditOperation && (
                 <button
                   type="button"
                   onClick={() => {
                     onClose();
-                    onOpenEditOperation();
+                    onOpenEditOperation(op);
                   }}
                   className="px-2.5 sm:px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-md"
                   title="Einsatz- und Vermisstendaten bearbeiten oder ergänzen"
@@ -686,12 +708,26 @@ export const OperationDetailModal: React.FC<OperationDetailModalProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
+              {isAdmin && op.status === 'planned' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateOperation(op.id, { status: 'active' });
+                    setCurrentOperationId(op.id);
+                    onClose();
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-lg uppercase"
+                >
+                  <Play className="w-3.5 h-3.5" />
+                  <span>Einsatz jetzt starten</span>
+                </button>
+              )}
               {isAdmin && onOpenEditOperation && (
                 <button
                   type="button"
                   onClick={() => {
                     onClose();
-                    onOpenEditOperation();
+                    onOpenEditOperation(op);
                   }}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-lg"
                 >

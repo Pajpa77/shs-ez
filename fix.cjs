@@ -1,0 +1,1 @@
+﻿const fs = require('fs'); let c = fs.readFileSync('src/components/TacticalMap.tsx', 'utf8'); c = c.replace('backdrop-blur pointer-events-none', 'backdrop-blur pointer-events-auto'); fs.writeFileSync('src/components/TacticalMap.tsx', c, 'utf8');

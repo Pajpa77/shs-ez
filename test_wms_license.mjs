@@ -1,0 +1,1 @@
+﻿const res = await fetch('https://uas-betrieb.de/geoservices/dipul/wms?service=WMS&request=GetCapabilities'); const text = await res.text(); const match = text.match(/<Fees[^>]*>([\s\S]*?)<\/Fees>/); console.log(match ? match[1] : 'none'); process.exit(0);

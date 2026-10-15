@@ -1,0 +1,1 @@
+﻿import fs from 'fs'; let content = fs.readFileSync('src/components/SniffingDogAnimation.tsx', 'utf8'); if (content.charCodeAt(0) === 0xFEFF) { content = content.slice(1); } fs.writeFileSync('src/components/SniffingDogAnimation.tsx', content, 'utf8');

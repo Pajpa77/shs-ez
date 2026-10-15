@@ -1,0 +1,1 @@
+import fs from 'fs'; let c = fs.readFileSync('src/components/TacticalMap.tsx', 'utf8'); c = c.replace(/attribution: 'openAIP Data'/g, 'attribution: \\'openFlightMaps\\''); fs.writeFileSync('src/components/TacticalMap.tsx', c);

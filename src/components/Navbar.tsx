@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { User, isFirstAdmin, isUserAdmin, isUserEL, isUserAdminOrEL, getUserTrackColor } from '../types';
+import { User, SearchOperation, isFirstAdmin, isUserAdmin, isUserEL, isUserAdminOrEL, getUserTrackColor } from '../types';
 import { PocketModeOverlay } from './PocketModeOverlay';
 import { VEREINSBUERO_LOCATION } from '../mockData';
 import {
@@ -147,7 +147,7 @@ interface NavbarProps {
   onOpenEndOperationModal?: () => void;
   onOpenPauseOperationModal?: () => void;
   onOpenCreateOperationModal?: () => void;
-  onOpenEditOperationModal?: () => void;
+  onOpenEditOperationModal?: (op?: SearchOperation) => void;
   onOpenOperationDetailModal?: () => void;
   onOpenCreateUserModal?: () => void;
   onOpenEditUser?: (user: User) => void;
@@ -958,6 +958,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                                           Start
                                         </button>
                                       )}
+                                      {isAdmin && onOpenEditOperationModal && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCurrentOperationId(op.id);
+                                            setShowOpDropdown(false);
+                                            onOpenEditOperationModal(op);
+                                          }}
+                                          className="p-1 text-slate-400 hover:text-amber-300 hover:bg-amber-950/60 rounded border border-transparent hover:border-amber-700 transition cursor-pointer"
+                                          title="Einsatz bearbeiten"
+                                        >
+                                          <Edit3 className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
                                       {onOpenOperationDetailModal && (
                                         <button
                                           type="button"
@@ -1132,16 +1147,31 @@ export const Navbar: React.FC<NavbarProps> = ({
                         </div>
                         <div className="grid grid-cols-2 gap-1.5">
                           {currentOperation.status === 'planned' ? (
-                            <button
-                              onClick={() => {
-                                setShowOpDropdown(false);
-                                updateOperation(currentOperation.id, { status: 'active' });
-                              }}
-                              className="py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 text-[10px] font-bold transition flex items-center justify-center gap-1 font-mono cursor-pointer uppercase"
-                              title="Geplanten Einsatz jetzt starten"
-                            >
-                              🚀 Starten
-                            </button>
+                            <>
+                              <button
+                                onClick={() => {
+                                  setShowOpDropdown(false);
+                                  updateOperation(currentOperation.id, { status: 'active' });
+                                }}
+                                className="py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 text-[10px] font-bold transition flex items-center justify-center gap-1 font-mono cursor-pointer uppercase"
+                                title="Geplanten Einsatz jetzt starten"
+                              >
+                                🚀 Starten
+                              </button>
+                              {onOpenEditOperationModal && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setShowOpDropdown(false);
+                                    onOpenEditOperationModal(currentOperation);
+                                  }}
+                                  className="py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-[10px] font-bold transition flex items-center justify-center gap-1 font-mono cursor-pointer"
+                                  title="Geplanten Einsatz bearbeiten"
+                                >
+                                  ✏️ Bearbeiten
+                                </button>
+                              )}
+                            </>
                           ) : currentOperation.status === 'active' ? (
                             <button
                               onClick={() => {
@@ -1220,19 +1250,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="bg-indigo-950/60 border border-indigo-500/40 rounded-xl p-2 flex items-center justify-between text-[11px] font-mono">
                       <div className="min-w-0 mr-2">
                         <div className="text-[9px] text-indigo-300 font-bold uppercase">
-                          {currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') ? '🚨 Aktive Einsatz-EZ' : '🏢 Vereinsbüro Aschersleben'}
+                          {currentOperation && currentOperation.status === 'planned' ? '🟢 Geplante Einsatz-EZ' : (currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused')) ? '🚨 Aktive Einsatz-EZ' : '🏢 Vereinsbüro Aschersleben'}
                         </div>
                         <div className="text-slate-200 truncate font-semibold text-[10px]">
-                          {(currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && currentOperation.headquartersLocation?.address) ? currentOperation.headquartersLocation.address : 'Hohe Straße 15, Aschersleben'}
+                          {(currentOperation && currentOperation.headquartersLocation?.address) ? currentOperation.headquartersLocation.address : 'Hohe Straße 15, Aschersleben'}
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused') && onOpenEditOperationModal && currentUser?.role !== 'observer' && (
+                        {currentOperation && onOpenEditOperationModal && currentUser?.role !== 'observer' && (
                           <button
                             type="button"
                             onClick={() => {
                               setShowResponderListDropdown(false);
-                              onOpenEditOperationModal();
+                              onOpenEditOperationModal(currentOperation);
                             }}
                             className="p-1.5 rounded-lg bg-indigo-800/80 hover:bg-indigo-700 text-indigo-200 hover:text-white transition cursor-pointer border border-indigo-600/50"
                             title="EZ-Standort oder Einsatzdaten bearbeiten"
@@ -1241,14 +1271,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                           </button>
                         )}
                         {(() => {
-                          const isOpActive = Boolean(currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused'));
-                          const targetLat = isOpActive
+                          const hasOp = Boolean(currentOperation && currentOperation.headquartersLocation);
+                          const targetLat = hasOp
                             ? (currentOperation?.headquartersLocation?.lat || currentOperation?.missingPerson?.lastSeenLocation?.lat || VEREINSBUERO_LOCATION.lat)
                             : VEREINSBUERO_LOCATION.lat;
-                          const targetLng = isOpActive
+                          const targetLng = hasOp
                             ? (currentOperation?.headquartersLocation?.lng || currentOperation?.missingPerson?.lastSeenLocation?.lng || VEREINSBUERO_LOCATION.lng)
                             : VEREINSBUERO_LOCATION.lng;
-                          const targetAddr = isOpActive
+                          const targetAddr = hasOp
                             ? (currentOperation?.headquartersLocation?.address || currentOperation?.missingPerson?.lastSeenLocation?.address || 'Einsatzort')
                             : VEREINSBUERO_LOCATION.address;
 

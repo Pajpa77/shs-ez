@@ -1,0 +1,1 @@
+import { initializeApp } from 'firebase/app'; import { getFirestore, doc, setDoc } from 'firebase/firestore'; const firebaseConfig = { projectId: 'shs-ea' }; const app = initializeApp(firebaseConfig); const db = getFirestore(app); setDoc(doc(db, 'users', 'test-user'), { id: 'test-user', name: 'test' }).then(() => console.log('success')).catch(e => console.error(e));

@@ -1,0 +1,1 @@
+﻿const url = 'https://uas-betrieb.de/geoservices/dipul/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=dipul:bundesstrassen&outputFormat=application/json&bbox=51.75,11.45,51.85,11.55,urn:ogc:def:crs:EPSG::4326'; const res = await fetch(url); const json = await res.json(); console.log(json.features?.length); process.exit(0);

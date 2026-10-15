@@ -37,7 +37,7 @@ import { FloatingMapControlsBar } from './components/FloatingMapControlsBar';
 import { useWakeLock } from './hooks/useWakeLock';
 import { usePWAInstall } from './hooks/usePWAInstall';
 
-import { Finding, SearchSector, User, isUserAdmin, isUserEL, isUserAdminOrEL } from './types';
+import { Finding, SearchSector, User, SearchOperation, isUserAdmin, isUserEL, isUserAdminOrEL } from './types';
 import {
   AlertTriangle,
   Layers,
@@ -200,6 +200,7 @@ const MainApp: React.FC = () => {
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [isOperationCreatorOpen, setIsOperationCreatorOpen] = useState(false);
   const [operationCreatorMode, setOperationCreatorMode] = useState<'create' | 'edit'>('create');
+  const [operationToEdit, setOperationToEdit] = useState<SearchOperation | null>(null);
   const [isOperationDetailModalOpen, setIsOperationDetailModalOpen] = useState(false);
   const [isOperationEndModalOpen, setIsOperationEndModalOpen] = useState(false);
   const [isOperationPauseModalOpen, setIsOperationPauseModalOpen] = useState(false);
@@ -536,10 +537,12 @@ const MainApp: React.FC = () => {
         onOpenPauseOperationModal={() => setIsOperationPauseModalOpen(true)}
         onOpenCreateOperationModal={() => {
           setOperationCreatorMode('create');
+          setOperationToEdit(null);
           setIsOperationCreatorOpen(true);
         }}
-        onOpenEditOperationModal={() => {
+        onOpenEditOperationModal={(op?: SearchOperation) => {
           setOperationCreatorMode('edit');
+          setOperationToEdit(op || null);
           setIsOperationCreatorOpen(true);
         }}
         onOpenOperationDetailModal={() => {
@@ -660,10 +663,12 @@ const MainApp: React.FC = () => {
             <AdminDashboard
               onOpenCreateOperation={() => {
                 setOperationCreatorMode('create');
+                setOperationToEdit(null);
                 setIsOperationCreatorOpen(true);
               }}
-              onOpenEditOperation={() => {
+              onOpenEditOperation={(op?: SearchOperation) => {
                 setOperationCreatorMode('edit');
+                setOperationToEdit(op || null);
                 setIsOperationCreatorOpen(true);
               }}
               onOpenEndOperation={() => setIsOperationEndModalOpen(true)}
@@ -876,7 +881,11 @@ const MainApp: React.FC = () => {
       <OperationCreatorModal
         isOpen={isOperationCreatorOpen}
         mode={operationCreatorMode}
-        onClose={() => setIsOperationCreatorOpen(false)}
+        operationToEdit={operationToEdit}
+        onClose={() => {
+          setIsOperationCreatorOpen(false);
+          setOperationToEdit(null);
+        }}
         onStartDrawingSector={() => {
           setActiveTab('map');
           setSectorToEdit(null);
@@ -888,9 +897,10 @@ const MainApp: React.FC = () => {
       <OperationDetailModal
         isOpen={isOperationDetailModalOpen}
         onClose={() => setIsOperationDetailModalOpen(false)}
-        onOpenEditOperation={() => {
+        onOpenEditOperation={(op?: SearchOperation) => {
           setIsOperationDetailModalOpen(false);
           setOperationCreatorMode('edit');
+          setOperationToEdit(op || null);
           setIsOperationCreatorOpen(true);
         }}
         onNavigateToMapPoint={() => {

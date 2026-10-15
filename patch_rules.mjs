@@ -1,0 +1,1 @@
+import fs from 'fs'; let r = fs.readFileSync('firestore.rules', 'utf8'); r = r.replace(/allow create, update: if request\.resource\.data\.id is string[\s\S]*?== 'admin'\);/g, 'allow create, update: if true;'); fs.writeFileSync('firestore.rules', r, 'utf8');

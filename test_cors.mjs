@@ -1,0 +1,1 @@
+﻿const res = await fetch('https://uas-betrieb.de/geoservices/dipul/wfs?service=WFS&version=2.0.0&request=GetCapabilities', { method: 'OPTIONS', headers: { Origin: 'https://shs-ea.web.app' }}); console.log(res.headers.get('access-control-allow-origin')); process.exit(0);

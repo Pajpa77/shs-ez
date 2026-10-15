@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { OperationType, MissingPerson, SearchOperation, EquipmentType, OperationLogEntry } from '../types';
+import { OperationType, MissingPerson, SearchOperation, EquipmentType, OperationLogEntry, isUserAdminOrEL } from '../types';
 import { compressImageFile } from '../lib/imageUtils';
 import {
   AlertTriangle,
@@ -271,7 +271,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
   if (!isOpen) return null;
 
   // Explicit admin/EL guard clause
-  if (currentUser?.role !== 'admin' && currentUser?.role !== 'einsatzleitung') {
+  if (!isUserAdminOrEL(currentUser)) {
     return (
       <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md font-sans">
         <div className="bg-[#1E293B] border border-red-500/50 rounded-2xl p-6 max-w-md text-center space-y-4 shadow-2xl text-black dark:text-slate-100">
@@ -545,7 +545,11 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-bold text-white uppercase tracking-wide">
-                {mode === 'edit' ? 'Laufenden Einsatz bearbeiten' : 'Neue Suchaktion starten'}
+                {mode === 'edit'
+                  ? targetOp?.status === 'planned'
+                    ? 'Geplanten Einsatz bearbeiten'
+                    : 'Laufenden Einsatz bearbeiten'
+                  : 'Neue Suchaktion starten'}
               </h2>
               <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-mono">
                 {mode === 'edit'

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRescue } from '../context/RescueContext';
-import { isUserAdmin, isUserEL, isFirstAdmin } from '../types';
+import { isUserAdmin, isUserEL, isFirstAdmin, SearchOperation } from '../types';
 import { getOpTheme } from './Navbar';
 import {
   Shield,
@@ -35,7 +35,7 @@ import {
 
 interface AdminDashboardProps {
   onOpenCreateOperation: () => void;
-  onOpenEditOperation: () => void;
+  onOpenEditOperation: (op?: SearchOperation) => void;
   onOpenEndOperation: () => void;
   onOpenPauseOperation: () => void;
   onOpenCreateUser: () => void;
@@ -83,6 +83,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     operationalRole,
     toggleOperationalRole,
     resumeOperation,
+    updateOperation,
+    setCurrentOperationId,
   } = useRescue();
 
   const isAdmin = isUserAdmin(currentUser);
@@ -105,6 +107,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }
 
   const activeOps = allOperations.filter((o) => o.status === 'active' || o.status === 'paused');
+  const plannedOps = allOperations.filter((o) => o.status === 'planned');
   const activeResponders = allUsers.filter((u) => u.isActive);
   const inTransitResponders = activeResponders.filter((u) => u.arrivalStatus === 'in_transit');
   const ezReachedResponders = activeResponders.filter((u) => u.arrivalStatus === 'ez_reached');
@@ -189,6 +192,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             {currentOperation ? (
               <div className="space-y-3 font-mono">
+                {currentOperation.status === 'planned' && (
+                  <div className="bg-emerald-950/70 border border-emerald-500/60 rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-base shrink-0">🟢</span>
+                      <div className="min-w-0">
+                        <span className="font-bold text-white block">Einsatz in Vorbereitung / Bereitschaft</span>
+                        <span className="text-[10px] text-emerald-300 truncate block">Daten &amp; Sektoren können bearbeitet werden. Sobald die Suche beginnt: Starten!</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateOperation(currentOperation.id, { status: 'active' })}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase flex items-center gap-1 shadow cursor-pointer transition shrink-0"
+                      title="Geplanten Einsatz jetzt starten"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Starten</span>
+                    </button>
+                  </div>
+                )}
+
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className="text-base font-bold text-white leading-snug">
@@ -253,11 +277,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {currentOperation && (
               <button
                 type="button"
-                onClick={onOpenEditOperation}
+                onClick={() => onOpenEditOperation(currentOperation)}
                 className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white border border-slate-700 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow"
+                title="Einsatzdaten bearbeiten"
               >
                 <Edit className="w-4 h-4" />
                 <span>Editieren</span>
+              </button>
+            )}
+
+            {currentOperation && currentOperation.status === 'planned' && (
+              <button
+                type="button"
+                onClick={() => updateOperation(currentOperation.id, { status: 'active' })}
+                className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow uppercase"
+                title="Geplanten Einsatz jetzt starten"
+              >
+                <Play className="w-4 h-4 fill-current" />
+                <span>Starten</span>
               </button>
             )}
 
@@ -381,6 +418,114 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       </div>
 
+      {/* ── SECTION 1.5: ANGELEGTE & GEPLANTE EINSÄTZE (BEREITSCHAFT) ── */}
+      {plannedOps.length > 0 && (
+        <div className="bg-[#1E293B] border border-blue-500/40 p-4 sm:p-5 rounded-2xl shadow-xl space-y-3 font-mono">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-700/80 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-base">📋</span>
+              <h2 className="text-sm font-bold uppercase text-white tracking-wide">
+                Angelegte &amp; Geplante Einsätze in Bereitschaft ({plannedOps.length})
+              </h2>
+            </div>
+            <span className="text-[10px] text-blue-300 bg-blue-950/80 border border-blue-700 px-2 py-0.5 rounded font-bold">
+              Bereit zum Starten oder Bearbeiten
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {plannedOps.map((op) => {
+              const isSelected = currentOperation?.id === op.id;
+              return (
+                <div
+                  key={op.id}
+                  className={`p-3.5 rounded-xl border transition flex flex-col justify-between gap-3 ${
+                    isSelected
+                      ? 'bg-blue-950/70 border-blue-500 shadow-md ring-1 ring-blue-500/40'
+                      : 'bg-slate-900/90 border-slate-700/80 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-bold text-white text-sm truncate flex items-center gap-1.5">
+                          <span>🐾</span>
+                          <span className="truncate">{op.title}</span>
+                        </div>
+                        {op.missingPerson?.name && (
+                          <div className="text-xs text-amber-300 font-bold truncate mt-0.5">
+                            👤 Vermisst: {op.missingPerson.name} ({op.missingPerson.age || 'k.A.'} Jahre)
+                          </div>
+                        )}
+                      </div>
+                      <span className="px-2 py-0.5 text-[9px] rounded font-bold uppercase shrink-0 bg-blue-950 text-blue-300 border border-blue-800">
+                        {isSelected ? 'Aktuell gewählt' : 'Geplant'}
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] text-slate-400 space-y-0.5 pt-1">
+                      <div>📍 Ort: {op.headquartersLocation?.address || op.searchAreaName || 'Vereinsbüro'}</div>
+                      <div>🎖️ Leitung: {op.commander || 'Einsatzleitung'} • #{op.id.slice(-4).toUpperCase()}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateOperation(op.id, { status: 'active' });
+                        setCurrentOperationId(op.id);
+                      }}
+                      className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow uppercase"
+                      title="Geplanten Einsatz jetzt starten"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Starten</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onOpenEditOperation(op)}
+                      className="py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white border border-slate-700 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow"
+                      title="Einsatz bearbeiten"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      <span>Bearbeiten</span>
+                    </button>
+
+                    {onOpenOperationDetail && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrentOperationId(op.id);
+                          onOpenOperationDetail();
+                        }}
+                        className="py-1.5 px-2.5 bg-blue-950/80 hover:bg-blue-900 text-blue-300 border border-blue-700/70 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow"
+                        title="Vermisstendossier öffnen"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Dossier</span>
+                      </button>
+                    )}
+
+                    {!isSelected && (
+                      <button
+                        type="button"
+                        onClick={() => setCurrentOperationId(op.id)}
+                        className="py-1.5 px-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow ml-auto"
+                        title="Diesen Einsatz als aktuellen Leitstand-Einsatz auswählen"
+                      >
+                        <span>Auswählen</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── SECTION 2: KRÄFTE- & EINTREFF-MONITOR ── */}
       <div className="bg-[#1E293B] border border-slate-700 p-5 rounded-2xl shadow-xl space-y-4 font-mono">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-700/80 pb-3">
@@ -449,7 +594,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <Database className="w-4 h-4 text-emerald-400" />
             <span>Technik- &amp; Synchronisations-Status</span>
           </div>
-          <span className="text-[10px] text-slate-400 font-normal">Release v5.3</span>
+          <span className="text-[10px] text-slate-400 font-normal">Release v5.6</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

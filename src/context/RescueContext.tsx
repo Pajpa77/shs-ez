@@ -1361,11 +1361,12 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           (op) =>
             op.id === currentOperationId &&
             !deletedOpIdsRef.current.has(op.id) &&
-            (op.status === 'active' || op.status === 'paused')
+            (op.status === 'active' || op.status === 'paused' || op.status === 'planned')
         )
       : null) ||
     allOperations.find((op) => !deletedOpIdsRef.current.has(op.id) && op.status === 'active') ||
     allOperations.find((op) => !deletedOpIdsRef.current.has(op.id) && op.status === 'paused') ||
+    allOperations.find((op) => !deletedOpIdsRef.current.has(op.id) && op.status === 'planned') ||
     null;
   currentOperationRef.current = currentOperation;
 
@@ -4922,7 +4923,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       }
 
       if (currentOperationId === id) {
-        const nextActive = remaining.find((op) => op.status === 'active' || op.status === 'paused');
+        const nextActive = remaining.find((op) => op.status === 'active' || op.status === 'paused' || op.status === 'planned');
         const nextOpId = nextActive ? nextActive.id : (remaining[0]?.id || '');
         setCurrentOperationIdState(nextOpId);
         try {

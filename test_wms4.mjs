@@ -1,0 +1,1 @@
+﻿const res = await fetch('https://uas-betrieb.de/geoservices/dipul/wms?service=WMS&request=GetCapabilities'); const text = await res.text(); const matches = Array.from(text.matchAll(/<Layer[^>]*>[\s\S]*?<Name>([^<]+)<\/Name>/g)).map(m => m[1]); console.log(matches.join(',')); process.exit(0);

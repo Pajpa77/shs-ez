@@ -1,0 +1,1 @@
+import fs from 'fs'; let r = fs.readFileSync('src/components/TacticalMap.tsx', 'utf8'); r = r.replace(/https:\/\/\{s\}\.tile\.maps\.openaip\.net[^']*/g, 'https://nwy-tiles-api.prod.newaydata.com/tiles/{z}/{x}/{y}.png?path=latest/aero/latest'); fs.writeFileSync('src/components/TacticalMap.tsx', r, 'utf8');

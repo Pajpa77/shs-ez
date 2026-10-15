@@ -1,0 +1,1 @@
+﻿const res = await fetch('https://uas-betrieb.de/geoservices/dipul/wfs?service=WFS&request=GetCapabilities'); const text = await res.text(); const matches = text.match(/<Name>([^<]+)<\/Name>/g); console.log(matches); process.exit(0);
