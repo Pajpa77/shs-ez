@@ -221,6 +221,7 @@ interface RescueContextType {
     isVoiceMessage?: boolean;
   }) => void;
   sendEmergencyAlert: (customMessage: string) => void;
+  sendPagerAlert: (targetUserId: string, customText?: string) => void;
   clearChatHistory: () => void;
   clearLogbook: () => void;
   clearAlerts: () => void;
@@ -883,6 +884,23 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + 0.45);
+      } else if (type === 'pager_alert') {
+        const now = ctx.currentTime;
+        // Dringender 5-fach Stakkato-Weckruf / Pager-Alarm (2200 Hz - 2600 Hz, laut und durchdringend)
+        for (let b = 0; b < 5; b++) {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          const t = now + (b * 0.16);
+          osc.frequency.setValueAtTime(2200, t);
+          osc.frequency.setValueAtTime(2600, t + 0.05);
+          gain.gain.setValueAtTime(0.35, t);
+          gain.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.13);
+        }
       } else if (type !== 'alert' && type !== 'finding' && type !== 'radio' && type !== 'cb_tx_start' && type !== 'cb_tx_end' && type !== 'cb_roger' && type !== 'notification' && type.trim().length > 0) {
         // Sector specific channel or unique channel: calculate dynamic frequency from hash!
         const now = ctx.currentTime;
@@ -1037,7 +1055,15 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     // Play tone specific to channel
-    if (msg.isAlert) {
+    if (msg.isAlert && (msg.text?.includes('PAGER') || msg.text?.includes('WECKRUF'))) {
+      playAlertSound('pager_alert');
+      try { if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 600]); } catch {}
+      setActiveAlertNotification({
+        title: '🚨 DRINGENDER PAGER-WECKRUF!',
+        message: `${msg.senderName} (${msg.senderCallSign}): "${msg.text}"`,
+        timestamp: new Date().toLocaleTimeString(),
+      });
+    } else if (msg.isAlert) {
       playAlertSound('emergency_alarm');
     } else if (msg.channel === 'admins') {
       playAlertSound('chat_admins');
@@ -3225,6 +3251,65 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       };
     });
   };
+
+  // Ghost-Reaper: Auto-Offline für Geister-Nutzer NACH 5 MINUTEN ohne Signal (NUR WENN KEIN EINSATZ AKTIV IST!)
+  useEffect(() => {
+    const ghostReaper = () => {
+      // Höchste Priorität: Im aktiven / pausierten Einsatz NIEMALS automatisch abmelden!
+      const isOpActive = Boolean(
+        currentOperationRef.current &&
+        (currentOperationRef.current.status === 'active' || currentOperationRef.current.status === 'paused')
+      );
+      if (isOpActive) return;
+
+      const now = Date.now();
+      const FIVE_MINUTES_MS = 5 * 60 * 1000;
+
+      // Finde alle User, die als aktiv markiert sind, deren letztes Lebenszeichen aber älter als 5 Minuten ist
+      allUsers.forEach((u) => {
+        if (!u.isActive) return;
+        const lastHb = u.lastHeartbeat || (u.lastSeen ? new Date(u.lastSeen).getTime() : 0);
+        if (lastHb > 0 && (now - lastHb) > FIVE_MINUTES_MS) {
+          console.log(`[Ghost-Reaper] Auto-Offline für inaktiven Benutzer ${u.name} (kein Signal seit > 5 Min außerhalb Einsatz)`);
+          setUserActiveStatus(u.id, false);
+        }
+      });
+    };
+
+    const interval = setInterval(ghostReaper, 30000); // alle 30 Sekunden prüfen
+    return () => clearInterval(interval);
+  }, [allUsers]);
+
+  // Sofortige Offline-Erkennung beim Schließen des Browser-Fensters/Tabs
+  // (NUR IM BEREITSCHAFTSMODUS! Im aktiven Einsatz wird der Status geschützt!)
+  useEffect(() => {
+    const handleUnload = () => {
+      const isOpActive = Boolean(
+        currentOperationRef.current &&
+        (currentOperationRef.current.status === 'active' || currentOperationRef.current.status === 'paused')
+      );
+      if (isOpActive) return;
+
+      const uid = currentUserIdRef.current;
+      if (!uid) return;
+
+      try {
+        if (db && isFirebaseConfigured()) {
+          const userDoc = doc(db, 'users', uid);
+          setDoc(userDoc, { isActive: false, lastSeen: `Abgemeldet (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` }, { merge: true });
+          const locDoc = doc(db, 'locations', uid);
+          setDoc(locDoc, { isLive: false, lastUpdated: new Date().toISOString() }, { merge: true });
+        }
+      } catch {}
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handleUnload);
+    };
+  }, []);
 
   // Authentication methods
   const login = (
@@ -5650,6 +5735,41 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     });
   };
 
+  const sendPagerAlert = useCallback((targetUserId: string, customText?: string) => {
+    if (!currentUser) return;
+    const targetUser = allUsers.find((u) => u.id === targetUserId);
+    if (!targetUser) return;
+
+    playAlertSound('pager_alert');
+    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]); } catch {}
+
+    const text = customText || `🚨 WECKRUF / PAGER: Bitte dringend im Funk oder per Telefon melden!`;
+    const opId = currentOperation?.id || 'general';
+
+    const alertMsg: ChatMessage = {
+      id: `msg-pager-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      operationId: opId,
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+      senderCallSign: currentUser.callSign,
+      senderRole: currentUser.role,
+      senderPhotoUrl: currentUser.photoUrl,
+      channel: targetUserId,
+      recipientId: targetUserId,
+      isDirect: true,
+      text,
+      timestamp: new Date().toISOString(),
+      isAlert: true,
+    };
+
+    setChatMessages((prev) => [...prev, alertMsg]);
+    syncChatToCloud(alertMsg);
+    broadcastChannelRef.current?.postMessage({
+      type: 'NEW_CHAT',
+      payload: alertMsg,
+    });
+  }, [currentUser, allUsers, currentOperation, playAlertSound, syncChatToCloud]);
+
   const setUiScale = useCallback((scale: number) => {
     const clamped = Math.max(0.75, Math.min(2.5, scale));
     setUiScaleState(clamped);
@@ -5861,6 +5981,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         markDmAsRead,
         sendChatMessage,
         sendEmergencyAlert,
+        sendPagerAlert,
         clearChatHistory,
         clearLogbook,
         clearAlerts,

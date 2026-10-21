@@ -29,6 +29,7 @@ import {
   ChevronDown,
   ChevronLeft,
   Hash,
+  Bell,
 } from 'lucide-react';
 
 interface ChatPanelProps {
@@ -216,6 +217,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     clearLogbook,
     clearAlerts,
     activeChatTarget,
+    sendPagerAlert,
   } = useRescue();
 
   // Primary navigation tab: 'channels' (Kanäle & Gruppen) vs 'findings' (Fundmeldungen mit Infos)
@@ -1083,9 +1085,24 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         </div>
 
         {activeTargetUser && (
-          <span className="text-[10px] text-blue-300 font-mono font-semibold shrink-0 bg-blue-900/40 px-2 py-0.5 rounded-full border border-blue-700/50 hidden sm:inline">
-            {activeTargetUser.callSign}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] text-blue-300 font-mono font-semibold shrink-0 bg-blue-900/40 px-2 py-0.5 rounded-full border border-blue-700/50 hidden sm:inline">
+              {activeTargetUser.callSign}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm(`Lautes Pager-Signal an ${activeTargetUser.name} (${activeTargetUser.callSign}) senden? Auf dem Smartphone ertönt ein lauter Alarmton.`)) {
+                  sendPagerAlert(activeTargetUser.id);
+                }
+              }}
+              className="px-2.5 py-1 rounded-xl bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-500/50 text-xs font-bold transition flex items-center gap-1 active:scale-95 cursor-pointer shadow-sm"
+              title={`Lautes Pager-Signal / Weckruf an ${activeTargetUser.name} senden`}
+            >
+              <Bell className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+              <span className="text-[11px]">Pager</span>
+            </button>
+          </div>
         )}
       </div>
 

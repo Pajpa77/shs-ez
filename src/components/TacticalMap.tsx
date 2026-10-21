@@ -64,6 +64,7 @@ import {
   Moon,
   Sun,
   RadioTower,
+  Bell,
 } from 'lucide-react';
 import { useDraggable } from '../hooks/useDraggable';
 import { GeoImportModal } from './GeoImportModal';
@@ -261,6 +262,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     showConfirmModal,
     operationalRole,
     toggleOperationalRole,
+    sendPagerAlert,
   } = useRescue();
 
   const currentOperation = propOperation !== undefined ? propOperation : globalOperation;
@@ -2980,6 +2982,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       const isSelected = selectedUser?.id === userId;
       if (!isOnline && !showInactiveResponders && !isParticipant && !isSelected) return;
 
+      // Geister-Schutz ohne aktiven Einsatz:
+      // Wenn kein Einsatz aktiv ist, und das Gerät seit > 3 Min. offline ist (connStatus === 'offline'),
+      // wird der Pin nicht angezeigt, es sei denn der User ist explizit ausgewählt oder showInactiveResponders ist an!
+      const userConnStatus = getUserConnectionStatus(user);
+      if (!isOperationActive && userConnStatus === 'offline' && !isSelected && !showInactiveResponders && user.id !== currentUser?.id) {
+        return;
+      }
+
       let locState = userLocations[userId];
       if (!locState && user.id === currentUser?.id && myLocation) {
         locState = {
@@ -5028,6 +5038,20 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
               {/* Sticky Action Footer */}
               <div className="p-3 border-t border-slate-700 bg-[#1E293B] flex gap-2 shrink-0 shadow-lg">
+                {selectedUser.id !== currentUser?.id && (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Lautes Pager-Signal an ${selectedUser.name} (${selectedUser.callSign}) senden? Auf dem Smartphone ertönt ein lauter Alarmton.`)) {
+                        sendPagerAlert(selectedUser.id);
+                      }
+                    }}
+                    className="py-2.5 px-3 bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-500/50 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow"
+                    title={`Lautes Pager-Signal / Weckruf an ${selectedUser.name} senden`}
+                  >
+                    <Bell className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+                    <span>Pager</span>
+                  </button>
+                )}
                 {selectedUser.phone && (
                   <a
                     href={`tel:${selectedUser.phone}`}

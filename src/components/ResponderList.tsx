@@ -43,6 +43,7 @@ import {
   Compass,
   Award,
   Navigation,
+  Bell,
 } from 'lucide-react';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 import { MemberCardModal } from './MemberCardModal';
@@ -109,6 +110,7 @@ export const ResponderList: React.FC<ResponderListProps> = ({
     confirmUserReady,
     calculateDistanceToEzMeters,
     setSelectedUser,
+    sendPagerAlert,
   } = useRescue();
 
   // 3 klare Unterbereiche ohne redundante Doppel-Auflistung
@@ -720,6 +722,23 @@ export const ResponderList: React.FC<ResponderListProps> = ({
                   {/* Action Toolbar */}
                   <div className="mt-4 pt-3 border-t border-slate-700/80 flex items-center justify-between gap-1.5 flex-wrap">
                     <div className="flex gap-1.5 flex-1 flex-wrap">
+                      {user.id !== currentUser?.id && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Lautes Pager-Signal an ${user.name} (${user.callSign}) senden? Auf dem Smartphone ertönt ein lauter Alarmton.`)) {
+                              sendPagerAlert(user.id);
+                            }
+                          }}
+                          className="py-1.5 px-2 bg-red-600/20 hover:bg-red-600/40 text-red-300 rounded-lg text-xs font-bold flex items-center gap-1 border border-red-500/50 cursor-pointer active:scale-95 shadow-sm"
+                          title="Lautes Pager-Signal / Weckruf an Einsatzkraft senden"
+                        >
+                          <Bell className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+                          <span>Pager</span>
+                        </button>
+                      )}
+
                       {user.phone && (
                         <a
                           href={`tel:${user.phone}`}
