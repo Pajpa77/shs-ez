@@ -2531,11 +2531,13 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                 currentUserRef.current?.role === 'einsatzleitung' ||
                 Boolean(currentUserRef.current?.canLeadOperations);
               const isOpRunning = currentOperationRef.current && currentOperationRef.current.status === 'active';
-              const isEzRole = (currentUserRef.current?.operationalRole || operationalRole) === 'ez_command';
+              const isEzRole =
+                (currentUserRef.current?.operationalRole || operationalRole) === 'ez_command' ||
+                Boolean(currentOperationRef.current?.ezAdminIds?.includes(currentUserRef.current?.id));
               let nextHistory = cleanHistory;
 
-              // Ultra-precise search track recording: when responder is ready/admin and an operation is actively running
-              if (isUserReady && isOpRunning) {
+              // Ultra-precise search track recording: when responder is ready (or admin as searcher) and an operation is actively running (NEVER when in EZ!)
+              if (isUserReady && isOpRunning && !isEzRole) {
                 const lastHistorical = cleanHistory[cleanHistory.length - 1];
                 const distMoved = lastHistorical
                   ? calculateDistanceMeters(lastHistorical.lat, lastHistorical.lng, point.lat, point.lng)
@@ -2726,13 +2728,15 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
                   currentUserRef.current?.role === 'admin' ||
                   currentUserRef.current?.role === 'einsatzleitung' ||
                   Boolean(currentUserRef.current?.canLeadOperations);
-                const isEzRole = (currentUserRef.current?.operationalRole || operationalRole) === 'ez_command';
+                const isEzRole =
+                  (currentUserRef.current?.operationalRole || operationalRole) === 'ez_command' ||
+                  Boolean(currentOperationRef.current?.ezAdminIds?.includes(currentUserRef.current?.id));
                 const activeOpId = currentOperationRef.current?.id;
                 const isOpRunning = currentOperationRef.current && currentOperationRef.current.status === 'active';
                 let nextHistory = (uLoc.trackHistory || []).filter(
                   pt => !pt.operationId || !activeOpId || pt.operationId === activeOpId
                 );
-                if (isReady && isOpRunning) {
+                if (isReady && isOpRunning && !isEzRole) {
                   const lastPt = nextHistory[nextHistory.length - 1];
                   const distMoved = lastPt
                     ? calculateDistanceMeters(lastPt.lat, lastPt.lng, bgPoint.lat, bgPoint.lng)

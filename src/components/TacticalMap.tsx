@@ -2032,14 +2032,18 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       hqTitle = '📡 EZ';
     }
 
-    // Kräfte in der EZ ermitteln (NUR bei einem AKTIVEN Einsatz UND nach Bestätigung auf 🟢 Bereit in der EZ)
-    const isOperationActive = Boolean(currentOperation && currentOperation.status === 'active');
+    // Kräfte in der EZ ermitteln (NUR bei einem AKTIVEN / PAUSIERTEN Einsatz werden EZ-Admins im EZ-Pin aufgeführt)
+    const isOperationActive = Boolean(
+      currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused')
+    );
     const ezResponders = isOperationActive
       ? allUsers.filter((u) => {
           if (!u.isActive) return false;
-          const isEzRole = u.operationalRole === 'ez_command' || userLocations[u.id]?.operationalRole === 'ez_command';
-          const isReady = u.arrivalStatus === 'ready' || u.arrivalStatus === 'ez_reached';
-          return isEzRole && isReady;
+          const isEzRole =
+            u.operationalRole === 'ez_command' ||
+            userLocations[u.id]?.operationalRole === 'ez_command' ||
+            Boolean(currentOperation?.ezAdminIds?.includes(u.id));
+          return isEzRole;
         })
       : [];
 
@@ -2632,6 +2636,15 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
         const user = allUsers.find((u) => u.id === userId);
 
+        // Kräfte in der EZ (Leitstand) zeichnen im Einsatz keine Suchspur auf der Karte
+        const isEzStaffUser =
+          user?.operationalRole === 'ez_command' ||
+          locState.operationalRole === 'ez_command' ||
+          Boolean(currentOperation?.ezAdminIds?.includes(userId));
+        if (isEzStaffUser) {
+          return;
+        }
+
         // Nur Einsatzkräfte berücksichtigen, die tatsächlich am aktuellen Einsatz teilnehmen
         // Verhindert phantom-/alte Spuren von Nicht-Teilnehmern (z.B. Madleen)
         const isParticipant =
@@ -2937,14 +2950,17 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       const user = allUsers.find((u) => u.id === userId);
       if (!user) return;
 
-      // In EZ verbleibende Kräfte (Leitstand / EZ-Personal) werden NUR bei AKTIVEM Einsatz
-      // und ERST NACH BESTÄTIGUNG auf 🟢 BEREIT im EZ-Pin gebündelt.
-      // Außerhalb von Einsätzen oder vor 🟢 Bereit-Bestätigung wird IMMER ihr eigener User-Pin angezeigt!
-      const isOperationActive = Boolean(currentOperation && currentOperation.status === 'active');
+      // In der EZ angemeldete Kräfte (Leitstand / EZ-Personal) werden NUR bei AKTIVEM / PAUSIERTEM Einsatz
+      // nicht als einzelner Pin auf der Karte angezeigt, sondern direkt im EZ-Pin (📡 EZ) aufgeführt.
+      // Ohne aktiven Einsatz (Bereitschaft) wird IMMER ihr aktueller Standort-Pin auf der Karte angezeigt!
+      const isOperationActive = Boolean(
+        currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused')
+      );
       const isEzStaff =
         isOperationActive &&
-        (user.operationalRole === 'ez_command' || userLocations[userId]?.operationalRole === 'ez_command') &&
-        (user.arrivalStatus === 'ready' || user.arrivalStatus === 'ez_reached');
+        (user.operationalRole === 'ez_command' ||
+          userLocations[userId]?.operationalRole === 'ez_command' ||
+          Boolean(currentOperation?.ezAdminIds?.includes(userId)));
 
       // If user is explicitly selected, NEVER skip them (even if EZ staff) so their location is visible!
       if (isEzStaff && selectedUser?.id !== userId) return;

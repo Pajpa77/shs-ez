@@ -772,16 +772,16 @@ export const LoginScreen: React.FC = () => {
                         ← Zurück zur Funktionswahl
                       </button>
                     </div>
-                  ) : (
-                    /* ── STEP 1: Role picker ── */
+                  ) : hasActiveOps ? (
+                    /* ── STEP 1A: EINSATZ-AUSWAHLSEITE (NUR BEI AKTIVEM / PAUSIERTEM EINSATZ) ── */
                     <>
                       <p className="text-xs text-slate-300 font-sans">
-                        Bitte wählen Sie Ihre Funktion für diese Einsatzsitzung:
+                        🔥 <strong>Aktiver Einsatz:</strong> Bitte wähle deine Funktion für diesen Einsatz:
                       </p>
 
                       <div className="grid grid-cols-1 gap-3 pt-1">
-                        {/* ── BEREICH 1 (OBERHALB): FÜHRUNGSDIENST (ADMIN & EINSATZLEITUNG) ── */}
-                        {isUserAdminOrEL(verifiedUser) && (
+                        {/* ── FÜR ADMINS / EL IM AKTIVEN EINSATZ: IN DER EZ ODER ALS SUCHER ── */}
+                        {isUserAdminOrEL(verifiedUser) ? (
                           <div className="p-3.5 rounded-xl bg-[#001050] border-2 border-amber-400/90 shadow-2xl space-y-3 relative overflow-hidden">
                             <div className="flex items-center justify-between border-b border-amber-500/30 pb-2">
                               <div className="flex items-center gap-2">
@@ -790,117 +790,103 @@ export const LoginScreen: React.FC = () => {
                                 </div>
                                 <div>
                                   <div className="text-xs font-black text-amber-300 uppercase tracking-wider font-mono">
-                                    Führungsdienst: {isFirstAdmin(verifiedUser) ? 'First-Admin' : verifiedUser.role === 'einsatzleitung' ? 'Einsatzleitung' : 'Admin / EL'}
+                                    Admin / Einsatzleitung ({isFirstAdmin(verifiedUser) ? 'First-Admin' : verifiedUser.name})
                                   </div>
                                   <div className="text-[10px] text-blue-200 font-sans">
-                                    Voller Zugriff auf Leitstelle, Lagekarte &amp; Einsatz-Steuerung
+                                    Anmeldung im laufenden Einsatz: In der EZ oder als Sucher
                                   </div>
                                 </div>
                               </div>
                               <span className="text-[9px] px-2 py-0.5 rounded font-mono bg-amber-950 text-amber-300 border border-amber-600 font-bold uppercase shrink-0">
-                                Adminrechte
+                                Einsatz-Rolle
                               </span>
                             </div>
 
-                            {hasActiveOps ? (
-                              <div className="space-y-2">
-                                <span className="block text-[10px] font-bold text-amber-200 uppercase font-mono tracking-wider">
-                                  Wie nimmst du an diesem Einsatz teil?
-                                </span>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  {/* Sub-Wahl 1: In der EZ verbleiben */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleLeadershipRoleSelected('ez_command')}
-                                    className="p-3 rounded-xl bg-[#000840] hover:bg-[#001466] border-2 border-cyan-400/80 hover:border-cyan-300 text-left transition cursor-pointer flex flex-col justify-between gap-1.5 group shadow"
-                                  >
-                                    <div>
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                                          <span>🏢</span> In EZ verbleiben
-                                        </span>
-                                        <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold">
-                                          Leitstand
-                                        </span>
-                                      </div>
-                                      <p className="text-[10px] text-blue-100 font-sans leading-tight mt-1">
-                                        Koordination &amp; Leitstelle. <span className="text-cyan-300 font-bold">Keine Trackingspur (Linie)</span> auf der Karte.
-                                      </p>
+                            <div className="space-y-2">
+                              <span className="block text-[10px] font-bold text-amber-200 uppercase font-mono tracking-wider">
+                                Wo bist du in diesem Einsatz tätig?
+                              </span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {/* Sub-Wahl 1: In der EZ */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleLeadershipRoleSelected('ez_command')}
+                                  className="p-3 rounded-xl bg-[#000840] hover:bg-[#001466] border-2 border-cyan-400/80 hover:border-cyan-300 text-left transition cursor-pointer flex flex-col justify-between gap-1.5 group shadow"
+                                >
+                                  <div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                                        <span>🏢</span> In der EZ
+                                      </span>
+                                      <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold">
+                                        Kein Tracking
+                                      </span>
                                     </div>
-                                    <div className="w-full py-1.5 px-2 rounded-lg bg-cyan-600 group-hover:bg-cyan-500 text-white font-bold text-[10px] uppercase font-mono text-center flex items-center justify-center gap-1 mt-1">
-                                      <span>In EZ {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
-                                      <ArrowRight className="w-3 h-3" />
-                                    </div>
-                                  </button>
+                                    <p className="text-[10px] text-blue-100 font-sans leading-tight mt-1">
+                                      Leitstand in der Einsatzzentrale. <span className="text-cyan-300 font-bold">Kein eigener Pin &amp; keine Trackingspur</span> – wird im EZ-Pin aufgeführt.
+                                    </p>
+                                  </div>
+                                  <div className="w-full py-1.5 px-2 rounded-lg bg-cyan-600 group-hover:bg-cyan-500 text-white font-bold text-[10px] uppercase font-mono text-center flex items-center justify-center gap-1 mt-1">
+                                    <span>In der EZ {activeOperations.length > 1 ? '→ Einsatz wählen' : 'anmelden'}</span>
+                                    <ArrowRight className="w-3 h-3" />
+                                  </div>
+                                </button>
 
-                                  {/* Sub-Wahl 2: Als Sucher mitlaufen */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleLeadershipRoleSelected('searcher')}
-                                    className="p-3 rounded-xl bg-[#000840] hover:bg-[#001466] border-2 border-emerald-400/80 hover:border-emerald-300 text-left transition cursor-pointer flex flex-col justify-between gap-1.5 group shadow"
-                                  >
-                                    <div>
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                                          <span>🚶</span> Als Sucher mitlaufen
-                                        </span>
-                                        <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">
-                                          Sucher
-                                        </span>
-                                      </div>
-                                      <p className="text-[10px] text-blue-100 font-sans leading-tight mt-1">
-                                        Führungskraft als Sucher. <span className="text-emerald-300 font-bold">Trackingspur (Linie) wird aufgezeichnet</span>.
-                                      </p>
+                                {/* Sub-Wahl 2: Als Sucher */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleLeadershipRoleSelected('searcher')}
+                                  className="p-3 rounded-xl bg-[#000840] hover:bg-[#001466] border-2 border-emerald-400/80 hover:border-emerald-300 text-left transition cursor-pointer flex flex-col justify-between gap-1.5 group shadow"
+                                >
+                                  <div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                                        <span>🦺</span> Als Sucher
+                                      </span>
+                                      <span className="text-[9px] px-1.5 py-0.2 rounded font-mono bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">
+                                        Mit Tracking
+                                      </span>
                                     </div>
-                                    <div className="w-full py-1.5 px-2 rounded-lg bg-emerald-600 group-hover:bg-emerald-500 text-white font-bold text-[10px] uppercase font-mono text-center flex items-center justify-center gap-1 mt-1">
-                                      <span>Als Sucher {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
-                                      <ArrowRight className="w-3 h-3" />
-                                    </div>
-                                  </button>
-                                </div>
+                                    <p className="text-[10px] text-blue-100 font-sans leading-tight mt-1">
+                                      Nimmt im Gelände an der Suche teil. <span className="text-emerald-300 font-bold">Eigener Pin &amp; Aufzeichnung der Suchspur</span> (sobald Bereit).
+                                    </p>
+                                  </div>
+                                  <div className="w-full py-1.5 px-2 rounded-lg bg-emerald-600 group-hover:bg-emerald-500 text-white font-bold text-[10px] uppercase font-mono text-center flex items-center justify-center gap-1 mt-1">
+                                    <span>Als Sucher {activeOperations.length > 1 ? '→ Einsatz wählen' : 'anmelden'}</span>
+                                    <ArrowRight className="w-3 h-3" />
+                                  </div>
+                                </button>
                               </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleLeadershipRoleSelected('ez_command')}
-                                className="w-full py-2.5 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow cursor-pointer transition"
-                              >
-                                <Shield className="w-4 h-4" />
-                                <span>Als Einsatzleitung / Admin starten (Bereitschaft)</span>
-                                <ArrowRight className="w-3.5 h-3.5" />
-                              </button>
-                            )}
+                            </div>
                           </div>
+                        ) : (
+                          /* ── FÜR REGULÄRE EINSATZKRÄFTE IM AKTIVEN EINSATZ: ALS SUCHER ── */
+                          <button
+                            type="button"
+                            onClick={() => handleRoleSelected('active')}
+                            className="p-4 rounded-xl bg-[#000840] hover:bg-[#001073] border-2 border-emerald-500/80 hover:border-emerald-400 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-lg"
+                          >
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold text-white uppercase flex items-center gap-2">
+                                  <span>🦺</span> Als Sucher anmelden
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">
+                                  Einsatzkraft
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
+                                Sobald du vom Admin bereit gesetzt wirst (Barcode-Scan oder Button), wirst du getrackt und deine Suchspur wird auf der Karte aufgezeichnet.
+                              </p>
+                            </div>
+                            <div className="w-full py-2.5 px-3 rounded-lg bg-emerald-600 group-hover:bg-emerald-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
+                              <span>Als Sucher {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </div>
+                          </button>
                         )}
 
-                        {/* ── BEREICH 2: REGULÄRE EINSATZKRAFT / SUCHER ── */}
-                        <button
-                          type="button"
-                          onClick={() => handleRoleSelected('active')}
-                          className="p-4 rounded-xl bg-[#000840] hover:bg-[#001073] border-2 border-emerald-500/80 hover:border-emerald-400 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-lg"
-                        >
-                          <div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-bold text-white uppercase flex items-center gap-2">
-                                <span>🦺</span> {isUserAdminOrEL(verifiedUser) ? 'Als regulärer Sucher starten' : 'Als aktive Einsatzkraft (Sucher)'}
-                              </span>
-                              <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">
-                                Feldeinsatz
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
-                              {isUserAdminOrEL(verifiedUser)
-                                ? 'Fokus auf die Feldsucharbeit als Sucher. GPS-Trackingspur (Linie) wird live aufgezeichnet.'
-                                : 'Nimmt aktiv an der Suche im Sektor teil. GPS-Trackingspur (Linie), Fundmeldung & Funk passend zur Helfer-Rolle.'}
-                            </p>
-                          </div>
-                          <div className="w-full py-2.5 px-3 rounded-lg bg-emerald-600 group-hover:bg-emerald-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
-                            <span>Als Sucher {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </div>
-                        </button>
-
-                        {/* ── BEREICH 3: GAST / BETRACHTER ── */}
+                        {/* ── GAST / BETRACHTER IM AKTIVEN EINSATZ ── */}
                         <button
                           type="button"
                           onClick={() => handleRoleSelected('observer')}
@@ -909,27 +895,27 @@ export const LoginScreen: React.FC = () => {
                           <div>
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-bold text-purple-200 uppercase flex items-center gap-2">
-                                <span>👁️</span> Als Betrachter
+                                <span>👁️</span> Als Gast / Betrachter
                               </span>
                               <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-purple-950 text-purple-300 border border-purple-700 font-bold">
                                 Nur Leseansicht
                               </span>
                             </div>
                             <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
-                              Nimmt <strong>nicht</strong> aktiv am Einsatz teil und wird keinen Sektoren zugeteilt. Sieht alle Live-Aktionen auf der Karte, Lageberichte und kann den Chat mitlesen.
+                              Nimmt <strong>nicht</strong> aktiv am Einsatz teil (kein eigenes GPS-Tracking). Sieht alle Live-Aktionen auf der Karte, Lageberichte und den Chat.
                             </p>
                           </div>
                           <div className="w-full py-2.5 px-3 rounded-lg bg-purple-600 group-hover:bg-purple-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
-                            <span>Als Betrachter {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
+                            <span>Als Gast / Betrachter {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </div>
                         </button>
 
-                        {/* Option 3: Trackingtest */}
+                        {/* ── SEPARATE FUNKTION: TRACKINGTEST (FÜR JEDEN) ── */}
                         <div className="space-y-2 pt-2 mt-2 border-t border-blue-700/60">
                           <div className="flex items-center gap-2 mb-1 px-1">
                             <div className="h-px flex-1 bg-blue-700/60" />
-                            <span className="text-[10px] font-bold text-cyan-300 uppercase tracking-widest">Alternativ</span>
+                            <span className="text-[10px] font-bold text-cyan-300 uppercase tracking-widest">Separate Funktion (Jederzeit verfügbar)</span>
                             <div className="h-px flex-1 bg-blue-700/60" />
                           </div>
 
@@ -944,11 +930,165 @@ export const LoginScreen: React.FC = () => {
                                   <span>🛰️</span> Persönlicher Trackingtest
                                 </span>
                                 <span className="text-[10px] px-2 py-0.5 rounded font-mono border font-bold bg-cyan-950 text-cyan-300 border-cyan-700">
-                                  Testmodus
+                                  10 / 20 / 30 Min.
                                 </span>
                               </div>
                               <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
-                                Überprüft die GPS-Funktion und Genauigkeit deines Geräts im Vorfeld (10-30 Min). Erstellt am Ende ein Prüfprotokoll mit Karte zur Bestätigung.
+                                Eigenständige Funktion unabhängig vom Einsatz: Prüft die GPS-Aufzeichnung deines Geräts (10–30 Min.) und erstellt ein Prüfprotokoll mit Karte.
+                              </p>
+                            </div>
+                            {!showTestDuration && (
+                              <div className="w-full py-2.5 px-3 rounded-lg bg-cyan-600 group-hover:bg-cyan-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
+                                <span>Testdauer wählen &amp; starten</span>
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              </div>
+                            )}
+                          </button>
+
+                          {showTestDuration && (
+                            <div className="p-3 rounded-xl bg-[#000529] border border-cyan-400/60 animate-in slide-in-from-top-2 duration-200">
+                              <span className="block text-[10px] font-bold text-cyan-300 uppercase tracking-widest mb-3 text-center">
+                                Wähle die Testdauer:
+                              </span>
+                              <div className="grid grid-cols-3 gap-2">
+                                {[10, 20, 30].map((d) => (
+                                  <button
+                                    key={d}
+                                    type="button"
+                                    onClick={() => {
+                                      if (verifiedUser) {
+                                        setTestDuration(d as 10 | 20 | 30);
+                                        startTrackingTest(verifiedUser, d as 10 | 20 | 30);
+                                      }
+                                    }}
+                                    className="py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-lg transition cursor-pointer"
+                                  >
+                                    {d} Min.
+                                  </button>
+                                ))}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setShowTestDuration(false)}
+                                className="w-full mt-3 py-1.5 text-[10px] text-blue-200 hover:text-white transition underline"
+                              >
+                                Abbrechen
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* ── STEP 1B: BEREITSCHAFTS-AUSWAHLSEITE (OHNE AKTIVEN EINSATZ) ── */
+                    <>
+                      <p className="text-xs text-slate-300 font-sans">
+                        ⚪ <strong>Kein aktiver Einsatz (Bereitschaft):</strong> Bitte wähle deine Anmeldung:
+                      </p>
+
+                      <div className="grid grid-cols-1 gap-3 pt-1">
+                        {/* ── 1. ALS ADMIN ANMELDEN (WENN ADMIN / EL) ── */}
+                        {isUserAdminOrEL(verifiedUser) && (
+                          <button
+                            type="button"
+                            onClick={() => handleFinalizeLogin(verifiedUser, 'leadership', undefined, 'searcher')}
+                            className="p-4 rounded-xl bg-[#001050] hover:bg-[#001870] border-2 border-amber-400/90 hover:border-amber-300 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-xl"
+                          >
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold text-amber-300 uppercase flex items-center gap-2">
+                                  <span>🛡️</span> Als Admin anmelden
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-amber-950 text-amber-300 border border-amber-600 font-bold uppercase">
+                                  {isFirstAdmin(verifiedUser) ? 'First-Admin' : 'Admin / EL'}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
+                                Voller Zugriff auf Verwaltung, Einsatzplanung &amp; Karte. Aktuelle Standorte werden auf der Karte <strong>ohne Aufzeichnung einer Trackingspur</strong> gezeigt.
+                              </p>
+                            </div>
+                            <div className="w-full py-2.5 px-3 rounded-lg bg-amber-600 group-hover:bg-amber-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
+                              <Shield className="w-4 h-4" />
+                              <span>Als Admin starten</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </div>
+                          </button>
+                        )}
+
+                        {/* ── 2. ALS AKTIVER NUTZER ANMELDEN (BEREITSCHAFT OHNE TRACKINGSPUR) ── */}
+                        <button
+                          type="button"
+                          onClick={() => handleRoleSelected('active')}
+                          className="p-4 rounded-xl bg-[#000840] hover:bg-[#001073] border-2 border-emerald-500/80 hover:border-emerald-400 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-lg"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-bold text-white uppercase flex items-center gap-2">
+                                <span>🦺</span> Als aktiver Nutzer anmelden
+                              </span>
+                              <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">
+                                Bereitschaft
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
+                              Anmeldung im Bereitschaftsmodus. Aktueller Standort wird auf der Karte <strong>ohne Aufzeichnung einer Trackingspur</strong> gezeigt.
+                            </p>
+                          </div>
+                          <div className="w-full py-2.5 px-3 rounded-lg bg-emerald-600 group-hover:bg-emerald-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
+                            <span>Als aktiver Nutzer starten</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </div>
+                        </button>
+
+                        {/* ── 3. ALS GAST / BETRACHTER ANMELDEN ── */}
+                        <button
+                          type="button"
+                          onClick={() => handleRoleSelected('observer')}
+                          className="p-4 rounded-xl bg-[#000840] hover:bg-[#001073] border-2 border-purple-500/80 hover:border-purple-400 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-lg"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-bold text-purple-200 uppercase flex items-center gap-2">
+                                <span>👁️</span> Als Gast / Betrachter
+                              </span>
+                              <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-purple-950 text-purple-300 border border-purple-700 font-bold">
+                                Nur Leseansicht
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
+                              Reine Karten- &amp; Leseansicht ohne Übertragung des eigenen Standorts.
+                            </p>
+                          </div>
+                          <div className="w-full py-2.5 px-3 rounded-lg bg-purple-600 group-hover:bg-purple-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
+                            <span>Als Gast / Betrachter starten</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </div>
+                        </button>
+
+                        {/* ── 4. SEPARATE FUNKTION: TRACKINGTEST (DARF JEDER) ── */}
+                        <div className="space-y-2 pt-2 mt-2 border-t border-blue-700/60">
+                          <div className="flex items-center gap-2 mb-1 px-1">
+                            <div className="h-px flex-1 bg-blue-700/60" />
+                            <span className="text-[10px] font-bold text-cyan-300 uppercase tracking-widest">Separate Funktion (Jederzeit verfügbar)</span>
+                            <div className="h-px flex-1 bg-blue-700/60" />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setShowTestDuration(!showTestDuration)}
+                            className="w-full p-4 rounded-xl bg-[#000840] hover:bg-[#001073] border-2 border-cyan-400/80 hover:border-cyan-300 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-lg"
+                          >
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold uppercase flex items-center gap-2 text-cyan-200">
+                                  <span>🛰️</span> Persönlicher Trackingtest
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded font-mono border font-bold bg-cyan-950 text-cyan-300 border-cyan-700">
+                                  10 / 20 / 30 Min.
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
+                                Überprüft die GPS-Funktion und Genauigkeit deines Geräts (10–30 Min.). Erstellt am Ende ein Prüfprotokoll mit Karte zur Bestätigung.
                               </p>
                             </div>
                             {!showTestDuration && (
