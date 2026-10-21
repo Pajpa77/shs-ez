@@ -676,33 +676,6 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const clearChatHistory = useCallback(() => {
-    // If an operation is currently active/paused, save chat into operation's archivedChatMessages & log before clearing
-    if (currentOperation) {
-      const opChat = chatMessages.filter((m) => m.operationId === currentOperation.id || m.channel !== 'system');
-      if (opChat.length > 0) {
-        const existingArchived = currentOperation.archivedChatMessages || [];
-        const combined = [...existingArchived];
-        opChat.forEach((msg) => {
-          if (!combined.some((m) => m.id === msg.id)) {
-            combined.push(msg);
-          }
-        });
-        const logEntry: OperationLogEntry = {
-          id: `log-chat-clear-${Date.now()}`,
-          operationId: currentOperation.id,
-          timestamp: new Date().toISOString(),
-          authorName: currentUser?.name || 'Einsatzleitung',
-          authorRole: currentUser?.role || 'admin',
-          category: 'radio',
-          text: `Funk- und Chatprotokoll exportiert und geleert (${opChat.length} Funksprüche archiviert).`,
-        };
-        updateOperation(currentOperation.id, (prevOp) => ({
-          archivedChatMessages: combined,
-          logs: [logEntry, ...(prevOp.logs || [])],
-        }));
-      }
-    }
-
     const toDelete: string[] = [];
     setChatMessages((prev) => {
       const remaining: ChatMessage[] = [];
@@ -732,34 +705,9 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (toDelete.length > 0) {
       deleteChatMessagesFromCloud(toDelete);
     }
-  }, [currentOperation, chatMessages, currentUser, updateOperation, deleteChatMessagesFromCloud]);
+  }, [deleteChatMessagesFromCloud]);
 
   const clearLogbook = useCallback(() => {
-    // If an operation is currently active/paused, save system log messages to operation's logs before clearing
-    if (currentOperation) {
-      const logbookEntries = chatMessages.filter(
-        (m) =>
-          m.channel === 'system' ||
-          m.channel === 'logs' ||
-          m.text.includes('hat sich soeben eingeloggt') ||
-          m.text.includes('hat das System verlassen')
-      );
-      if (logbookEntries.length > 0) {
-        const newLogs: OperationLogEntry[] = logbookEntries.map((m) => ({
-          id: `log-migrated-${m.id}`,
-          operationId: currentOperation.id,
-          timestamp: m.timestamp,
-          authorName: m.senderName || 'System',
-          authorRole: 'admin',
-          category: 'member',
-          text: m.text,
-        }));
-        updateOperation(currentOperation.id, (prevOp) => ({
-          logs: [...newLogs, ...(prevOp.logs || [])],
-        }));
-      }
-    }
-
     const toDelete: string[] = [];
     setChatMessages((prev) => {
       const remaining: ChatMessage[] = [];
@@ -783,36 +731,9 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (toDelete.length > 0) {
       deleteChatMessagesFromCloud(toDelete);
     }
-  }, [currentOperation, chatMessages, updateOperation, deleteChatMessagesFromCloud]);
+  }, [deleteChatMessagesFromCloud]);
 
   const clearAlerts = useCallback(() => {
-    // If an operation is currently active/paused, save alert messages to operation's logs before clearing
-    if (currentOperation) {
-      const alertEntries = chatMessages.filter(
-        (m) =>
-          m.isAlert ||
-          m.text.includes('EINSATZ REAKTIVIERT') ||
-          m.text.includes('EINSATZ BEENDET') ||
-          m.text.includes('EINSATZ PAUSIERT') ||
-          m.text.includes('EINSATZ WIEDERAUFGENOMMEN') ||
-          m.text.includes('REALEINSATZ')
-      );
-      if (alertEntries.length > 0) {
-        const newLogs: OperationLogEntry[] = alertEntries.map((m) => ({
-          id: `log-alert-${m.id}`,
-          operationId: currentOperation.id,
-          timestamp: m.timestamp,
-          authorName: m.senderName || 'Einsatzleitung',
-          authorRole: 'admin',
-          category: 'status',
-          text: `[ALARM-ARCHIV] ${m.text}`,
-        }));
-        updateOperation(currentOperation.id, (prevOp) => ({
-          logs: [...newLogs, ...(prevOp.logs || [])],
-        }));
-      }
-    }
-
     const toDelete: string[] = [];
     setChatMessages((prev) => {
       const remaining: ChatMessage[] = [];
@@ -838,7 +759,7 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (toDelete.length > 0) {
       deleteChatMessagesFromCloud(toDelete);
     }
-  }, [currentOperation, chatMessages, updateOperation, deleteChatMessagesFromCloud]);
+  }, [deleteChatMessagesFromCloud]);
 
   const [isRealGpsActive, setIsRealGpsActive] = useState<boolean>(true);
   const [isSimulatorRunning, setIsSimulatorRunning] = useState<boolean>(false);

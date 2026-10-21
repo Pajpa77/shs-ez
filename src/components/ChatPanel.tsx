@@ -219,6 +219,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     clearAlerts,
     activeChatTarget,
     sendPagerAlert,
+    updateOperation,
   } = useRescue();
 
   // Primary navigation tab: 'channels' (Kanäle & Gruppen) vs 'findings' (Fundmeldungen mit Infos)
@@ -1590,6 +1591,31 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                         return m.text.toLowerCase().includes(q) || m.senderName.toLowerCase().includes(q) || m.senderCallSign.toLowerCase().includes(q);
                       });
                       exportChatHistoryPdf(messagesToExport, opTitle);
+
+                      // Archive into operation if an operation is active
+                      if (effectiveOperation) {
+                        const existingArchived = effectiveOperation.archivedChatMessages || [];
+                        const combined = [...existingArchived];
+                        messagesToExport.forEach((msg) => {
+                          if (!combined.some((m) => m.id === msg.id)) {
+                            combined.push(msg);
+                          }
+                        });
+                        const logEntry: any = {
+                          id: `log-chat-clear-${Date.now()}`,
+                          operationId: effectiveOperation.id,
+                          timestamp: new Date().toISOString(),
+                          authorName: currentUser?.name || 'Einsatzleitung',
+                          authorRole: currentUser?.role || 'admin',
+                          category: 'radio',
+                          text: `Funk- und Chatprotokoll als PDF exportiert und geleert (${messagesToExport.length} Funksprüche archiviert).`,
+                        };
+                        updateOperation(effectiveOperation.id, (prevOp) => ({
+                          archivedChatMessages: combined,
+                          logs: [logEntry, ...(prevOp.logs || [])],
+                        }));
+                      }
+
                       clearChatHistory();
                     }}
                     className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow"
@@ -1661,6 +1687,23 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                     onClick={() => {
                       const opTitle = effectiveOperation?.title || 'Einsatz';
                       exportLogbookPdf(logbookMessages, opTitle);
+
+                      // Archive into operation logs if an operation is active
+                      if (effectiveOperation && logbookMessages.length > 0) {
+                        const newLogs: any[] = logbookMessages.map((m) => ({
+                          id: `log-migrated-${m.id}`,
+                          operationId: effectiveOperation.id,
+                          timestamp: m.timestamp,
+                          authorName: m.senderName || 'System',
+                          authorRole: 'admin',
+                          category: 'member',
+                          text: m.text,
+                        }));
+                        updateOperation(effectiveOperation.id, (prevOp) => ({
+                          logs: [...newLogs, ...(prevOp.logs || [])],
+                        }));
+                      }
+
                       clearLogbook();
                     }}
                     className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow"
@@ -1716,6 +1759,23 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                     onClick={() => {
                       const opTitle = effectiveOperation?.title || 'Einsatz';
                       exportAlertsPdf(alertMessages, findings || [], opTitle);
+
+                      // Archive alerts into operation logs if an operation is active
+                      if (effectiveOperation && alertMessages.length > 0) {
+                        const newLogs: any[] = alertMessages.map((m) => ({
+                          id: `log-alert-${m.id}`,
+                          operationId: effectiveOperation.id,
+                          timestamp: m.timestamp,
+                          authorName: m.senderName || 'Einsatzleitung',
+                          authorRole: 'admin',
+                          category: 'status',
+                          text: `[ALARM-ARCHIV] ${m.text}`,
+                        }));
+                        updateOperation(effectiveOperation.id, (prevOp) => ({
+                          logs: [...newLogs, ...(prevOp.logs || [])],
+                        }));
+                      }
+
                       clearAlerts();
                     }}
                     className="px-3 py-1.5 rounded-lg bg-red-600/30 hover:bg-red-600/50 border border-red-500 text-red-200 font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow"
