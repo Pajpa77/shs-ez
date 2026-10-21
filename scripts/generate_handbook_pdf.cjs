@@ -5,19 +5,19 @@ const path = require('path');
 // ============================================================================
 // STYLING, FARBEN & DESIGNKONSTANTEN
 // ============================================================================
-const C_DARK = [15, 23, 42];        // Slate 900
-const C_NAVY = [30, 41, 59];        // Slate 800
-const C_PRIMARY = [16, 185, 129];   // Emerald 500
-const C_PRIMARY_LIGHT = [240, 253, 244]; // Emerald 50
-const C_BLUE = [37, 99, 235];       // Royal Blue 600
-const C_BLUE_LIGHT = [239, 246, 255]; // Blue 50
-const C_AMBER = [217, 119, 6];      // Amber 600
-const C_AMBER_LIGHT = [254, 252, 232]; // Amber 50
-const C_RED = [220, 38, 38];        // Red 600
-const C_RED_LIGHT = [254, 242, 242]; // Red 50
-const C_MUTED = [100, 116, 139];    // Slate 500
-const C_BORDER = [226, 232, 240];   // Slate 200
-const C_CARD_BG = [248, 250, 252];  // Slate 50
+const C_DARK = [15, 23, 42];            // Slate 900
+const C_NAVY = [30, 41, 59];            // Slate 800
+const C_PRIMARY = [16, 185, 129];       // Emerald 500
+const C_PRIMARY_LIGHT = [240, 253, 244];// Emerald 50
+const C_BLUE = [37, 99, 235];           // Royal Blue 600
+const C_BLUE_LIGHT = [239, 246, 255];   // Blue 50
+const C_AMBER = [217, 119, 6];          // Amber 600
+const C_AMBER_LIGHT = [254, 252, 232];  // Amber 50
+const C_RED = [220, 38, 38];            // Red 600
+const C_RED_LIGHT = [254, 242, 242];    // Red 50
+const C_MUTED = [100, 116, 139];        // Slate 500
+const C_BORDER = [226, 232, 240];       // Slate 200
+const C_CARD_BG = [248, 250, 252];      // Slate 50
 const C_WHITE = [255, 255, 255];
 
 const doc = new jsPDF({
@@ -28,14 +28,14 @@ const doc = new jsPDF({
 
 const pageWidth = 210;
 const pageHeight = 297;
-const margin = 16;
-const contentWidth = pageWidth - 2 * margin; // 178 mm
+const margin = 15;
+const contentWidth = pageWidth - 2 * margin; // 180 mm
 const bottomMargin = pageHeight - 16;
 
 let curY = 0;
 
 // ============================================================================
-// HILFSFUNKTIONEN FÜR DYNAMISCHES LAYOUT
+// HILFSFUNKTIONEN FÜR DYNAMISCHES LAYOUT & SEITENKÖPFE
 // ============================================================================
 
 let activeChapterTitle = '';
@@ -43,16 +43,16 @@ let activeChapterSubtitle = '';
 
 function renderPageHeader() {
   doc.setFillColor(...C_PRIMARY);
-  doc.rect(margin, 12, contentWidth, 1.8, 'F');
+  doc.rect(margin, 12, contentWidth, 2, 'F');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
+  doc.setFontSize(12);
   doc.setTextColor(...C_DARK);
   doc.text(activeChapterTitle, margin, 20);
 
   if (activeChapterSubtitle) {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
+    doc.setFontSize(8.2);
     doc.setTextColor(...C_MUTED);
     doc.text(activeChapterSubtitle, margin, 24.5);
   }
@@ -82,6 +82,7 @@ function startChapter(title, subtitle) {
 
 /**
  * Zeichnet eine Karte mit flexibler dynamischer Höhe.
+ * Garantiert sauberes Einbetten aller Zeilen ohne Textüberlauf.
  */
 function drawDynamicCard({
   title = '',
@@ -91,23 +92,23 @@ function drawDynamicCard({
   borderColor = C_BORDER,
   bgColor = C_WHITE,
   padding = 4.5,
-  spacingAfter = 4.5,
+  spacingAfter = 4.2,
 }) {
-  let totalH = padding * 2;
   const innerW = contentWidth - (padding * 2);
+  let totalH = padding * 2;
 
   if (title || badge) {
-    totalH += 7;
+    totalH += 7.5;
   }
 
   const computedSections = sections.map((sec) => {
     let secH = 0;
-    if (sec.heading) secH += 5;
-    
+    if (sec.heading) secH += 5.2;
+
     let lines = [];
     if (sec.text) {
       doc.setFont('helvetica', sec.isBold ? 'bold' : 'normal');
-      doc.setFontSize(sec.fontSize || 8.5);
+      doc.setFontSize(sec.fontSize || 8.3);
       lines = doc.splitTextToSize(sec.text, innerW);
       secH += lines.length * (sec.lineHeight || 4.2);
     }
@@ -132,7 +133,7 @@ function drawDynamicCard({
   if (title || badge) {
     if (title) {
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10.5);
+      doc.setFontSize(10);
       doc.setTextColor(...C_DARK);
       doc.text(title, margin + padding, innerY + 4.5);
     }
@@ -155,13 +156,13 @@ function drawDynamicCard({
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(s.headingSize || 8.5);
       doc.setTextColor(...(s.headingColor || C_DARK));
-      doc.text(s.heading, margin + padding, innerY + 3.5);
-      innerY += 4.8;
+      doc.text(s.heading, margin + padding, innerY + 3.8);
+      innerY += 5.2;
     }
 
     if (s.lines && s.lines.length > 0) {
       doc.setFont('helvetica', s.isBold ? 'bold' : 'normal');
-      doc.setFontSize(s.fontSize || 8.5);
+      doc.setFontSize(s.fontSize || 8.3);
       doc.setTextColor(...(s.color || C_DARK));
       doc.text(s.lines, margin + padding, innerY + 3.5);
       innerY += s.lines.length * (s.lineHeight || 4.2);
@@ -173,88 +174,7 @@ function drawDynamicCard({
   curY = startY + totalH + spacingAfter;
 }
 
-/**
- * Zeichnet zwei Karten nebeneinander (Erlaubt / Nicht erlaubt)
- */
-function drawSplitCard({
-  title,
-  badge = null,
-  badgeColor = C_PRIMARY,
-  leftHeading,
-  leftHeadingColor = [5, 150, 105],
-  leftLines = [],
-  rightHeading,
-  rightHeadingColor = [220, 38, 38],
-  rightLines = [],
-  spacingAfter = 4.5,
-}) {
-  const colW = (contentWidth - 14) / 2;
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.2);
-  const leftWrapped = leftLines.flatMap(l => doc.splitTextToSize(l, colW));
-  const rightWrapped = rightLines.flatMap(l => doc.splitTextToSize(l, colW));
-
-  const maxLines = Math.max(leftWrapped.length, rightWrapped.length);
-  const bodyH = maxLines * 4.2 + 8;
-  const totalH = 14 + bodyH;
-
-  checkPageBreak(totalH + spacingAfter);
-
-  const startY = curY;
-
-  doc.setFillColor(...C_WHITE);
-  doc.setDrawColor(...C_BORDER);
-  doc.setLineWidth(0.4);
-  doc.roundedRect(margin, startY, contentWidth, totalH, 2, 2, 'FD');
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10.5);
-  doc.setTextColor(...C_DARK);
-  doc.text(title, margin + 4.5, startY + 6.5);
-
-  if (badge) {
-    doc.setFillColor(...badgeColor);
-    const bW = doc.getTextWidth(badge) + 6;
-    doc.roundedRect(pageWidth - margin - 4.5 - bW, startY + 2.5, bW, 5.5, 1.2, 1.2, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
-    doc.setTextColor(...C_WHITE);
-    doc.text(badge, pageWidth - margin - 4.5 - bW + 3, startY + 6.3);
-  }
-
-  doc.setDrawColor(...C_BORDER);
-  doc.setLineWidth(0.2);
-  doc.line(margin + 4, startY + 10, pageWidth - margin - 4, startY + 10);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.2);
-  doc.setTextColor(...leftHeadingColor);
-  doc.text(leftHeading, margin + 4.5, startY + 14.5);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(...C_DARK);
-  doc.text(leftWrapped, margin + 4.5, startY + 19);
-
-  const midX = margin + (contentWidth / 2);
-  doc.setDrawColor(...C_BORDER);
-  doc.line(midX, startY + 12, midX, startY + totalH - 4);
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.2);
-  doc.setTextColor(...rightHeadingColor);
-  doc.text(rightHeading, midX + 3.5, startY + 14.5);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(...C_DARK);
-  doc.text(rightWrapped, midX + 3.5, startY + 19);
-
-  curY = startY + totalH + spacingAfter;
-}
-
-function printParagraph(text, isBold = false, color = C_DARK, fontSize = 8.8, spacingAfter = 3.5) {
+function printParagraph(text, isBold = false, color = C_DARK, fontSize = 8.6, spacingAfter = 3.5) {
   doc.setFont('helvetica', isBold ? 'bold' : 'normal');
   doc.setFontSize(fontSize);
   doc.setTextColor(...color);
@@ -269,63 +189,64 @@ function printParagraph(text, isBold = false, color = C_DARK, fontSize = 8.8, sp
 }
 
 function printSectionTitle(title, spacingBefore = 3, spacingAfter = 2) {
-  checkPageBreak(9 + spacingBefore + spacingAfter);
+  checkPageBreak(10 + spacingBefore + spacingAfter);
   curY += spacingBefore;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(...C_NAVY);
   doc.text(title, margin, curY + 4);
-  curY += 6.5 + spacingAfter;
+  curY += 7 + spacingAfter;
 }
 
 // ============================================================================
-// SEITE 1: TITELBLATT & SYSTEM-ÜBERBLICK
+// SEITE 1: TITELBLATT & SYSTEM-ÜBERSICHT
 // ============================================================================
 doc.setFillColor(15, 23, 42); // Slate 900
-doc.rect(0, 0, pageWidth, 98, 'F');
+doc.rect(0, 0, pageWidth, 102, 'F');
 
 doc.setFont('helvetica', 'bold');
-doc.setFontSize(28);
+doc.setFontSize(26);
 doc.setTextColor(...C_WHITE);
-doc.text('SHS-EZ', margin, 36);
+doc.text('SHS-EZ', margin, 34);
 
 doc.setFontSize(13);
 doc.setTextColor(52, 211, 153); // Emerald 400
-doc.text('Suchhundestaffel Einsatzzentrale', margin, 45);
+doc.text('Suchhundestaffel Einsatzzentrale', margin, 43);
 
 doc.setFont('helvetica', 'normal');
-doc.setFontSize(10.5);
+doc.setFontSize(10);
 doc.setTextColor(226, 232, 240);
-doc.text('Offizielles Benutzerhandbuch & Operativer Leitfaden', margin, 54);
-doc.text('Taktische Einsatzleitung | GPS-Ortung | Sektoren | Funk | Revisionssichere Berichte', margin, 61);
+doc.text('Schritt-fuer-Schritt Bedienungsanleitung & Operativer Einsatzleitfaden', margin, 52);
+doc.text('Fuer Einsatzleitung (Admins), aktive Sucher (Hundefuehrer) und Behoerden', margin, 58);
 
 doc.setFillColor(30, 41, 59);
-doc.roundedRect(margin, 70, contentWidth, 18, 1.5, 1.5, 'F');
+doc.roundedRect(margin, 67, contentWidth, 23, 1.5, 1.5, 'F');
 
 doc.setFont('helvetica', 'bold');
-doc.setFontSize(8);
+doc.setFontSize(8.2);
 doc.setTextColor(52, 211, 153);
-doc.text('SYSTEM-STATUS: PRODUKTIV-BETRIEB', margin + 4, 76.5);
+doc.text('SYSTEM-STATUS: PRODUKTIV-BETRIEB VERSION 6.4.0', margin + 4, 73.5);
 
 doc.setFont('helvetica', 'normal');
 doc.setFontSize(7.8);
 doc.setTextColor(203, 213, 225);
-doc.text('App-Version: 6.4.0 (PWA & Android APK) | Stand: Oktober 2026 | Spuerhunde-Salzlandkreis e.V.', margin + 4, 82.5);
+doc.text('Plattform: Progressive Web App (PWA) & Native Android App (APK)', margin + 4, 79.5);
+doc.text('Herausgeber: Spuerhunde-Salzlandkreis e.V. | Stand: Oktober 2026', margin + 4, 85);
 
-curY = 106;
+curY = 112;
 
-printSectionTitle('1. Was ist SHS-EZ und wie funktioniert die Plattform?');
+printSectionTitle('1. Kurzeinfuehrung & Grundarchitektur');
 
 printParagraph(
-  'SHS-EZ ist eine hochmoderne, web- und app-basierte Einsatzleitzentrale, die speziell fuer die ' +
-  'Anforderungen von Rettungs- und Suchhundestaffeln (Flaechensuche, Truemmersuche, Mantrailing) entwickelt wurde. ' +
-  'Sie vernetzt die Einsatzleitung (EL) in der mobilen Zentrale in Echtzeit mit allen Suchtrupps im Gelaende, ' +
-  'der Polizei, Feuerwehren sowie uebergeordneten Leitstellen.'
+  'SHS-EZ ist eine hochmoderne, echtzeitbasierte Fuehrungs- und Ortungsplattform, die speziell fuer die ' +
+  'Beduerfnisse von Rettungs- und Suchhundestaffeln (Flaechensuche, Mantrailing, Truemmer) entwickelt wurde. ' +
+  'Sie vernetzt die Einsatzleitung (EL) in der Zentrale mit den Hundefuehrern im Suchgebiet sowie externen Partnern ' +
+  '(Polizei, Feuerwehr, Leitstelle).'
 );
 
 printParagraph(
-  'Die Architektur unterscheidet strikt zwischen zwei grundlegenden Betriebszustaenden, um hoechste Ausfallsicherheit ' +
-  'mit maximaler Akkulaufzeit und lueckenlosem Datenschutz zu kombinieren:'
+  'Um hoechste Praezision im Einsatz mit maximaler Akkuschonung und absolutem Datenschutz in der Freizeit ' +
+  'zu vereinen, arbeitet SHS-EZ in zwei strikt voneinander getrennten Systemmodi:'
 );
 
 drawDynamicCard({
@@ -334,197 +255,307 @@ drawDynamicCard({
   bgColor: C_CARD_BG,
   sections: [
     {
-      text: '- Standby-Ortung: Zeigt den aktuellen Standort der Einsatzkraefte lediglich als Punkt-Pins auf der Karte.\n' +
-            '- Keine Spuraufzeichnung: Es werden im Bereitschaftsmodus KEINE Wegstrecken aufgezeichnet (Akkuschonung & Privatsphaere).\n' +
-            '- 5-Minuten Geister-Filter: Schliesst ein Helfer die App oder wischt sie weg, wird er nach 5 Minuten automatisch als offline markiert. Keine Geister-Pins!\n' +
-            '- Ausnahme Trackingtest: Der persoenliche GPS-Hardwaretest zeichnet auch im Bereitschaftsmodus eine vollstaendige Testspur auf.',
-      fontSize: 8.3,
-      lineHeight: 4.2
+      text: '- Reine Punkt-Ortung: Zeigt angemeldete Helfer lediglich als Standort-Pin auf der Lagekarte.\n' +
+            '- KEINE Spuraufzeichnung: Im Bereitschaftsmodus werden keine Wegstrecken aufgezeichnet (Privatsphaere & Akku).\n' +
+            '- Automatischer Geister-Filter: Verlaesst ein Helfer die App laenger als 5 Minuten ohne Abmeldung, wird er automatisch als offline markiert. Keine Geister-Pins!\n' +
+            '- Ausnahme Trackingtest: Der persoenliche GPS-Hardwaretest darf jederzeit gestartet werden und zeichnet immer eine vollstaendige Testspur auf.',
+      fontSize: 8.2,
+      lineHeight: 4.1
     }
   ],
   spacingAfter: 4
 });
 
 drawDynamicCard({
-  title: '[AKTIV] Aktiver Einsatz & Uebung (Realeinsatz oder Training gestartet)',
+  title: '[AKTIV] Aktiver Einsatz & Uebung (Status aktiv oder pausiert)',
   borderColor: C_BLUE,
   bgColor: C_BLUE_LIGHT,
   sections: [
     {
-      text: '- Hochpraezises Suchspur-Tracking: Sobald die Einsatzleitung einen Sucher auf BEREIT schaltet, wird dessen vollstaendiger GPS-Pfad live aufgezeichnet.\n' +
-            '- Prozess-Wachhaltung (WakeLock): Verhindert das Einschlafen des Prozessors bei gesperrtem Bildschirm in der Jackentasche.\n' +
-            '- Geschuetzte Mindestbesetzung: Mindestens 1 Admin und 1 Einsatzleitung muessen waehrend des gesamten Einsatzes aktiv eingeloggt bleiben.\n' +
-            '- Integrierter Einsatzstellenfunk: Direkter Text- und CB-Sprachfunk mit akustischen Quittungen und Pager-Weckruf.\n' +
-            '- Revisionssicheres Archiv: Nach Einsatzende werden alle Spuren, Sektoren, Funde und Funkprotokolle dauerhaft gespeichert.',
-      fontSize: 8.3,
-      lineHeight: 4.2
+      text: '- Hochpraezises Suchspur-Tracking: Sobald die EL ein Team auf BEREIT schaltet, wird dessen GPS-Spur lueckenlos live erfasst.\n' +
+            '- Prozessor-Wachhaltung (WakeLock): Haelt das Smartphone auch bei gesperrtem Bildschirm in der Jackentasche wach.\n' +
+            '- Schutzregel: Mindestens 1 Admin und 1 EL muessen waehrend des gesamten Einsatzes eingeloggt bleiben.\n' +
+            '- Taktischer Einsatzfunk: Tastatur-stabiler Textfunk, Notfall-Pager mit Sirenenton und Direkt-PDF-Archivierung.\n' +
+            '- Revisionssicherheit: Nach Einsatzende werden alle Spuren, Sektoren und Protokolle dauerhaft gespeichert.',
+      fontSize: 8.2,
+      lineHeight: 4.1
     }
   ],
   spacingAfter: 4
 });
 
 // ============================================================================
-// SEITE 2: ROLLEN & BERECHTIGUNGEN IM DETAIL
+// TEIL I: SCHRITT-FÜR-SCHRITT FÜR ADMINISTRATOREN & EINSATZLEITUNG
 // ============================================================================
-startChapter('2. Rollen, Berechtigungen & Sicherheitsregeln', 'Detaillierte Uebersicht aller Berechtigungsstufen im System');
+startChapter('TEIL I: Handbuch fuer Admins & Einsatzleitung', 'Schritt-fuer-Schritt Anleitung fuer die Fuehrungskraft');
 
 printParagraph(
-  'Die Plattform verfuegt ueber ein strikt rollenbasiertes Zugriffskonzept. Jedes Mitglied der Staffel ' +
-  'erhaelt einen festen Account mit PIN-Code, Rufnamen und spezifischen Zugriffsrechten:'
+  'Als Administrator oder Einsatzleitung fuehren Sie den Einsatz operativ, koordinieren die Suchtrupps, ' +
+  'teilen Sektoren ein und sichern die behoerdliche Dokumentation. Befolgen Sie diese Schrittfolge:'
 );
 
-drawSplitCard({
-  title: 'Administrator (Admin) & First-Admin (Maria)',
-  badge: 'VOLLZUGRIFF',
+drawDynamicCard({
+  title: 'Schritt 1: Einsatz oder Uebung vorbereiten (Status: planned / Weiss)',
+  badge: 'SCHRITT 1',
   badgeColor: C_PRIMARY,
-  leftHeading: 'Erlaubte Aktionen & Aufgaben:',
-  leftLines: [
-    '- Vollstaendige Benutzer- und Kontenverwaltung (Anlegen, Editieren, Loeschen)',
-    '- PIN-Codes und Passwoerter fuer alle Helfer zuruecksetzen',
-    '- Einsaetze erstellen, konfigurieren, starten, pausieren und beenden',
-    '- Sektoren zeichnen, Hektar pruefen und Suchtrupps zuweisen',
-    '- Bereit-Schaltung von Suchern per Barcode-Scan oder Klick',
-    '- Gesamteinsatzberichte als PDF und CSV exportieren',
-    '- Funk- und Chatprotokolle archivieren und leeren'
+  sections: [
+    {
+      heading: 'Ziel: Einsatzdaten anlegen, bevor die Teams am Sammelplatz eintreffen.',
+      text: '1. Klicken Sie in der Hauptnavigation auf "+ Neuer Einsatz".\n' +
+            '2. Name & Einsatzart waehlen: Geben Sie dem Einsatz einen praegnanten Namen (z.B. "Einsatz Bernburg Waldkante") und waehlen Sie, ob es sich um einen Realeinsatz oder eine Staffeluebung handelt.\n' +
+            '3. Vermisstenprofil erfassen: Tragen Sie Name, Alter, koerperliche Verfassung, Kleidung und besondere Risiken (z.B. Demenz, Diabetes) ein. Laden Sie optional ein Foto der vermissten Person hoch.\n' +
+            '4. Sammelplatz / EZ definieren: Setzen Sie den Treffpunkt auf der Karte per Klick oder GPS.\n' +
+            '5. Speichern: Der Einsatz erscheint nun mit weissem Status (planned). In diesem Status greifen noch keine Sperren und anfahrende Kraefte koennen bereits das Einsatzprofil studieren.\n' +
+            'WICHTIG: Angelegte Einsaetze haben einen [Starten]- und einen [Entfernen]-Button, aber KEINEN [Beenden]-Button!',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
   ],
-  rightHeading: 'Feste Schutz- & Sicherheitsregeln:',
-  rightLines: [
-    '- Maria (First-Admin / Owner) ist unantastbar: Kann weder geloescht, gesperrt noch herabgestuft werden.',
-    '- Mindestbesetzung im Einsatz: Mindestens 1 Admin muss dauerhaft eingeloggt bleiben. Logout gesperrt!',
-    '- Einsatzbeendigung erfordert verbindliche Bestaetigung, dass alle Suchtrupps das Gelaende verlassen haben.'
-  ]
+  spacingAfter: 4
 });
 
-drawSplitCard({
-  title: 'Einsatzleitung (EL)',
-  badge: 'TAKTIK & LEITUNG',
+drawDynamicCard({
+  title: 'Schritt 2: Einsatz scharfschalten & starten (Status: active)',
+  badge: 'SCHRITT 2',
   badgeColor: C_BLUE,
-  leftHeading: 'Erlaubte Aktionen & Aufgaben:',
-  leftLines: [
-    '- Einsaetze operativ fuehren (Starten, Pausieren, Fortsetzen, Beenden)',
-    '- Sektoren im Gelaende polygonieren und Suchtrupps zuteilen',
-    '- Status-Steuerung aller Einsatzkraefte (Bereit / Pause)',
-    '- Fundmeldungen der Sucher verifizieren und Marker setzen',
-    '- Drohnen-Videostream zuschalten und Lagekarte einbinden',
-    '- Pager-Sirenenalarm an einzelne oder alle Einheiten ausloesen',
-    '- Funkleitung im Text- und CB-Sprachkanal fuehren'
+  sections: [
+    {
+      heading: 'Ziel: Beginn der aktiven Phase und Aktivierung der Fuehrungsschutzregeln.',
+      text: '1. Sobald die Einsatzleitung vor Ort einsatzbereit ist, klicken Sie auf [Starten].\n' +
+            '2. Die Statusanzeige faerbt sich sofort gemaess Vorschrift:\n' +
+            '   - Realeinsatz: BLAU (active)\n' +
+            '   - Staffeluebung: GELB (active)\n' +
+            '3. Systemschutz schaltet sich scharf: Ab jetzt muessen mindestens 1 Admin und 1 Einsatzleitung dauerhaft eingeloggt bleiben. Ein versehentlicher Logout der letzten Fuehrungskraft wird vom System blockiert.\n' +
+            '4. Der Geister-Filter wird fuer aktive Helfer deaktiviert, damit Sucher bei voruebergehendem Funkloch nicht von der Karte verschwinden.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
   ],
-  rightHeading: 'Feste Schutz- & Sicherheitsregeln:',
-  rightLines: [
-    '- Kann keine anderen Administratoren loeschen oder deren Passwoerter aendern.',
-    '- Mindestbesetzung im Einsatz: Mindestens 1 EL muss stets online sein.',
-    '- Zugriff auf globale Systemeinstellungen bleibt Administratoren vorbehalten.'
-  ]
+  spacingAfter: 4
 });
 
-drawSplitCard({
-  title: 'Sucher / Aktiver Nutzer (Hundefuehrer & Helfer)',
-  badge: 'EINSATZKRAFT IM GELAENDE',
+drawDynamicCard({
+  title: 'Schritt 3: Kraefteverwaltung & User BEREIT schalten',
+  badge: 'SCHRITT 3',
+  badgeColor: C_PRIMARY,
+  sections: [
+    {
+      heading: 'Ziel: Freigabe der Suchtrupps zur Spuraufzeichnung.',
+      text: 'Sucher zeichnen ihre Suchspur erst auf, wenn sie von der EL ausdruecklich auf BEREIT geschaltet werden!\n\n' +
+            'Sie haben dafuer zwei komfortable Moeglichkeiten:\n' +
+            'A) Schneller Barcode- / QR-Scan:\n' +
+            '   - Oeffnen Sie den Scanner in der App und scannen Sie den digitalen Mitgliedsausweis des Suchers.\n' +
+            '   - Der Sucher wird sofort erkannt und auf [BEREIT] gesetzt.\n' +
+            'B) Manuelle Freigabe in der Kraefteliste:\n' +
+            '   - Oeffnen Sie die Kraefte-Uebersicht.\n' +
+            '   - Klicken Sie neben dem Namen des Helfers auf den gruenen Schalter [Bereit].\n\n' +
+            'Ergebnis: Das Smartphone des Helfers schaltet in den hochfrequenten GPS-Modus und seine gelaufene Spur wird ab diesem Meter fuer alle live auf der Lagekarte gezeichnet.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
+  ],
+  spacingAfter: 4
+});
+
+// ============================================================================
+// TEIL I FORTSETZUNG: SEKTOREN, LAGEKARTE, FUNK & FUNDMELDUNGEN
+// ============================================================================
+startChapter('TEIL I: Admins & EL - Sektoren, Lage & Funk', 'Operative Werkzeuge der Einsatzleitung');
+
+drawDynamicCard({
+  title: 'Schritt 4: Suchgebiet & Sektoren anlegen, berechnen & zuweisen',
+  badge: 'SCHRITT 4',
+  badgeColor: C_PRIMARY,
+  sections: [
+    {
+      heading: 'Ziel: Gezielte Flaechenzuteilung ohne Luecken und ohne Doppelbelegungen.',
+      text: '1. Sektor-Editor aufrufen: Klicken Sie in der Kartenansicht auf "Sektoren" und anschliessend auf "+ Neuer Sektor".\n' +
+            '2. Flaeche abstecken: Tippen Sie die Eckpunkte des Suchgebiets entlang von Waldkanten, Wegen oder Gelaendemarken auf der Karte ab. Das System schliesst das Polygon automatisch.\n' +
+            '3. Hektar- & Umfangsermittlung: Die Flaeche in Hektar (ha) sowie der Umfang in Metern werden in Echtzeit berechnet. Dies ermoeglicht eine praezise Einschaetzung des Zeitbedarfs fuer das Suchhundeteam.\n' +
+            '4. Sektor benennen & Suchtrupp zuweisen: Geben Sie dem Sektor eine Kennung (z.B. "Sektor A - Waldstueck Nord") und weisen Sie ueber das Dropdown-Menue den zustaendigen Sucher zu.\n' +
+            '5. DOPPELZUWEISUNGS-WARNUNG: Versuchen Sie versehentlich, einen Helfer zuzuweisen, der bereits in einem anderen Sektor eingeteilt ist, blendet das System sofort eine Warnung ein ("Warnung: Bereits in Sektor X"). Dadurch werden Doppelbelegungen zuverlaessig verhindert!\n' +
+            '6. Statuspflege: Aendern Sie den Status waehrend des Einsatzes von "Offen" (Gelb) ueber "In Arbeit" (Blau) zu "Abgesucht" (Gruen).',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
+  ],
+  spacingAfter: 4
+});
+
+drawDynamicCard({
+  title: 'Schritt 5: Taktische Lagekarte, Drohnenstream & Nachtmodus',
+  badge: 'SCHRITT 5',
+  badgeColor: C_BLUE,
+  sections: [
+    {
+      heading: 'Ziel: Maximale Uebersicht ueber alle Kraefte und Gelaendegegebenheiten.',
+      text: '- Kartenlayer wechseln: Schalten Sie per Klick zwischen OpenTopoMap (detailreiche topografische Wander- und Forstwege mit Hoehenlinien) und Satelliten-Luftbild (zur Beurteilung von Dickungen und Freiflaechen) um.\n' +
+            '- Bedienfenster oben rechts (Wetter / GPS / Ebenen): Hier sind alle wichtigen Sondersteuerungen gebuendelt:\n' +
+            '  * Mond/Sonne-Icon: Schaltet den Karten-Nachtmodus (Darkmode) an, um die Nachtsichtfaehigkeit im Wald nicht durch blendende Bildschirme zu zerstoeren.\n' +
+            '  * Funkantennen-Icon (RadioTower): Oeffnet das Drohnen-Videofenster, um Luftbilder oder Waermebildkameras direkt auf der Lagekarte einzublenden.\n' +
+            '  * GPS-Cockpit: Zeigt die eigene Signalgenauigkeit und Satellitenverbindung an.\n' +
+            '- EZ-Pin Buendelung: Fuehrungskraefte, die sich als "In der EZ" angemeldet haben, werden nicht als einzelne Laeufer auf der Karte angezeigt, sondern sauber gebuendelt im Standortmarker der Einsatzzentrale ("EZ").',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
+  ],
+  spacingAfter: 4
+});
+
+drawDynamicCard({
+  title: 'Schritt 6: Einsatzfunk, Pager & Einsatzdokumentation (PDF & Leeren)',
+  badge: 'SCHRITT 6',
+  badgeColor: C_PRIMARY,
+  sections: [
+    {
+      heading: 'Ziel: Ausfallsichere Kommunikation und fortlaufende Protokollsicherung.',
+      text: '- Tastatur-optimierter Textfunk: Das Eingabefeld bleibt auch beim Aufklappen der Smartphone-Tastatur fest am unteren Bildschirmrand verankert. Kein Wegspringen des Chats!\n' +
+            '- Pager-Sirenenalarm: Bei dringenden Durchsagen, Rueckzugsbefehlen oder Erstalarmierung loest die EL den Pager aus. Auf den Smartphones aller Teams ertoent ein durchdringender Alarmton.\n' +
+            '- WERKZEUG "PDF & LEEREN": Waehrend eines laengeren Einsatzes koennen Chatverlauf, System-Logbuch sowie Alarme mit einem Klick als PDF exportiert und anschliessend geleert werden. Dadurch bleibt die App auf aelteren Handys blitzschnell, waehrend saemtliche Eintraege lueckenlos im revisionssicheren Einsatztagebuch archiviert werden.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
+  ],
+  spacingAfter: 4
+});
+
+// ============================================================================
+// TEIL I FORTSETZUNG: FUNDMELDUNGEN, PAUSIEREN, BEENDEN & BERICHTE
+// ============================================================================
+startChapter('TEIL I: Admins & EL - Funde, Abschluss & Archiv', 'Von der Fundmeldung bis zum behoerdlichen Einsatzbericht');
+
+drawDynamicCard({
+  title: 'Schritt 7: Fundmeldungen empfangen, pruefen & Rettungskette einleiten',
+  badge: 'SCHRITT 7',
   badgeColor: C_AMBER,
-  leftHeading: 'Erlaubte Aktionen & Aufgaben:',
-  leftLines: [
-    '- Eigene GPS-Suchspur lueckenlos aufzeichnen (nach Freigabe durch EL)',
-    '- Zugewiesene Sektorengrenzen und Gesamtgebiet live auf Karte einsehen',
-    '- Fundmeldungen mit Foto, GPS-Koordinate und Dringlichkeit melden',
-    '- Taktischen Funkverkehr (Text & CB-Voice) empfangen und senden',
-    '- Eigenen Mitgliedsausweis mit Barcode / QR-Code vorzeigen',
-    '- Persoenlichen GPS-Trackingtest jederzeit autonom durchfuehren'
-  ],
-  rightHeading: 'Einschraenkungen & Schutz:',
-  rightLines: [
-    '- Kann keinen Einsatz starten, pausieren oder beenden.',
-    '- Kann keine fremden Sektoren bearbeiten oder loeschen.',
-    '- Trackingspur wird erst aufgezeichnet, wenn die EL den Trupp auf Bereit geschaltet hat.',
-    '- Keine Administrationsrechte fuer Benutzerstammdaten.'
-  ]
-});
-
-drawSplitCard({
-  title: 'Gast / Betrachter (Polizei, Feuerwehr, Behoerden)',
-  badge: 'REINE LESEANSICHT',
-  badgeColor: C_MUTED,
-  leftHeading: 'Verfuegbare Funktionen:',
-  leftLines: [
-    '- Live-Lagekarte in Echtzeit beobachten (Grossbildschirm, Leitstelle)',
-    '- Aktuelle Positionen der freigegebenen Suchtrupps und Sektoren sehen',
-    '- Verifizierte Fundstellen und Suchgebietsgrenzen einsehen',
-    '- Umschaltung zwischen Topo-Karte, Satellit und Nachtmodus'
-  ],
-  rightHeading: 'Gesperrte Funktionen:',
-  rightLines: [
-    '- Sendet KEINE eigene GPS-Position (wird nicht auf Karte angezeigt)',
-    '- Keine Schreib- oder Senderechte im Funk-Chat',
-    '- Keine Bearbeitungsrechte fuer Einsatz-, Sektoren- oder Personendaten',
-    '- Reiner passiver Lese- und Beobachterzugang.'
-  ]
-});
-
-// ============================================================================
-// SEITE 3: DIE ZWEI GETRENNTEN AUSWAHLSEITEN NACH DEM LOGIN
-// ============================================================================
-startChapter('3. Die zwei Auswahlseiten nach dem Login', 'Verbindliche Systemlogik zur Vermeidung von Fehlbedienungen');
-
-printParagraph(
-  'Nach erfolgreicher Authentifizierung (Passwort oder PIN-Schnellwahl) leitet die App NIEMALS sofort unkontrolliert ' +
-  'in eine Kartenansicht weiter, sondern zeigt immer eine eindeutige Auswahlseite. ' +
-  'Das System prueft automatisch, ob aktuell ein Einsatz aktiv/pausiert ist oder ob sich die Staffel in Bereitschaft befindet:'
-);
-
-drawDynamicCard({
-  title: 'A) Auswahlseite OHNE aktiven Einsatz (Bereitschaftsmodus)',
-  badge: 'BEREITSCHAFT',
-  badgeColor: C_PRIMARY,
-  borderColor: C_PRIMARY,
-  bgColor: C_PRIMARY_LIGHT,
   sections: [
     {
-      heading: 'Gueltig bei: Kein Einsatz vorhanden oder angelegte Einsaetze im Status "Vorbereitet / Geplant" (weiss).',
-      headingColor: C_DARK,
-      text: 'Im Bereitschaftsmodus gibt es fuer Admins KEINE Unterscheidung zwischen "In der EZ" und "Als Sucher"!\n\n' +
-            'Folgende 4 Auswahlmoeglichkeiten stehen bereit:\n' +
-            '  1. [Admin] Als Admin anmelden: Ein einfacher Button ohne EZ/Sucher-Aufteilung (nur fuer Admins/EL sichtbar).\n' +
-            '  2. [Helfer] Als aktiver Nutzer anmelden: Meldet den Helfer fuer die Bereitschaft an. Zeigt den aktuellen Standort-Pin auf der Karte, zeichnet jedoch KEINE Trackingspur auf.\n' +
-            '  3. [Gast] Als Gast / Betrachter: Reine Leseansicht ohne eigenen Standort-Pin.\n' +
-            '  4. [Test] Persoenlicher Trackingtest (10 / 20 / 30 Min.): Separater Hardware- und Genauigkeitstest fuer jedermann.',
-      fontSize: 8.3,
-      lineHeight: 4.2
-    },
-    {
-      heading: 'Spezifisches Verhalten im Bereitschaftsmodus:',
-      headingColor: [5, 150, 105],
-      text: '- Automatischer Geister-Filter: Verlaesst ein Helfer die App (Browser geschlossen, App weggewischt) und sendet laenger als 5 Minuten kein Lebenszeichen, wird er automatisch als offline markiert. Dadurch bleibt die Bereitschaftskarte stets verlaesslich sauber.',
+      heading: 'Ziel: Sofortige Verifikation von Funden und Alarmierung weiterer Kraefte.',
+      text: '1. Sobald ein Suchtrupp einen Fund meldet, ertoent ein akustisches Alarmsignal in der EZ.\n' +
+            '2. Die Fundmeldung enthaelt: Exakte GPS-Koordinate, Uhrzeit, Finder-Name, Dringlichkeitsstufe (z.B. Person / Kleidungsstueck) und ein Belegfoto.\n' +
+            '3. Verifizieren: Die EL prueft die Daten und setzt per Klick den Fundstellen-Marker auf die taktische Lagekarte. Dieser Marker ist ab sofort fuer alle Kraefte und externe Beobachter sichtbar.\n' +
+            '4. Rettungskette aktivieren: Bei Auffinden der Person ueber die hinterlegte Notfallliste sofort Notarzt / Rettungsdienst sowie Polizei alarmieren und Koordinaten uebermitteln.',
       fontSize: 8.2,
       lineHeight: 4.1
     }
   ],
-  spacingAfter: 5
+  spacingAfter: 4
 });
 
 drawDynamicCard({
-  title: 'B) Auswahlseite BEI AKTIVEM EINSATZ (Status aktiv oder pausiert)',
-  badge: 'EINSATZ LAEUFT',
+  title: 'Schritt 8: Einsatz pausieren & fortsetzen (Status: paused)',
+  badge: 'SCHRITT 8',
+  badgeColor: C_RED,
+  sections: [
+    {
+      heading: 'Ziel: Geordnete Unterbrechung bei Gewitter, Lagebesprechung oder Nachtpause.',
+      text: '1. Klicken Sie in der Kopfzeile auf [Pausieren].\n' +
+            '2. Der Status wechselt auf ROT (Realeinsatz pausiert) oder ORANGE (Uebung pausiert).\n' +
+            '3. Die GPS-Spuraufzeichnung wird temporaer angehalten, damit bei Lagebesprechungen am Zelt keine unnoetigen Punktwolken gezeichnet werden.\n' +
+            '4. Alle bisherigen Spuren, Sektoren und Fundmarker bleiben unveraendert sichtbar.\n' +
+            '5. Sobald die Suche weitergeht, klicken Sie auf [Fortsetzen] - das Tracking laeuft nahtlos weiter.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
+  ],
+  spacingAfter: 4
+});
+
+drawDynamicCard({
+  title: 'Schritt 9: Einsatz beenden & Sicherheitspruefung',
+  badge: 'SCHRITT 9',
+  badgeColor: C_DARK,
+  sections: [
+    {
+      heading: 'Ziel: Vollstaendigkeitsabfrage und Ueberfuehrung ins Archiv.',
+      text: '1. Erst wenn alle Suchtrupps das Gelaende vollstaendig verlassen haben und persoenlich am Sammelplatz angetreten sind, klicken Sie auf [Einsatz Beenden].\n' +
+            '2. Bestaetigungsdialog: Bestaetigen Sie die Abfrage, dass alle Einsatzkraefte wohlbehalten zurueck sind.\n' +
+            '3. Das System schliesst alle offenen Spuren, beendet das GPS-Tracking auf allen Mobilgeraeten und verschiebt den Vorgang in das Einsatzarchiv.\n' +
+            '4. Die Aktiv-Einsatz-Sperrregeln werden aufgehoben und die App kehrt in den Bereitschaftsmodus zurueck.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
+  ],
+  spacingAfter: 4
+});
+
+drawDynamicCard({
+  title: 'Schritt 10: Einsatzberichte, Archiv & Accountverwaltung',
+  badge: 'SCHRITT 10',
+  badgeColor: C_PRIMARY,
+  sections: [
+    {
+      heading: 'Behoerdlicher Gesamteinsatzbericht (PDF & CSV):',
+      text: '- Nach Beendigung kann mit einem Klick der offizielle Einsatzbericht generiert werden.\n' +
+            '- Enthaelt Karten-Snapshots, lueckenlose Suchspuren jedes Hundefuehrers, genaue Hektarangaben, alle Funksprueche mit Zeitstempel und Fundstellenfotos.\n' +
+            '- CSV-Export fuer uebergeordnete GIS-Systeme von Feuerwehr und Katastrophenschutz.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    },
+    {
+      heading: 'Einsatzarchiv & Reaktivierung:',
+      text: '- Alle abgeschlossenen Einsaetze koennen im Archiv jederzeit eingesehen werden.\n' +
+            '- Reaktivierungs-Option: Sollte am Folgetag eine Nachsuche erforderlich sein, kann der Einsatz reaktiviert werden, sodass alle bisherigen Sektoren und Spuren direkt weitergenutzt werden koennen.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    },
+    {
+      heading: 'Benutzer- & Rollenverwaltung:',
+      text: '- Admins verwalten die Mitglieder (Rufname, PIN, Rolle: Admin, EL, Sucher, Gast).\n' +
+            '- Uebersichtliche Streifendarstellung mit Admins an erster Stelle und anschliessend alphabetischer Sortierung.\n' +
+            '- UNANTASTBAR: First-Admin Maria (user-maria) kann weder geloescht noch in den Rechten beschnitten werden.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
+  ],
+  spacingAfter: 4
+});
+
+// ============================================================================
+// TEIL II: SCHRITT-FÜR-SCHRITT FÜR AKTIVE NUTZER / SUCHER
+// ============================================================================
+startChapter('TEIL II: Handbuch fuer Sucher & Helfer', 'Schritt-fuer-Schritt Anleitung fuer Einsatzkraefte im Gelaende');
+
+printParagraph(
+  'Als Sucher, Hundefuehrer oder Suchtrupphelfer arbeiten Sie direkt im Gelaende. ' +
+  'Fuer Sie ist die App bewusst einfach, uebersichtlich und ablenkungsfrei gestaltet. ' +
+  'Befolgen Sie diese Schritte von der Alarmierung bis zum Rueckweg:'
+);
+
+drawDynamicCard({
+  title: 'Schritt 1: Anmeldung am Smartphone & PIN-Eingabe',
+  badge: 'SCHRITT 1',
+  badgeColor: C_PRIMARY,
+  sections: [
+    {
+      heading: 'Ziel: Schneller und sicherer Login in der App.',
+      text: '1. Oeffnen Sie SHS-EZ auf Ihrem Smartphone (als installierte App oder im Chrome-/Safari-Browser).\n' +
+            '2. Waehlen Sie Ihren Rufnamen aus der Mitgliederliste aus oder tippen Sie die ersten Buchstaben ein.\n' +
+            '3. Geben Sie Ihre 4-stellige persoenliche PIN oder Ihr Passwort ein.\n' +
+            '4. Nach erfolgreicher PIN-Pruefung gelangen Sie auf die rollenbasierte Auswahlseite:\n' +
+            '   - WENN KEIN EINSATZ AKTIV IST: Tippen Sie auf "[Als aktiver Nutzer anmelden]". Sie sind in Bereitschaft. Ihr Standort-Pin ist sichtbar, es wird jedoch KEINE Spur aufgezeichnet (Akkuschonung).\n' +
+            '   - WENN EIN EINSATZ AKTIV IST: Tippen Sie auf "[Als aktiver Nutzer / Sucher anmelden]". Sie sind im Einsatz registriert.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
+  ],
+  spacingAfter: 4
+});
+
+drawDynamicCard({
+  title: 'Schritt 2: Am Sammelplatz eintreffen & Freigabe abwarten',
+  badge: 'SCHRITT 2',
   badgeColor: C_BLUE,
-  borderColor: C_BLUE,
-  bgColor: C_BLUE_LIGHT,
   sections: [
     {
-      heading: 'Gueltig bei: Realeinsatz (blau/rot) oder Staffeluebung (gelb/orange) wurde gestartet.',
-      headingColor: C_DARK,
-      text: 'Nur bei laufendem Einsatz melden sich Fuehrungskraefte rollenbasiert an:\n\n' +
-            '1. Fuer Administratoren & Einsatzleitung:\n' +
-            '   - In der EZ (ez_command): Leitung aus der Einsatzzentrale. Kein GPS-Tracking der eigenen Person! Fuehrungskraefte werden nicht als einzelne Laeufer auf der Karte dargestellt, sondern direkt gebuendelt im "EZ"-Kartenpin aufgefuehrt.\n' +
-            '   - Als Sucher (searcher): Die Fuehrungskraft begibt sich selbst ins Gelaende. Erhaelt einen eigenen Karten-Pin und wird nach Freigabe als vollwertiger Suchtrupp getrackt.\n\n' +
-            '2. Fuer regulaere Einsatzkraefte (Nicht-Admins):\n' +
-            '   - Als aktiver Nutzer / Sucher: Fungieren im Einsatz als Sucher. Sobald sie von der EL per Barcode-Scan oder Klick auf "Bereit" freigegeben werden, zeichnet die App ihre Suchspur lueckenlos auf.\n\n' +
-            '3. Fuer Externe (Polizei, Behoerden, Gaeste):\n' +
-            '   - Als Gast / Betrachter: Reine Kartenbeobachtung ohne eigenes GPS-Signal.',
-      fontSize: 8.3,
-      lineHeight: 4.2
-    },
-    {
-      heading: 'Wichtige Sicherheitsgarantie im aktiven Einsatz:',
-      headingColor: C_BLUE,
-      text: 'Der 5-Minuten Geister-Filter ist im aktiven Einsatz DEAKTIVIERT! Selbst bei voruebergehendem Funkloch im dichten Wald laeuft die GPS-Aufzeichnung lokal auf dem Smartphone ununterbrochen weiter und synchronisiert sich automatisch nach.',
+      heading: 'Ziel: Freischaltung der GPS-Suchspur durch die Einsatzleitung.',
+      text: '1. Melden Sie sich persoenlich am Einsatzleitwagen (EZ).\n' +
+            '2. Zeigen Sie Ihren digitalen Mitgliedsausweis mit Barcode/QR-Code auf dem Handy vor, oder lassen Sie sich von der EL in der Kraefteliste auf BEREIT setzen.\n' +
+            '3. WICHTIGE REGEL: Ihre GPS-Suchspur wird erst aufgezeichnet, wenn die EL Sie auf [BEREIT] geschaltet hat!\n' +
+            '4. Geraete-Check:\n' +
+            '   - Pruefen Sie, ob der Standortdienst (GPS) auf "Hohe Genauigkeit" steht.\n' +
+            '   - Deaktivieren Sie extreme Energiesparmodi fuer SHS-EZ (die App nutzt eine automatische Prozessor-Wachhaltung WakeLock).\n' +
+            '   - Sperren Sie ruhig das Display und stecken Sie das Handy in die Einsatzweste - die Aufzeichnung laeuft zuverlaessig im Hintergrund weiter.',
       fontSize: 8.2,
       lineHeight: 4.1
     }
@@ -532,288 +563,247 @@ drawDynamicCard({
   spacingAfter: 4
 });
 
-// ==========================================
-// SEITE 4: PERSÖNLICHER TRACKINGTEST
-// ==========================================
-startChapter('4. Persoenlicher Trackingtest (10 / 20 / 30 Min.)', 'Autonomer GPS-Hardware- und Akkutest fuer Hundefuehrer');
-
-printParagraph(
-  'Der persoenliche Trackingtest ist eine eigenstaendige Funktion von SHS-EZ. Er dient dazu, vor einem ' +
-  'Ernsteinsatz oder waehrend des Trainings die GPS-Praezision des Handys, die Energieeinstellungen und das ' +
-  'Standortverhalten im Wald unabhaengig von der Leitstelle zu ueberpruefen.'
-);
-
 drawDynamicCard({
-  title: 'Ablauf des Trackingtests in 3 Schritten',
-  borderColor: C_BORDER,
-  bgColor: C_WHITE,
-  sections: [
-    {
-      heading: 'Schritt 1: Dauer waehlen & Starten',
-      headingColor: C_DARK,
-      text: '- Waehlbare Testzeit: 10 Minuten (Schnelltest), 20 Minuten (Standard) oder 30 Minuten (Dauertest).\n' +
-            '- Start per Knopfdruck: Die App schaltet den GPS-Empfaenger auf maximale Genauigkeit.\n' +
-            '- Integrierter WakeLock: Verhindert zuverlaessig das Einschlafen des Betriebssystems bei gesperrtem Bildschirm.\n' +
-            '- Start-Markierung: Der Startpunkt wird als gruene Fahne auf der Karte verankert.',
-      fontSize: 8.3,
-      lineHeight: 4.1
-    },
-    {
-      heading: 'Schritt 2: Live-Aufzeichnung & Statistik-Cockpit',
-      headingColor: C_DARK,
-      text: '- Durchgaengige Trackingspur: Jeder GPS-Punkt wird mit Zeit, Hoehe, Geschwindigkeit und HDOP-Genauigkeit erfasst.\n' +
-            '- Richtungspfeile: Auf der Spur zeigen Pfeile die exakte Gehrichtung und Richtungswechsel an.\n' +
-            '- Live-Anzeige: Zurueckgelegte Strecke in Metern, aktuelle Geschwindigkeit (km/h) und verbleibende Testzeit.\n' +
-            '- Warnanzeige bei Signalverlust oder schlechtem Satellitenempfang.',
-      fontSize: 8.3,
-      lineHeight: 4.1
-    },
-    {
-      heading: 'Schritt 3: Auswertung, PDF-Protokoll & E-Mail',
-      headingColor: C_DARK,
-      text: '- Automatischer Stopp nach Ablauf des Timers (oder manueller vorzeitiger Abbruch).\n' +
-            '- Rote Endpunkt-Fahne markiert das Ende des Testlaufs.\n' +
-            '- Generierung eines detailreichen Testberichts mit interaktivem Karten-Snapshot und Metriken.\n' +
-            '- PDF-Download fuer das Ausbildungsbuch des Hundefuehrers oder direkter Versand an den Ausbildungsleiter.',
-      fontSize: 8.3,
-      lineHeight: 4.1
-    }
-  ],
-  spacingAfter: 5
-});
-
-drawDynamicCard({
-  title: '[AUSNAHME] Wichtigste Ausnahmeregel gemaess Dienstvorschrift',
-  badge: 'AUSNAHME-REGEL',
+  title: 'Schritt 3: Sektorenansicht & Navigation im Gelaende',
+  badge: 'SCHRITT 3',
   badgeColor: C_PRIMARY,
-  borderColor: C_PRIMARY,
-  bgColor: C_PRIMARY_LIGHT,
   sections: [
     {
-      text: 'Waehrend im regulaeren Bereitschaftsmodus KEINE Spuren aufgezeichnet werden (um Akku und Privatsphaere zu schonen), ' +
-            'wird beim persoenlichen Trackingtest IMMER die vollstaendige GPS-Testspur (Linie, Pfeile, Fahnen) aufgezeichnet und visualisiert.\n' +
-            'Dieser Test darf von jedem Mitglied jederzeit gestartet werden - voellig unabhaengig davon, ob ein Einsatz aktiv ist oder nicht.',
-      fontSize: 8.3,
-      lineHeight: 4.2
+      heading: 'Ziel: Sichere Orientierung im zugewiesenen Suchbereich.',
+      text: '1. Tippen Sie auf die Karte: Ihr zugewiesener Sektor ist farbig umrandet hervorgehoben.\n' +
+            '2. Ihr eigener Standort wird als blauer Punkt mit genauer Blickrichtung dargestellt.\n' +
+            '3. Kartenebene waehlen: Nutzen Sie die topografische Karte (OpenTopoMap), um Waldwege, Gelaendekanten, Baeche und Hoehenlinien zu erkennen. Bei unuebersichtlichem Gelaende schalten Sie auf Satellit um.\n' +
+            '4. Bisherige Suchspur: Auf der Karte sehen Sie exakt, welche Flaechen Sie und Ihr Hund bereits abgesucht haben und wo noch Luecken vorhanden sind.',
+      fontSize: 8.2,
+      lineHeight: 4.1
     }
   ],
   spacingAfter: 4
 });
 
-// ==========================================
-// SEITE 5: EINSATZ-STATUS & FARBCODES
-// ==========================================
-startChapter('5. Einsatz-Status, Farbcodes & Lebenszyklus', 'Verbindliche optische Kennzeichnung gemaess Einsatzrichtlinie');
+// ============================================================================
+// TEIL II FORTSETZUNG: FUNDMELDUNG, FUNK & EINSATZENDE
+// ============================================================================
+startChapter('TEIL II: Sucher & Helfer - Funde & Einsatzende', 'Meldewesen und Verhalten bei Auffinden');
+
+drawDynamicCard({
+  title: 'Schritt 4: Fundmeldung mit Foto & GPS absetzen',
+  badge: 'SCHRITT 4',
+  badgeColor: C_AMBER,
+  sections: [
+    {
+      heading: 'Ziel: Beweissichere und sekunenschnelle Uebermittlung an die Einsatzleitung.',
+      text: 'Wenn Ihr Suchhund verbellt, Sie einen Gegenstand (Schuh, Muetze, Fahrrad), eine Spur oder die vermisste Person finden:\n\n' +
+            '1. Bleiben Sie sofort stehen! Zertrampeln Sie keine Spuren und sichern Sie Ihren Hund.\n' +
+            '2. Tippen Sie in der App unten auf den Button [Fund melden].\n' +
+            '3. Foto aufnehmen: Machen Sie mit der Handykamera ein klares Foto des Fundes.\n' +
+            '4. Dringlichkeit auswaehlen:\n' +
+            '   - Notfall / Vermisste Person (hoechste Prioritaet)\n' +
+            '   - Spur / Faehrte\n' +
+            '   - Gegenstand / Kleidungsstueck\n' +
+            '5. Kurze Beschreibung eingeben (z.B. "Roter Damenschuh im Brombeergestruepp").\n' +
+            '6. Auf [Absenden] tippen: Ihre exakte GPS-Koordinate wird automatisch angehaengt und der Einsatzleitung sofort mit akustischem Signal gemeldet!',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
+  ],
+  spacingAfter: 4
+});
+
+drawDynamicCard({
+  title: 'Schritt 5: Taktischer Funk & Pager-Quittung',
+  badge: 'SCHRITT 5',
+  badgeColor: C_PRIMARY,
+  sections: [
+    {
+      heading: 'Ziel: Reibungsloser Funkverkehr mit der Einsatzleitung.',
+      text: '- Textfunk: Nutzen Sie den Chat fuer kurze Rueckmeldungen (z.B. "Sektor A zu 50% abgesucht, keine Feststellung").\n' +
+            '- Pager-Sirene: Wenn die Einsatzleitung einen Alarm ausloest, ertoent ein lauter Signalton auf Ihrem Handy. Quittieren Sie den Alarm per Fingertipp und beachten Sie sofort die Durchsage (z.B. Suchabbruch bei Fund oder Gefahrenlage).\n' +
+            '- Funkloch-Sicherheit: Haben Sie im dichten Wald kurzzeitig keinen Mobilfunkempfang, zeichnet Ihr Handy die GPS-Spur lokal im Speicher weiter auf und uebermittelt sie automatisch, sobald wieder Netzempfang besteht.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
+  ],
+  spacingAfter: 4
+});
+
+drawDynamicCard({
+  title: 'Schritt 6: Einsatzende & persoenliche Rueckmeldung',
+  badge: 'SCHRITT 6',
+  badgeColor: C_DARK,
+  sections: [
+    {
+      heading: 'Ziel: Sichere Rueckkehr aller Teams zum Bereitstellungsraum.',
+      text: '1. Nach dem offiziellen Signal zum Einsatzende (per Funk oder Pager) brechen Sie die Suche ab.\n' +
+            '2. Kehren Sie auf dem sichersten Weg zum Sammelplatz / zur Einsatzzentrale zurueck.\n' +
+            '3. Melden Sie sich persoenlich bei der Einsatzleitung zurueck!\n' +
+            '4. Erst wenn Sie persoenlich registriert sind, kann die EL den Einsatz vollstaendig schliessen.\n' +
+            '5. Nach Einsatzbeendigung stoppt das Tracking automatisch auf Ihrem Smartphone.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
+  ],
+  spacingAfter: 4
+});
+
+// ============================================================================
+// TEIL III: SCHRITT-FÜR-SCHRITT ZUM PERSÖNLICHEN TRACKINGTEST
+// ============================================================================
+startChapter('TEIL III: Persoenlicher GPS-Trackingtest', 'Autonomer Hardware- und Genauigkeitstest fuer alle Helfer');
 
 printParagraph(
-  'Um Verwechslungen zwischen echten Einsaetzen, Uebungen und Vorbereitungsphasen unter Stress ' +
-  'vollstaendig auszuschliessen, folgt SHS-EZ einer unveraenderlichen, farbcodierten Status-Logik:'
+  'Der persoenliche Trackingtest ist eine voellig autonome Funktion von SHS-EZ. ' +
+  'Er ermoeglicht jedem Mitglied, vor einem Einsatz oder im woechentlichen Hundetraining ' +
+  'die Satellitengenauigkeit, das Akkuverhalten und die GPS-Spuraufzeichnung des eigenen Handys zu testen:'
 );
 
-function printStatusCard(colorBox, title, badge, desc, actions) {
+drawDynamicCard({
+  title: 'Zweck & wichtigste Ausnahmeregel gemaess Dienstvorschrift',
+  badge: 'GRUNDREGEL',
+  badgeColor: C_PRIMARY,
+  sections: [
+    {
+      heading: 'Wann wird der Test genutzt?',
+      text: '- Vor dem Ernstfall zur Funktionspruefung des Handys im Wald.\n' +
+            '- Waehrend des Trainings zur Dokumentation von Suchstrecken fuer das Ausbildungsheft.\n' +
+            '- Bei Verdacht auf fehlerhafte Energiespar-Einstellungen des Smartphone-Betriebssystems.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    },
+    {
+      heading: 'Wichtige System-Ausnahme:',
+      text: 'Waehrend im regulaeren Bereitschaftsmodus KEINE Spuren aufgezeichnet werden, zeichnet der persoenliche ' +
+            'Trackingtest IMMER eine vollstaendige, hochpraezise Testspur (Linie, Start-/Zielflaggen, Richtungspfeile) auf! ' +
+            'Der Test darf von jedem Nutzer jederzeit gestartet werden - unabhaengig davon, ob ein Einsatz aktiv ist oder nicht.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
+  ],
+  spacingAfter: 4
+});
+
+drawDynamicCard({
+  title: 'Schritt-fuer-Schritt Anleitung fuer den Trackingtest',
+  badge: 'TESTABLAUF',
+  badgeColor: C_BLUE,
+  sections: [
+    {
+      heading: '1. Testdauer waehlen & Starten:',
+      text: '- Nach dem Login waehlen Sie auf der Auswahlseite "[Persoenlicher Trackingtest]".\n' +
+            '- Waehlen Sie die gewuenschte Dauer: 10 Minuten (Schnelltest), 20 Minuten (Standard) oder 30 Minuten (Intensivtest).\n' +
+            '- Tippen Sie auf [Starten]: Die App setzt eine gruene Startflagge und schaltet die Prozessor-Wachhaltung (WakeLock) scharf.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    },
+    {
+      heading: '2. Bewegung im Gelaende & Live-Cockpit:',
+      text: '- Sie koennen das Smartphone sperren und in die Tasche stecken.\n' +
+            '- Auf dem Bildschirm sehen Sie: Zurueckgelegte Strecke (Meter), aktuelle Geschwindigkeit (km/h) und die Restzeit.\n' +
+            '- Auf der Karte wird Ihre Wegstrecke mit Richtungspfeilen fuer jeden Richtungswechsel gezeichnet.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    },
+    {
+      heading: '3. Testende, Auswertung & PDF-Protokoll:',
+      text: '- Nach Ablauf des Timers stoppt der Test automatisch (oder manuell vorzeitig per Klick auf Stopp).\n' +
+            '- Eine rote Zielflagge markiert den Endpunkt.\n' +
+            '- Detaillierte Auswertung: Gesamtstrecke, Durchschnittsgeschwindigkeit, Hoehenprofil und Satellitenguete.\n' +
+            '- Export: Sie koennen das offizielle PDF-Testprotokoll mit Kartenbild herunterladen oder direkt an Ihren Ausbildungsleiter senden.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    }
+  ],
+  spacingAfter: 4
+});
+
+// ============================================================================
+// TEIL IV: ROLLEN, STATUSCODES & SYSTEMREGELN (REFERENZ)
+// ============================================================================
+startChapter('TEIL IV: Referenz - Rollen, Farbcodes & Regeln', 'Verbindliche Nachschlagetafel gemaess Dienstanweisung');
+
+printParagraph(
+  'Diese Referenztafel fasst alle Statusfarben, Rollenbefugnisse und Sicherheitsgarantien zusammen:'
+);
+
+function printRefStatus(boxCol, name, code, desc) {
   drawDynamicCard({
-    title,
-    badge,
-    badgeColor: colorBox,
-    borderColor: colorBox,
+    title: `${name} [Status: ${code}]`,
+    badge: code.toUpperCase(),
+    badgeColor: boxCol,
+    borderColor: boxCol,
     bgColor: C_WHITE,
     sections: [
       {
-        heading: 'Beschreibung & Verhalten im System:',
-        headingColor: C_DARK,
         text: desc,
         fontSize: 8.2,
         lineHeight: 4.1
-      },
-      {
-        heading: 'Verfuegbare Aktionen fuer Einsatzleitung & Admins:',
-        headingColor: C_BLUE,
-        text: actions,
-        fontSize: 8.2,
-        lineHeight: 4.1
       }
     ],
-    spacingAfter: 3.8
+    spacingAfter: 3.5
   });
 }
 
-printStatusCard(
+printRefStatus(
   [148, 163, 184],
-  '[WEISS] Angelegt / Vorbereitet (planned)',
-  'WEISS (NIEMALS GRUEN!)',
-  'Der Einsatz ist vorkonfiguriert (z. B. Vermisstenprofil hinterlegt, Sektoren grob vordefiniert), aber die Kraefte sind noch in Anfahrt. ' +
-  'Fuer angelegte Einsaetze gelten noch KEINE Aktiv-Einsatz-Sperrregeln. Angelegte Einsaetze werden separat gefuehrt und gehoeren noch nicht ins Archiv.',
-  '- [Starten] Button: Schaltet das System scharf in den Aktiv-Modus.\n' +
-  '- [Entfernen] Button: Loescht den vorbereiteten Entwurf rueckstandslos.\n' +
-  '- WICHTIG: Hat KEINEN [Beenden]-Button, da er noch gar nicht gestartet wurde!'
+  'Angelegter Einsatz (Vorbereitet)',
+  'planned',
+  'FARBE: WEISS (NIEMALS GRUEN!). Der Einsatz ist angelegt, Kraefte sind in Anfahrt. Hat [Starten]- und [Entfernen]-Button, aber KEINEN [Beenden]-Button. Noch keine Aktiv-Sperrregeln.'
 );
 
-printStatusCard(
+printRefStatus(
   C_BLUE,
-  '[BLAU] Realeinsatz - Aktiv (active)',
-  'BLAU (REALEINSATZ)',
-  'Echter Vermisstenfall laeuft mit hoechster Prioritaet. Alle GPS-Suchspuren, Sektorenfreigaben, Funk- und Pagerkanaele sind voll aktiv. ' +
-  'Die Mindestbesetzung (1 Admin & 1 EL) ist aktiv geschuetzt. Tracking laeuft unterbrechungsfrei.',
-  '- [Pausieren] Button (z. B. Lagebesprechung, Gewitterpause)\n' +
-  '- [Einsatz Beenden] Button mit Rueckkehr-Bestaetigung aller Kraefte\n' +
-  '- Sektor-Editor, Fundmeldungen mit Foto, Drohnen-Stream, Einsatzfunk'
+  'Realeinsatz - Aktiv',
+  'active',
+  'FARBE: BLAU. Echter Vermisstenfall. Vollstaendiges Live-Tracking aller freigegebenen Sucher. Mindestbesetzung (1 Admin & 1 EL) ist aktiv geschuetzt. Funk- und Fundsystem voll aktiv.'
 );
 
-printStatusCard(
+printRefStatus(
   C_RED,
-  '[ROT] Realeinsatz - Pausiert (paused)',
-  'ROT (UNTERBROCHEN)',
-  'Der Realeinsatz ist temporaer unterbrochen (z. B. Nachtpause, Unwetter). Die GPS-Spuraufzeichnung ist voruebergehend angehalten, ' +
-  'aber alle Daten, Sektoren und bisherigen Spuren bleiben vollstaendig auf der Lagekarte erhalten.',
-  '- [Fortsetzen] Button: Nimmt die aktive Suche sofort wieder auf.\n' +
-  '- [Einsatz Beenden] Button: Beendet die Operation endgueltig.\n' +
-  '- Lageprotokollierung und Funkverkehr bleiben weiterhin aktiv.'
+  'Realeinsatz - Pausiert',
+  'paused',
+  'FARBE: ROT. Einsatz temporaer unterbrochen (Gewitter, Besprechung). Tracking pausiert, alle bisherigen Spuren bleiben voll erhalten. Kann per [Fortsetzen] sofort reaktiviert werden.'
 );
 
-printStatusCard(
+printRefStatus(
   [202, 138, 4],
-  '[GELB] Staffeluebung - Aktiv (active)',
-  'GELB (UEBUNGSEINSATZ)',
-  'Ausbildungs- und Pruefungseinsatz. Bietet exakt dieselben Funktionen wie ein Realeinsatz (Live-GPS, Suchspuren, Sektoren, Funk), ' +
-  'wird im System und im spaeteren Archiv jedoch unuebersehbar als Schulungsmassnahme gekennzeichnet.',
-  '- [Pausieren] Button\n' +
-  '- [Uebung Beenden] Button\n' +
-  '- Ausbildungsbericht & Protokollexport fuer Pruefungsunterlagen'
+  'Staffeluebung - Aktiv',
+  'active',
+  'FARBE: GELB. Uebungs- und Pruefungsbetrieb. Exakt identische Funktionen wie Realeinsatz, wird jedoch im System und Archiv unuebersehbar als Schulung gekennzeichnet.'
 );
 
-printStatusCard(
+printRefStatus(
   [234, 88, 12],
-  '[ORANGE] Staffeluebung - Pausiert (paused)',
-  'ORANGE (UEBUNGS-PAUSE)',
-  'Unterbrechung der Uebung fuer Auswerter-Feedback oder Truppwechsel. Tracking pausiert.',
-  '- [Fortsetzen] Button\n' +
-  '- [Uebung Beenden] Button'
-);
-
-// ==========================================
-// SEITE 6: LAGEKARTE, SEKTOREN & FUNK
-// ==========================================
-startChapter('6. Taktische Lagekarte, Sektoren, Funk & Pager', 'Operative Werkzeuge fuer Fuehrungskraefte und Suchtrupps');
-
-printParagraph(
-  'Das Herzstueck von SHS-EZ ist die interaktive Lagekarte mit integrierter Sektorenverwaltung, ' +
-  'Lageprotokollierung und Einsatzstellenfunk:'
+  'Staffeluebung - Pausiert',
+  'paused',
+  'FARBE: ORANGE. Pause im Uebungsbetrieb. Tracking pausiert.'
 );
 
 drawDynamicCard({
-  title: '[KARTE] Taktische Lagekarte & Kartenebenen',
-  borderColor: C_BORDER,
-  bgColor: C_WHITE,
+  title: 'Wichtigste Schutz- & Sicherheitsregeln im Ueberblick',
+  badge: 'SICHERHEIT',
+  badgeColor: C_PRIMARY,
   sections: [
     {
-      text: '- Kartenebenen: Schneller Wechsel zwischen topografischer Wanderkarte (OpenTopoMap mit Hoehenlinien und Waldwegen) und Satelliten-Luftbild.\n' +
-            '- Zentrales Wetter- & GPS-Bedienfenster (oben rechts): Alle Kartensteuerungen (Nachtmodus/Darkmode mit Mond/Sonne, Drohnen-Stream mit Funkantenne RadioTower, GPS-Status) sind ergonomisch oben rechts gebuendelt und verdecken nicht die Zoom-Leiste.\n' +
-            '- Live-Pins: Eindeutige Kennzeichnung aller Kraefte mit Funkrufnamen, Akkustand und Rolle.\n' +
-            '- EZ-Pin-Buendelung: Fuehrungskraefte in der Einsatzzentrale werden sauber im "EZ"-Marker zusammengefasst.',
-      fontSize: 8.3,
-      lineHeight: 4.2
+      heading: '1. Unantastbarkeit von First-Admin Maria:',
+      text: 'Der Hauptadministrator-Account (user-maria, Maria) besitzt unveraenderlichen Eigentuemer-Schutz. Er kann weder geloescht, gesperrt noch herabgestuft werden.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    },
+    {
+      heading: '2. Mindestbesetzung im laufenden Einsatz:',
+      text: 'Solange ein Einsatz aktiv oder pausiert ist, muessen mindestens 1 Admin und 1 EL online bleiben. Ein Wechsel auf Gast oder Logout der letzten Fuehrungskraft ist technisch gesperrt.',
+      fontSize: 8.2,
+      lineHeight: 4.1
+    },
+    {
+      heading: '3. Geister-Filter im Bereitschaftsmodus:',
+      text: 'Helfer, die im Bereitschaftsmodus laenger als 5 Minuten kein Lebenszeichen senden, werden automatisch ausgeblendet, um Kartenverwirrung zu verhindern. Im aktiven Einsatz ist dieser Filter deaktiviert.',
+      fontSize: 8.2,
+      lineHeight: 4.1
     }
   ],
   spacingAfter: 4
 });
-
-drawDynamicCard({
-  title: '[SEKTOREN] Sektorenverwaltung & Doppelzuweisungs-Schutz',
-  borderColor: C_BORDER,
-  bgColor: C_WHITE,
-  sections: [
-    {
-      text: '- Freies Polygon-Zeichnen: Sektoren werden mit wenigen Fingertipps direkt auf Wald- und Feldraendern abgesteckt.\n' +
-            '- Automatische Flaechenberechnung: Exakte Hektar- (ha) und Umfangsberechnung fuer realistische Zeit- und Kraefteansaetze.\n' +
-            '- Doppelzuweisungs-Warnung: Weist die EL einen Sucher zu, der bereits in einem anderen Sektor eingeteilt ist, warnt das System sofort auffaellig in Rot ("Warnung: In Sektor X"). Doppelbelegungen werden dadurch zuverlaessig verhindert.\n' +
-            '- Statusverwaltung: Sektoren wechseln farblich von Offen (Gelb) ueber In Arbeit (Blau) zu Abgesucht (Gruen).',
-      fontSize: 8.3,
-      lineHeight: 4.2
-    }
-  ],
-  spacingAfter: 4
-});
-
-drawDynamicCard({
-  title: '[FUNK & PAGER] Funk, Pager & Einsatzdokumentation (Neu in Version 6.4)',
-  borderColor: C_BORDER,
-  bgColor: C_WHITE,
-  sections: [
-    {
-      text: '- Tastatur-optimierter Textfunk: Das Eingabefeld bleibt auf Android- und iOS-Smartphones beim Aufklappen der Bildschirmtastatur stabil fixiert.\n' +
-            '- Akustischer Pager-Weckruf: Loest bei dringenden Durchsagen oder Erstalarmierung einen durchdringenden Weckton aus (ideal fuer schlafende Hundefuehrer im Bereitstellungsraum).\n' +
-            '- Direkt-PDF & Leeren: Im aktiven Einsatz koennen Chatverlauf, System-Logbuch sowie Alarme & Fundmeldungen mit einem Klick als sauberes PDF exportiert werden. Die Eintraege fliessen automatisch in das revisionssichere Einsatztagebuch ein und ueberlasten nicht den Live-Chat.',
-      fontSize: 8.3,
-      lineHeight: 4.2
-    }
-  ],
-  spacingAfter: 4
-});
-
-// ==========================================
-// SEITE 7: CHECKLISTE FÜR DEN EINSATZABLAUF
-// ==========================================
-startChapter('7. Checkliste fuer den Einsatzablauf', 'Schritt-fuer-Schritt Leitfaden von der Erstalarmierung bis zum Archiv');
-
-printParagraph(
-  'Dieser standardisierte Einsatzablauf stellt sicher, dass alle Daten vollstaendig erfasst werden ' +
-  'und nach Einsatzende ein lueckenloses Behoerdenprotokoll zur Verfuegung steht:'
-);
-
-function printStepCard(stepNum, stepTitle, phaseBadge, bulletText) {
-  drawDynamicCard({
-    title: `${stepNum}: ${stepTitle}`,
-    badge: phaseBadge,
-    badgeColor: C_PRIMARY,
-    borderColor: C_BORDER,
-    bgColor: C_WHITE,
-    sections: [
-      {
-        text: bulletText,
-        fontSize: 8.3,
-        lineHeight: 4.2
-      }
-    ],
-    spacingAfter: 4
-  });
-}
-
-printStepCard(
-  'Phase 1',
-  'Alarmierung & Einsatz vorbereiten',
-  'VORBEREITUNG',
-  '1. Einsatzleiter oeffnet SHS-EZ und klickt auf "Neuer Einsatz".\n' +
-  '2. Einsatzname, Vermisstenprofil (Name, Foto, Kleidung, Vorerkrankungen), Sammelplatz / EZ und Modus (Realeinsatz oder Uebung) festlegen.\n' +
-  '3. Speichern: Der Einsatz hat den Status planned (weiss). Anfahrende Suchtrupps koennen sich bereits orientieren.'
-);
-
-printStepCard(
-  'Phase 2',
-  'Eintreffen am Sammelplatz & Einsatz starten',
-  'START & SAMMLUNG',
-  '1. Am Sammelplatz klickt die EL auf [Starten] - Der Status wechselt auf Blau (Realeinsatz) oder Gelb (Uebung).\n' +
-  '2. Einsatzkraefte melden sich am Handy als "Aktiver Nutzer / Sucher" an.\n' +
-  '3. Die Fuehrungs-Schutzregel (mind. 1 Admin & 1 EL dauerhaft online) wird automatisch aktiviert.'
-);
-
-printStepCard(
-  'Phase 3',
-  'Sektoreneinteilung & Sucher auf BEREIT schalten',
-  'SUCHPHASE',
-  '1. EL teilt im Sektor-Editor den Teams ihre Suchbereiche zu (Achtung auf Doppelzuweisungs-Warnung!).\n' +
-  '2. EL schaltet jedes abmarschbereite Team per Klick auf [Bereit] (oder Barcode-Scan des Mitgliedsausweises) scharf.\n' +
-  '3. Die hochpraezise GPS-Suchspur des Hundeteams erscheint ab diesem Moment live fuer alle auf der Lagekarte.'
-);
-
-printStepCard(
-  'Phase 4',
-  'Fund, Einsatzende & Revisionssicheres Archiv',
-  'ABSCHLUSS',
-  '1. Bei Fund: Foto mit GPS-Fix aufnehmen und uebermitteln. Die EL verifiziert den Fund und alarmiert Rettungsdienst / Notarzt.\n' +
-  '2. Nach Rueckkehr aller Kraefte: Klick auf [Einsatz Beenden] und Pruefung der Vollstaendigkeit.\n' +
-  '3. Alle GPS-Spuren, Sektoren und Funkprotokolle werden revisionssicher im Einsatzarchiv gespeichert.\n' +
-  '4. Export des offiziellen Behoerden-Einsatzberichtes (PDF & CSV) mit Karten-Snapshots und Spurennachweis.'
-);
 
 // ============================================================================
 // FOOTER AUF ALLEN SEITEN RENDERN
@@ -824,28 +814,35 @@ for (let p = 1; p <= totalPages; p++) {
 
   doc.setDrawColor(...C_BORDER);
   doc.setLineWidth(0.3);
-  doc.line(margin, pageHeight - 13, pageWidth - margin, pageHeight - 13);
+  doc.line(margin, pageHeight - 12.5, pageWidth - margin, pageHeight - 12.5);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.8);
+  doc.setFontSize(7.6);
   doc.setTextColor(...C_MUTED);
-  doc.text('SHS-EZ - Suchhundestaffel Einsatzzentrale - Offizielles Systemhandbuch v6.4', margin, pageHeight - 8.5);
-  doc.text(`Seite ${p} von ${totalPages}`, pageWidth - margin - 18, pageHeight - 8.5);
+  doc.text('SHS-EZ - Suchhundestaffel Einsatzzentrale - Schritt-fuer-Schritt Handbuch v6.4', margin, pageHeight - 8);
+  doc.text(`Seite ${p} von ${totalPages}`, pageWidth - margin - 18, pageHeight - 8);
 }
 
 // ============================================================================
 // DATEIEN SPEICHERN
 // ============================================================================
 const outPathRoot = path.join(__dirname, '..', 'SHS_EZ_Funktionsuebersicht_Handbuch.pdf');
+const outPathStepManual = path.join(__dirname, '..', 'SHS_EZ_Schritt_fuer_Schritt_Anleitung.pdf');
 const outPathBackups = path.join('C:\\Users\\Maria\\.gemini\\antigravity\\scratch\\shs-ez-backups\\v6.4-backup', 'SHS_EZ_Funktionsuebersicht_Handbuch.pdf');
+const outPathBackups2 = path.join('C:\\Users\\Maria\\.gemini\\antigravity\\scratch\\shs-ez-backups\\v6.4-backup', 'SHS_EZ_Schritt_fuer_Schritt_Anleitung.pdf');
 
 const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+
 fs.writeFileSync(outPathRoot, pdfBuffer);
-console.log('PDF erfolgreich erstellt unter:', outPathRoot);
+console.log('PDF erfolgreich gespeichert:', outPathRoot);
+
+fs.writeFileSync(outPathStepManual, pdfBuffer);
+console.log('PDF erfolgreich gespeichert:', outPathStepManual);
 
 try {
   fs.writeFileSync(outPathBackups, pdfBuffer);
-  console.log('PDF erfolgreich gesichert in Backups unter:', outPathBackups);
+  fs.writeFileSync(outPathBackups2, pdfBuffer);
+  console.log('PDF erfolgreich in Backups kopiert.');
 } catch (e) {
-  console.error('Backup copy error:', e.message);
+  console.warn('Backup-Pfad nicht beschreibbar:', e.message);
 }
