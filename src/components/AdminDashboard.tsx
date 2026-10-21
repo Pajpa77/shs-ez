@@ -31,6 +31,7 @@ import {
   Database,
   ExternalLink,
   RotateCcw,
+  Trash2,
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -85,6 +86,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     resumeOperation,
     updateOperation,
     setCurrentOperationId,
+    deleteOperation,
+    showConfirmModal,
   } = useRescue();
 
   const isAdmin = isUserAdmin(currentUser);
@@ -193,12 +196,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {currentOperation ? (
               <div className="space-y-3 font-mono">
                 {currentOperation.status === 'planned' && (
-                  <div className="bg-emerald-950/70 border border-emerald-500/60 rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-base shrink-0">🟢</span>
+                  <div className="bg-slate-800/90 border-2 border-white/70 rounded-xl p-3 flex items-center justify-between gap-2 text-xs shadow-md">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="text-base shrink-0">⚪</span>
                       <div className="min-w-0">
-                        <span className="font-bold text-white block">Einsatz in Vorbereitung / Bereitschaft</span>
-                        <span className="text-[10px] text-emerald-300 truncate block">Daten &amp; Sektoren können bearbeitet werden. Sobald die Suche beginnt: Starten!</span>
+                        <span className="font-bold text-white block">Einsatz angelegt (Noch nicht gestartet)</span>
+                        <span className="text-[10px] text-slate-300 truncate block">Daten &amp; Sektoren können vorbereitet werden. Sobald die Suche beginnt: Starten!</span>
                       </div>
                     </div>
                     <button
@@ -320,7 +323,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </button>
             )}
 
-            {currentOperation && currentOperation.status !== 'completed' && (
+            {currentOperation && currentOperation.status === 'planned' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  showConfirmModal({
+                    title: 'Angelegten Einsatz entfernen',
+                    message: `Möchten Sie den noch nicht gestarteten Einsatz "${currentOperation.title}" wieder entfernen?`,
+                    confirmLabel: 'Einsatz entfernen',
+                    isDanger: true,
+                    onConfirm: () => {
+                      deleteOperation(currentOperation.id);
+                    },
+                  });
+                }}
+                className="py-2.5 px-3 bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-700 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 shadow col-span-2 sm:col-span-1"
+                title="Angelegten Einsatz entfernen"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Entfernen</span>
+              </button>
+            ) : currentOperation && currentOperation.status !== 'completed' ? (
               <button
                 type="button"
                 onClick={onOpenEndOperation}
@@ -329,7 +352,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <Square className="w-4 h-4 fill-current" />
                 <span>Beenden</span>
               </button>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -587,6 +610,115 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       </div>
 
+      {/* ── SECTION 1B: GESONDERT GESPEICHERTE / ANGELEGTE EINSÄTZE (VORBEREITUNG) ── */}
+      {plannedOps.length > 0 && (
+        <div className="bg-[#1E293B] border-2 border-white/40 p-5 rounded-2xl shadow-xl space-y-3 font-mono">
+          <div className="flex items-center justify-between border-b border-slate-700/80 pb-3">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase text-white tracking-wide">
+              <span className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.85)]" />
+              <span>⚪ Angelegte Einsätze in Vorbereitung ({plannedOps.length})</span>
+            </div>
+            <span className="text-[10px] text-slate-300 bg-slate-800 px-2 py-0.5 rounded border border-slate-500">
+              Nicht gestartet • Gesondert vom Archiv
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {plannedOps.map((op) => {
+              const isSelected = currentOperation?.id === op.id;
+              return (
+                <div
+                  key={op.id}
+                  className={`p-3.5 rounded-xl border transition flex flex-col justify-between gap-3 ${
+                    isSelected
+                      ? 'bg-slate-800/95 border-white shadow-lg'
+                      : 'bg-slate-900/80 border-slate-600 hover:border-slate-400'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span>⚪</span>
+                        <span className="text-xs font-bold text-white truncate">{op.title}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-300 mt-1 truncate">
+                        👤 Vermisst: {op.missingPerson?.name || 'Unbekannt'} • {op.sectors?.length || 0} Sektoren
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 truncate">
+                        📍 {op.headquartersLocation?.address || 'Vereinsbüro'}
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-slate-800 text-white border border-slate-300 shrink-0">
+                      Angelegt
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-700/80">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentOperationId(op.id);
+                        updateOperation(op.id, { status: 'active' });
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase flex items-center gap-1 cursor-pointer transition shadow"
+                      title="Einsatz jetzt aktiv starten"
+                    >
+                      <Play className="w-3 h-3 fill-current" />
+                      <span>Starten</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentOperationId(op.id);
+                        onOpenEditOperation(op);
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-amber-300 text-[10px] font-bold uppercase flex items-center gap-1 cursor-pointer transition border border-slate-500"
+                      title="Einsatzdaten bearbeiten"
+                    >
+                      <Edit className="w-3 h-3" />
+                      <span>Editieren</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentOperationId(op.id);
+                        onNavigateToMap();
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-blue-950/80 hover:bg-blue-900 text-blue-300 text-[10px] font-bold uppercase flex items-center gap-1 cursor-pointer transition border border-blue-700"
+                      title="Auf Lagekarte vorbereiten (Sektoren zeichnen)"
+                    >
+                      <span>🗺️ Karte</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        showConfirmModal({
+                          title: 'Angelegten Einsatz entfernen',
+                          message: `Möchten Sie den noch nicht gestarteten Einsatz "${op.title}" wieder entfernen?`,
+                          confirmLabel: 'Entfernen',
+                          isDanger: true,
+                          onConfirm: () => {
+                            deleteOperation(op.id);
+                          },
+                        });
+                      }}
+                      className="ml-auto px-2.5 py-1.5 rounded-lg bg-red-950/70 hover:bg-red-900 text-red-300 text-[10px] font-bold uppercase flex items-center gap-1 cursor-pointer transition border border-red-800"
+                      title="Angelegten Einsatz entfernen"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Entfernen</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── SECTION 3: SYSTEM-, CLOUD- & TECHNIK-STATUS ── */}
       <div className="bg-[#1E293B] border border-slate-700 p-5 rounded-2xl shadow-xl space-y-4 font-mono">
         <div className="flex items-center justify-between border-b border-slate-700/80 pb-3">
@@ -594,7 +726,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <Database className="w-4 h-4 text-emerald-400" />
             <span>Technik- &amp; Synchronisations-Status</span>
           </div>
-          <span className="text-[10px] text-slate-400 font-normal">Release v6.0</span>
+          <span className="text-[10px] text-slate-400 font-normal">Release v6.1</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

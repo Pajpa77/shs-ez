@@ -579,6 +579,9 @@ const MainApp: React.FC = () => {
             <div className="flex-1 relative flex flex-col h-full w-full">
               <TacticalMap
                 isMapLight={isMapLight}
+                setIsMapLight={setIsMapLight}
+                showDroneFeed={showDroneFeed}
+                setShowDroneFeed={setShowDroneFeed}
                 onSelectArchiveOp={(opId) => {
                   setSelectedArchiveOpId(opId);
                   setActiveTab('archive');

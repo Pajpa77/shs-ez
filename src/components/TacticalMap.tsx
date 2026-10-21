@@ -61,6 +61,9 @@ import {
   Search,
   FileUp,
   WifiOff,
+  Moon,
+  Sun,
+  RadioTower,
 } from 'lucide-react';
 import { useDraggable } from '../hooks/useDraggable';
 import { GeoImportModal } from './GeoImportModal';
@@ -103,6 +106,9 @@ interface TacticalMapProps {
   onSelectArchiveOp?: (opId: string) => void;
   /** Controls map tile brightness: true = light tiles, false = dark-filtered tiles */
   isMapLight?: boolean;
+  setIsMapLight?: (light: boolean) => void;
+  showDroneFeed?: boolean;
+  setShowDroneFeed?: (show: boolean) => void;
 }
 
 // Calculate geodesic area in hectares for a polygon
@@ -229,6 +235,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   onSaveSnapshot,
   onSelectArchiveOp,
   isMapLight = true,
+  setIsMapLight,
+  showDroneFeed = false,
+  setShowDroneFeed,
 }) => {
   const {
     currentOperation: globalOperation,
@@ -3837,6 +3846,32 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               <span>Ebenen</span>
             </button>
 
+            {setIsMapLight && (
+              <button
+                type="button"
+                onClick={() => setIsMapLight(!isMapLight)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-white border border-slate-700 text-xs font-bold transition cursor-pointer font-mono"
+                title={isMapLight ? 'Karte auf Dunkelmodus umschalten' : 'Karte auf Hellmodus umschalten'}
+              >
+                {isMapLight ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+              </button>
+            )}
+
+            {isAdminOrEL && setShowDroneFeed && (
+              <button
+                type="button"
+                onClick={() => setShowDroneFeed(!showDroneFeed)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer font-mono border ${
+                  showDroneFeed
+                    ? 'bg-red-600 text-white border-red-400 shadow-md shadow-red-500/40'
+                    : 'bg-slate-800 hover:bg-slate-700 text-red-400 border-slate-700'
+                }`}
+                title="Drohnen-Livestream Widget umschalten"
+              >
+                <RadioTower className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             {isAdminOrEL && !isDrawingSector && !isArchiveMode && onStartFreehandDrawing && (
               <>
                 <button
@@ -4178,13 +4213,39 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 Aktionen
               </button>
             </div>
-            <button
-              onClick={() => setIsDesktopSidebarCollapsed(true)}
-              className="text-slate-400 hover:text-white px-2 py-1 rounded text-[11px] bg-slate-800 hover:bg-slate-700 border border-slate-700 cursor-pointer ml-1"
-              title="Sidebar minimieren"
-            >
-              ◀
-            </button>
+            <div className="flex items-center gap-1 ml-1 shrink-0">
+              {setIsMapLight && (
+                <button
+                  type="button"
+                  onClick={() => setIsMapLight(!isMapLight)}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-white border border-slate-700 cursor-pointer transition"
+                  title={isMapLight ? 'Karte auf Dunkelmodus umschalten' : 'Karte auf Hellmodus umschalten'}
+                >
+                  {isMapLight ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+                </button>
+              )}
+              {isAdminOrEL && setShowDroneFeed && (
+                <button
+                  type="button"
+                  onClick={() => setShowDroneFeed(!showDroneFeed)}
+                  className={`p-1.5 rounded-lg border cursor-pointer transition ${
+                    showDroneFeed
+                      ? 'bg-red-600 text-white border-red-400 shadow-md shadow-red-500/40'
+                      : 'bg-slate-800 hover:bg-slate-700 text-red-400 border-slate-700'
+                  }`}
+                  title="Drohnen-Livestream Widget umschalten"
+                >
+                  <RadioTower className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <button
+                onClick={() => setIsDesktopSidebarCollapsed(true)}
+                className="text-slate-400 hover:text-white px-2 py-1 rounded text-[11px] bg-slate-800 hover:bg-slate-700 border border-slate-700 cursor-pointer"
+                title="Sidebar minimieren"
+              >
+                ◀
+              </button>
+            </div>
           </div>
 
           {/* TAB 1: LAYERS */}
@@ -4297,6 +4358,38 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   {showWeatherOverlay ? '✓ Eingeblendet' : 'Ausgeblendet'}
                 </button>
               </div>
+
+              {/* Karten-Darkmode (Mond) & Drohne (Funkantenne) im Ebenen/Wetter-Fenster */}
+              {(setIsMapLight || (isAdminOrEL && setShowDroneFeed)) && (
+                <div className="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-slate-700/80 font-mono">
+                  {setIsMapLight && (
+                    <button
+                      type="button"
+                      onClick={() => setIsMapLight(!isMapLight)}
+                      className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-[10px] font-bold transition cursor-pointer"
+                      title={isMapLight ? 'Karte auf Dunkelmodus umschalten' : 'Karte auf Hellmodus umschalten'}
+                    >
+                      {isMapLight ? <Moon className="w-3.5 h-3.5 text-amber-400" /> : <Sun className="w-3.5 h-3.5 text-amber-400" />}
+                      <span>{isMapLight ? 'Nachtkarte' : 'Tagkarte'}</span>
+                    </button>
+                  )}
+                  {isAdminOrEL && setShowDroneFeed && (
+                    <button
+                      type="button"
+                      onClick={() => setShowDroneFeed(!showDroneFeed)}
+                      className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg border text-[10px] font-bold transition cursor-pointer ${
+                        showDroneFeed
+                          ? 'bg-red-600 text-white border-red-400 shadow'
+                          : 'bg-slate-800 hover:bg-slate-700 text-red-400 border-slate-700'
+                      }`}
+                      title="Drohnen-Livestream Widget umschalten"
+                    >
+                      <RadioTower className="w-3.5 h-3.5" />
+                      <span>Drohne</span>
+                    </button>
+                  )}
+                </div>
+              )}
 
               <div className="pt-2 border-t border-slate-700 flex flex-col gap-1.5">
                 <span className="text-[10px] text-slate-400 uppercase font-mono">KARTENSTIL:</span>
@@ -4525,6 +4618,34 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   >
                     <MapPin className="w-3.5 h-3.5 text-indigo-400" />
                     <span>{isPlacingEzMode ? 'Tippen Sie auf die Karte...' : '📍 EZ auf Karte platzieren / verschieben'}</span>
+                  </button>
+                )}
+
+                {setIsMapLight && (
+                  <button
+                    type="button"
+                    onClick={() => setIsMapLight(!isMapLight)}
+                    className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold rounded-lg border border-slate-700 transition cursor-pointer font-mono"
+                    title={isMapLight ? 'Karte auf Dunkelmodus umschalten' : 'Karte auf Hellmodus umschalten'}
+                  >
+                    {isMapLight ? <Moon className="w-3.5 h-3.5 text-amber-400" /> : <Sun className="w-3.5 h-3.5 text-amber-400" />}
+                    <span>{isMapLight ? 'Nachtkarte' : 'Tagkarte'}</span>
+                  </button>
+                )}
+
+                {isAdminOrEL && setShowDroneFeed && (
+                  <button
+                    type="button"
+                    onClick={() => setShowDroneFeed(!showDroneFeed)}
+                    className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition cursor-pointer font-mono ${
+                      showDroneFeed
+                        ? 'bg-red-600 text-white border-red-400 shadow'
+                        : 'bg-slate-800 hover:bg-slate-700 text-red-400 border-slate-700'
+                    }`}
+                    title="Drohnen-Livestream Widget umschalten"
+                  >
+                    <RadioTower className="w-3.5 h-3.5" />
+                    <span>Drohne</span>
                   </button>
                 )}
               </div>

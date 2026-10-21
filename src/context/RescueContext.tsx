@@ -3978,7 +3978,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
           authorName: currentUser?.name || 'Einsatzleiter',
           authorRole: currentUser?.role || 'admin',
           category: 'status',
-          text: `${data.type === 'operation' ? '🔴 REALEINSATZ' : '🟠 ÜBUNG'} eröffnet: "${data.title}"`,
+          text:
+            data.status === 'planned'
+              ? `⚪ Einsatz angelegt (Vorbereitung, noch nicht gestartet): "${data.title}"`
+              : `${data.type === 'operation' ? '🔴 REALEINSATZ' : '🟠 ÜBUNG'} eröffnet: "${data.title}"`,
         },
       ],
       participantIds: Array.isArray(data.participantIds) && data.participantIds.length > 0
@@ -4018,26 +4021,28 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       // ignore
     }
     
-    // Reset arrival status for everyone when a new operation starts
-    setAllUsers((prev) => {
-      const next = prev.map((u) => {
-        const updatedUser: User = {
-          ...u,
-          arrivalStatus: 'in_transit',
-          updatedAt: new Date().toISOString(),
-        };
-        syncUserToCloud(updatedUser);
-        return updatedUser;
+    // Reset arrival status for everyone only when a new operation actually starts (not when merely planned)
+    if (newOp.status === 'active') {
+      setAllUsers((prev) => {
+        const next = prev.map((u) => {
+          const updatedUser: User = {
+            ...u,
+            arrivalStatus: 'in_transit',
+            updatedAt: new Date().toISOString(),
+          };
+          syncUserToCloud(updatedUser);
+          return updatedUser;
+        });
+        try {
+          localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(next));
+        } catch {}
+        return next;
       });
+      setUserArrivalStatuses({});
       try {
-        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(next));
+        localStorage.removeItem('rescue_app_arrival_statuses_slk_v4');
       } catch {}
-      return next;
-    });
-    setUserArrivalStatuses({});
-    try {
-      localStorage.removeItem('rescue_app_arrival_statuses_slk_v4');
-    } catch {}
+    }
 
     syncOperationToCloud(newOp);
     return newOp;
@@ -4072,6 +4077,23 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
             console.warn(`[Security Guard] Non-admin/EL user '${currentUser?.name || 'unknown'}' attempted unauthorized operation status change to '${appliedUpdates.status}'. Status modification blocked.`);
             const { status: _blockedStatus, ...rest } = appliedUpdates;
             appliedUpdates = rest;
+          }
+
+          if (op.status === 'planned' && appliedUpdates.status === 'active') {
+            const startLog: OperationLogEntry = {
+              id: `log-start-${Date.now()}`,
+              operationId: op.id,
+              timestamp: now,
+              authorName: currentUser?.name || 'Einsatzleitung',
+              authorRole: currentUser?.role || 'admin',
+              category: 'status',
+              text: `${op.type === 'operation' ? '🔴 REALEINSATZ' : '🟠 ÜBUNG'} aktiv gestartet: "${op.title}"`,
+            };
+            appliedUpdates = {
+              ...appliedUpdates,
+              createdAt: now,
+              logs: [startLog, ...(appliedUpdates.logs || op.logs || [])],
+            };
           }
 
           const updated = cleanOperation({ ...op, ...appliedUpdates, updatedAt: now });

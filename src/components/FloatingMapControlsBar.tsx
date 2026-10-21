@@ -90,37 +90,6 @@ export const FloatingMapControlsBar: React.FC<FloatingMapControlsBarProps> = ({
         </button>
       )}
 
-      <div className="w-[1px] h-4 bg-slate-700 mx-0.5 shrink-0" />
-
-      {/* Map Tile Dark/Light Toggle */}
-      <button
-        type="button"
-        onClick={() => setIsMapLight(!isMapLight)}
-        className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-800 hover:bg-slate-700 active:bg-amber-600 text-amber-400 active:text-white transition active:scale-90 cursor-pointer border border-slate-700 shrink-0"
-        title={isMapLight ? 'Karte auf Dunkelmodus umschalten' : 'Karte auf Hellmodus umschalten'}
-      >
-        {isMapLight ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
-      </button>
-
-      {/* Admin Drone Feed Toggle */}
-      {isAdmin && (
-        <>
-          <div className="w-[1px] h-4 bg-slate-700 mx-0.5 shrink-0" />
-          <button
-            type="button"
-            onClick={() => setShowDroneFeed(!showDroneFeed)}
-            className={`w-6 h-6 flex items-center justify-center rounded-full transition active:scale-90 cursor-pointer border shrink-0 ${
-              showDroneFeed
-                ? 'bg-red-600 text-white border-red-500 shadow-md shadow-red-500/50'
-                : 'bg-slate-800 text-red-400 hover:bg-slate-700 border-slate-700'
-            }`}
-            title="Drohnen-Livestream Widget umschalten"
-          >
-            <RadioTower className="w-3.5 h-3.5" />
-          </button>
-        </>
-      )}
-
       {/* Reset Position Button if dragged away */}
       {position && (
         <button

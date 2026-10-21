@@ -80,11 +80,18 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
     userLocations,
   } = useRescue();
 
+  // Angelegte Einsätze (status === 'planned') gehören nicht ins Archiv, sondern werden gesondert in der Vorbereitung verwaltet
+  const archiveOperations = useMemo(
+    () => allOperations.filter((op) => op.status !== 'planned'),
+    [allOperations]
+  );
+
   const [selectedOpId, setSelectedOpId] = useState<string>(() => {
     if (initialSelectedOpId) return initialSelectedOpId;
-    // Prefer completed operation if any, or current
+    // Prefer completed operation if any, or first started operation
     const completed = allOperations.find((op) => op.status === 'completed');
-    return completed?.id || allOperations[0]?.id || '';
+    const fallback = allOperations.find((op) => op.status !== 'planned');
+    return completed?.id || fallback?.id || '';
   });
 
   // Sync state with incoming props
@@ -131,7 +138,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
   const [snapshotPreviewModal, setSnapshotPreviewModal] = useState<string | null>(null);
   const [isRegeneratingSnapshot, setIsRegeneratingSnapshot] = useState(false);
 
-  const selectedOp = allOperations.find((op) => op.id === selectedOpId) || allOperations[0];
+  const selectedOp = archiveOperations.find((op) => op.id === selectedOpId) || archiveOperations[0];
   const isAdmin = currentUser?.role === 'admin';
   const isEL = currentUser?.role === 'einsatzleitung';
   const canManageOps = isAdmin || isEL;
@@ -520,15 +527,15 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
         <div className="lg:col-span-4 space-y-3 font-mono">
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-              EINSÄTZE ({allOperations.length}):
+              EINSÄTZE ({archiveOperations.length}):
             </span>
             <span className="text-[10px] text-slate-500 font-mono">
-              {allOperations.filter((o) => o.status === 'completed').length} abgeschlossen
+              {archiveOperations.filter((o) => o.status === 'completed').length} abgeschlossen
             </span>
           </div>
 
           <div className="space-y-2.5 overflow-y-auto flex-1 pr-0.5">
-            {allOperations.map((op) => {
+            {archiveOperations.map((op) => {
               const isSel = selectedOp && op.id === selectedOp.id;
               const opIsExercise = op.type === 'exercise';
               const isOpCompleted = op.status === 'completed';

@@ -94,13 +94,13 @@ export const LoginScreen: React.FC = () => {
       };
     }
 
-    const plannedReal = allOperations.find(o => o.type !== 'exercise' && o.status === 'planned');
-    if (plannedReal) {
+    const plannedOp = allOperations.find(o => o.status === 'planned');
+    if (plannedOp) {
       return {
-        dotBg: 'bg-emerald-500', pingBg: 'bg-emerald-400', animatePing: true,
-        glow: 'shadow-[0_0_12px_rgba(16,185,129,0.8)]',
-        badgeBg: 'bg-emerald-950/70 border-emerald-700/60 text-emerald-300',
-        title: 'Lage: Einsatz Angelegt (Bereitschaft)',
+        dotBg: 'bg-white', pingBg: 'bg-slate-200', animatePing: false,
+        glow: 'shadow-[0_0_12px_rgba(255,255,255,0.85)]',
+        badgeBg: 'bg-slate-900/70 border-slate-400/60 text-white',
+        title: 'Lage: Einsatz Angelegt (Nicht gestartet)',
       };
     }
 
@@ -185,9 +185,9 @@ export const LoginScreen: React.FC = () => {
   const [showTestDuration, setShowTestDuration] = useState(false);
   const [testDuration, setTestDuration] = useState<10 | 20 | 30>(10);
 
-  // 2-step flow: pendingSessionMode is set when user picks role (active/observer) but there are
+  // 2-step flow: pendingSessionMode is set when user picks role (leadership/active/observer) but there are
   // multiple active operations → user must then pick which operation to join.
-  const [pendingSessionMode, setPendingSessionMode] = useState<'active' | 'observer' | null>(null);
+  const [pendingSessionMode, setPendingSessionMode] = useState<'leadership' | 'active' | 'observer' | null>(null);
   const [pendingOperationalRole, setPendingOperationalRole] = useState<'ez_command' | 'searcher' | null>(null);
 
   // Initialize selectedUser if in device unlock mode
@@ -199,32 +199,39 @@ export const LoginScreen: React.FC = () => {
   }, [loginMode, rememberedUser]);
 
   /**
-   * Called once both role (active/observer) AND target operation are known.
+   * Called once both role (leadership/active/observer) AND target operation are known.
    * Single canonical place for all login finalization state changes.
    */
   const handleFinalizeLogin = (
     user: User,
-    sessionMode: 'active' | 'observer',
+    sessionMode: 'leadership' | 'active' | 'observer',
     targetOpId?: string,
     opRole: 'ez_command' | 'searcher' = 'searcher'
   ) => {
+    const isLeadAccount =
+      isUserAdminOrEL(user) ||
+      isFirstAdmin(user) ||
+      user.isAdmin ||
+      user.canLeadOperations ||
+      user.username.toLowerCase().includes('admin') ||
+      user.username.toLowerCase().includes('leitung') ||
+      user.name.toLowerCase().includes('admin');
+    const defaultLeadRole: UserRole =
+      isFirstAdmin(user) || user.isAdmin || user.role === 'admin' || user.username.toLowerCase().includes('admin')
+        ? 'admin'
+        : 'einsatzleitung';
+
     // Update role first
     if (sessionMode === 'observer') {
       updateUser(user.id, { role: 'observer', operationalRole: 'searcher' });
+    } else if (sessionMode === 'leadership') {
+      updateUser(user.id, { role: defaultLeadRole, operationalRole: opRole });
     } else {
+      // sessionMode === 'active' (Sucher / Einsatzkraft)
       if (user.role === 'observer') {
-        const isLead =
-          isUserAdminOrEL(user) ||
-          isFirstAdmin(user) ||
-          user.isAdmin ||
-          user.canLeadOperations ||
-          user.username.toLowerCase().includes('admin') ||
-          user.username.toLowerCase().includes('leitung') ||
-          user.name.toLowerCase().includes('admin');
-        const defaultLeadRole: UserRole = (isFirstAdmin(user) || user.isAdmin || user.username.toLowerCase().includes('admin')) ? 'admin' : 'einsatzleitung';
-        updateUser(user.id, { role: isLead ? defaultLeadRole : 'responder', operationalRole: opRole });
+        updateUser(user.id, { role: isLeadAccount ? defaultLeadRole : 'responder', operationalRole: 'searcher' });
       } else {
-        updateUser(user.id, { operationalRole: opRole });
+        updateUser(user.id, { operationalRole: 'searcher' });
       }
     }
 
@@ -283,9 +290,9 @@ export const LoginScreen: React.FC = () => {
   const handleLeadershipRoleSelected = (opRole: 'ez_command' | 'searcher') => {
     if (!verifiedUser) return;
     if (activeOperations.length <= 1) {
-      handleFinalizeLogin(verifiedUser, 'active', activeOperations[0]?.id, opRole);
+      handleFinalizeLogin(verifiedUser, 'leadership', activeOperations[0]?.id, opRole);
     } else {
-      setPendingSessionMode('active');
+      setPendingSessionMode('leadership');
       setPendingOperationalRole(opRole);
     }
   };
@@ -391,49 +398,9 @@ export const LoginScreen: React.FC = () => {
       return;
     }
 
-    // Success – reset security counters
+    // Success – reset security counters and show the Role & Tracking-Test Selection Screen
     setFailedAttempts(0);
     setForceLogoutTarget(null);
-
-    // When NO operation is active (Bereitschaft): login immediately without showing any selector
-    if (activeOperations.length === 0) {
-      const isLead = isUserAdminOrEL(foundUser);
-      handleFinalizeLogin(
-        foundUser,
-        foundUser.role === 'observer' ? 'observer' : 'active',
-        undefined,
-        isLead ? 'ez_command' : 'searcher'
-      );
-      return;
-    }
-
-    // Observer accounts skip the role picker – finalize directly as observer.
-    const isTempObserver = foundUser.role === 'observer' && (
-      isFirstAdmin(foundUser) || 
-      foundUser.isAdmin || 
-      foundUser.canLeadOperations ||
-      foundUser.username.toLowerCase().includes('admin') ||
-      foundUser.username.toLowerCase().includes('leitung') ||
-      foundUser.name.toLowerCase().includes('admin')
-    );
-
-    if (foundUser.role === 'observer' && !isTempObserver) {
-      if (activeOperations.length > 1) {
-        setVerifiedUser(foundUser);
-        setPendingSessionMode('observer');
-      } else {
-        handleFinalizeLogin(foundUser, 'observer', activeOperations[0]?.id);
-      }
-      return;
-    }
-
-    // Regular responder (non-admin) during a single active operation logs in directly as searcher
-    if (!isUserAdminOrEL(foundUser) && activeOperations.length === 1) {
-      handleFinalizeLogin(foundUser, 'active', activeOperations[0].id, 'searcher');
-      return;
-    }
-
-    // Otherwise (Admin during active op or multiple active ops): show selector
     setVerifiedUser(foundUser);
   };
 
@@ -608,7 +575,7 @@ export const LoginScreen: React.FC = () => {
 
           <div className="pt-6 mt-6 border-t border-blue-700/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-blue-200 font-mono">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-cyan-300">v6.0</span>
+              <span className="font-bold text-cyan-300">v6.1</span>
               <button
                 type="button"
                 onClick={() => {
@@ -895,7 +862,7 @@ export const LoginScreen: React.FC = () => {
                             ) : (
                               <button
                                 type="button"
-                                onClick={() => handleLeadershipRoleSelected('searcher')}
+                                onClick={() => handleLeadershipRoleSelected('ez_command')}
                                 className="w-full py-2.5 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow cursor-pointer transition"
                               >
                                 <Shield className="w-4 h-4" />

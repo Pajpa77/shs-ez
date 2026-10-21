@@ -531,10 +531,10 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md overflow-y-auto font-sans">
-      <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl text-black dark:text-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-2 sm:p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md font-sans">
+      <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92dvh] flex flex-col text-black dark:text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-white dark:bg-slate-900/90 p-4 border-b border-slate-300 dark:border-slate-700 flex items-center justify-between">
+        <div className="bg-white dark:bg-slate-900/90 p-3.5 sm:p-4 border-b border-slate-300 dark:border-slate-700 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold text-xl border ${
               mode === 'edit'
@@ -547,9 +547,9 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
               <h2 className="text-sm font-bold text-white uppercase tracking-wide">
                 {mode === 'edit'
                   ? targetOp?.status === 'planned'
-                    ? 'Geplanten Einsatz bearbeiten'
+                    ? 'Angelegten Einsatz bearbeiten'
                     : 'Laufenden Einsatz bearbeiten'
-                  : 'Neue Suchaktion starten'}
+                  : 'Neuen Einsatz anlegen / starten'}
               </h2>
               <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-mono">
                 {mode === 'edit'
@@ -587,7 +587,11 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-6rem)] sm:overflow-y-auto flex-1 text-xs">
+        <form
+          onSubmit={handleSubmit}
+          className="p-4 sm:p-5 space-y-4 overflow-y-auto overscroll-contain flex-1 min-h-0 text-xs touch-pan-y"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {formError && (
             <div className="p-3 rounded-xl bg-red-950/90 border border-red-600 text-red-300 text-xs font-mono flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />
@@ -1274,7 +1278,7 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto flex-1 pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
                 {allUsers.map((u) => {
                   const isChecked = selectedResponders.includes(u.id);
                   return (
@@ -1551,10 +1555,10 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
                 <button
                   type="submit"
                   onClick={() => setSubmitAction('planned')}
-                  className="px-6 py-2.5 rounded-xl text-slate-100 font-bold transition cursor-pointer flex items-center gap-2 shadow-lg uppercase tracking-wider font-mono text-xs bg-slate-600 hover:bg-slate-500 ring-2 ring-slate-400/40"
+                  className="px-5 py-2.5 rounded-xl text-white font-bold transition cursor-pointer flex items-center gap-2 shadow-lg uppercase tracking-wider font-mono text-xs bg-slate-700 hover:bg-slate-600 border border-white/60 ring-2 ring-white/30"
                 >
-                  <Archive className="w-4 h-4" />
-                  <span>Nur anlegen (Bereitschaft)</span>
+                  <span>⚪</span>
+                  <span>Nur anlegen (Weiß / Vorbereitung)</span>
                 </button>
               )}
               <button

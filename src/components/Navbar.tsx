@@ -88,11 +88,11 @@ export const getOpTheme = (
       };
     } else if (op.status === 'planned') {
       return {
-        type: 'planned', colorName: 'Bereitschaft', emoji: '🟢', label: op.title,
-        dotBg: 'bg-emerald-500', pingBg: 'bg-emerald-400', animatePing: true,
-        ring: 'ring-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.5)]',
-        border: 'border-emerald-500', text: 'text-emerald-300',
-        badge: 'bg-emerald-950/80 text-emerald-300 border-emerald-800',
+        type: 'planned', colorName: 'Weiß (Angelegt)', emoji: '⚪', label: op.title,
+        dotBg: 'bg-white', pingBg: 'bg-slate-200', animatePing: false,
+        ring: 'ring-white/60 shadow-[0_0_12px_rgba(255,255,255,0.4)]',
+        border: 'border-slate-200', text: 'text-white',
+        badge: 'bg-slate-800 text-white border-slate-300',
       };
     }
   }
@@ -119,11 +119,11 @@ export const getOpTheme = (
 
   if (op.status === 'planned') {
     return {
-      type: 'planned', colorName: 'Bereitschaft', emoji: '🟢', label: op.title,
-      dotBg: 'bg-emerald-500', pingBg: 'bg-emerald-400', animatePing: true,
-      ring: 'ring-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.5)]',
-      border: 'border-emerald-500', text: 'text-emerald-300',
-      badge: 'bg-emerald-950/80 text-emerald-300 border-emerald-800',
+      type: 'planned', colorName: 'Weiß (Angelegt)', emoji: '⚪', label: op.title,
+      dotBg: 'bg-white', pingBg: 'bg-slate-200', animatePing: false,
+      ring: 'ring-white/60 shadow-[0_0_12px_rgba(255,255,255,0.4)]',
+      border: 'border-slate-200', text: 'text-white',
+      badge: 'bg-slate-800 text-white border-slate-300',
     };
   }
 
@@ -517,7 +517,28 @@ export const Navbar: React.FC<NavbarProps> = ({
                             </button>
                           ) : null}
 
-                          {onOpenEndOperationModal && currentOperation.status !== 'completed' && (
+                          {currentOperation.status === 'planned' ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowSarAdminMenu(false);
+                                showConfirmModal({
+                                  title: 'Angelegten Einsatz entfernen',
+                                  message: `Möchten Sie den noch nicht gestarteten Einsatz "${currentOperation.title}" wieder entfernen?`,
+                                  confirmLabel: 'Einsatz entfernen',
+                                  isDanger: true,
+                                  onConfirm: () => {
+                                    deleteOperation(currentOperation.id);
+                                  },
+                                });
+                              }}
+                              className="py-1.5 px-2 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-800 transition flex items-center justify-center gap-1 cursor-pointer font-bold"
+                              title="Angelegten Einsatz entfernen"
+                            >
+                              <span>🗑️</span>
+                              <span>Entfernen</span>
+                            </button>
+                          ) : onOpenEndOperationModal && currentOperation.status !== 'completed' ? (
                             <button
                               type="button"
                               onClick={() => {
@@ -530,7 +551,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               <span>🛑</span>
                               <span>Beenden</span>
                             </button>
-                          )}
+                          ) : null}
                         </div>
 
                         {onOpenCreateOperationModal && (
@@ -893,23 +914,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
 
                     <div className="space-y-2 my-1.5 pr-1">
-                      {/* Section 1: Aktive Einsätze & Bereitschaft */}
+                      {/* Section 1: Laufende & Pausierte Einsätze */}
                       <div>
-                        <div className="text-[10px] font-bold text-emerald-400 uppercase font-mono px-2 py-1 flex items-center justify-between">
+                        <div className="text-[10px] font-bold text-blue-400 uppercase font-mono px-2 py-1 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                            <span>Aktuell & Geplant ({allOperations.filter((o) => o.status === 'active' || o.status === 'planned' || o.status === 'paused').length})</span>
+                            <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+                            <span>Laufende Einsätze ({allOperations.filter((o) => o.status === 'active' || o.status === 'paused').length})</span>
                           </div>
-                          <span className="text-[9px] text-slate-400 font-mono">Farbcodiert</span>
+                          <span className="text-[9px] text-slate-400 font-mono">Aktiv / Pause</span>
                         </div>
-                        {allOperations.filter((o) => o.status === 'active' || o.status === 'planned' || o.status === 'paused').length === 0 ? (
+                        {allOperations.filter((o) => o.status === 'active' || o.status === 'paused').length === 0 ? (
                           <div className="px-3 py-2 bg-slate-900/60 rounded-xl text-[11px] text-slate-400 font-mono text-center border border-slate-800">
-                            Kein Einsatz läuft. (Bereitschaft)
+                            Kein Einsatz aktiv gestartet. (Bereitschaft)
                           </div>
                         ) : (
                           <div className="space-y-1">
                             {allOperations
-                              .filter((o) => o.status === 'active' || o.status === 'planned' || o.status === 'paused')
+                              .filter((o) => o.status === 'active' || o.status === 'paused')
                               .map((op) => {
                                 const opTheme = getOpTheme(op, allOperations);
                                 const isSelected = op.id === currentOperation?.id && activeTab !== 'archive';
@@ -943,21 +964,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                                     </div>
                                     <div className="flex items-center gap-1.5 shrink-0">
                                       <span className={`text-[9px] uppercase font-mono px-2 py-0.5 rounded font-bold border ${opTheme.badge}`}>
-                                        {op.status === 'planned' ? 'Bereit' : op.type === 'exercise' ? 'Übung' : 'Aktiv'}
+                                        {op.type === 'exercise' ? 'Übung' : 'Aktiv'}
                                       </span>
-                                      {op.status === 'planned' && isAdmin && (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            updateOperation(op.id, { status: 'active' });
-                                          }}
-                                          className="px-2 py-0.5 text-[10px] text-white bg-emerald-600 hover:bg-emerald-500 rounded border border-emerald-400 transition cursor-pointer font-bold font-mono uppercase"
-                                          title="Diesen Einsatz jetzt aktivieren und starten"
-                                        >
-                                          Start
-                                        </button>
-                                      )}
                                       {isAdmin && onOpenEditOperationModal && (
                                         <button
                                           type="button"
@@ -1016,6 +1024,108 @@ export const Navbar: React.FC<NavbarProps> = ({
                           </div>
                         )}
                       </div>
+
+                      {/* Section 1b: Angelegte Einsätze / Vorbereitung (Weiß — Nicht gestartet, gesondert gespeichert) */}
+                      {allOperations.filter((o) => o.status === 'planned').length > 0 && (
+                        <div className="pt-2 border-t border-slate-700/80">
+                          <div className="text-[10px] font-bold text-slate-200 uppercase font-mono px-2 py-1 flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"></span>
+                              <span>⚪ Angelegte Einsätze ({allOperations.filter((o) => o.status === 'planned').length})</span>
+                            </div>
+                            <span className="text-[9px] text-slate-400 font-mono">Nicht gestartet</span>
+                          </div>
+                          <div className="space-y-1">
+                            {allOperations
+                              .filter((o) => o.status === 'planned')
+                              .map((op) => {
+                                const opTheme = getOpTheme(op, allOperations);
+                                const isSelected = op.id === currentOperation?.id && activeTab !== 'archive';
+                                return (
+                                  <div
+                                    key={op.id}
+                                    onClick={() => {
+                                      setCurrentOperationId(op.id);
+                                      setActiveTab('map');
+                                      setShowOpDropdown(false);
+                                    }}
+                                    className={`w-full text-left p-2 rounded-xl flex items-center justify-between transition cursor-pointer group ${
+                                      isSelected
+                                        ? 'bg-slate-800 border-2 border-white/80 shadow-md'
+                                        : 'bg-slate-900/70 hover:bg-slate-800 text-slate-200 border border-slate-600'
+                                    }`}
+                                  >
+                                    <div className="truncate flex-1 mr-2">
+                                      <div className="font-semibold flex items-center gap-1.5 text-xs">
+                                        <span className="shrink-0">⚪</span>
+                                        <span className="truncate font-bold text-white">
+                                          {op.title}
+                                        </span>
+                                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border shrink-0 ${opTheme.badge}`}>
+                                          Weiß (Angelegt)
+                                        </span>
+                                      </div>
+                                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono truncate">
+                                        Vermisst: {op.missingPerson?.name || 'Unbekannt'} • #{op.id.slice(-4).toUpperCase()}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      {isAdmin && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            updateOperation(op.id, { status: 'active' });
+                                          }}
+                                          className="px-2 py-0.5 text-[10px] text-white bg-emerald-600 hover:bg-emerald-500 rounded border border-emerald-400 transition cursor-pointer font-bold font-mono uppercase"
+                                          title="Diesen angelegten Einsatz jetzt aktivieren und starten"
+                                        >
+                                          Start
+                                        </button>
+                                      )}
+                                      {isAdmin && onOpenEditOperationModal && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setCurrentOperationId(op.id);
+                                            setShowOpDropdown(false);
+                                            onOpenEditOperationModal(op);
+                                          }}
+                                          className="p-1 text-slate-300 hover:text-amber-300 hover:bg-amber-950/60 rounded border border-transparent hover:border-amber-700 transition cursor-pointer"
+                                          title="Angelegten Einsatz bearbeiten"
+                                        >
+                                          <Edit3 className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
+                                      {isAdmin && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            showConfirmModal({
+                                              title: 'Angelegten Einsatz entfernen',
+                                              message: `Möchten Sie den angelegten Einsatz "${op.title}" wieder entfernen?`,
+                                              confirmLabel: 'Entfernen',
+                                              isDanger: true,
+                                              onConfirm: () => {
+                                                deleteOperation(op.id);
+                                              },
+                                            });
+                                          }}
+                                          className="p-1 text-slate-300 hover:text-red-400 hover:bg-red-950/60 rounded border border-transparent hover:border-red-800 transition cursor-pointer"
+                                          title="Angelegten Einsatz entfernen"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Section 2: Beendete Einsätze im Archiv */}
                       {allOperations.filter((o) => o.status === 'completed').length > 0 && (
@@ -1143,7 +1253,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                     {isAdmin && currentOperation && (
                       <div className="pt-2 border-t border-slate-300 dark:border-slate-700 space-y-1.5">
                         <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase font-mono px-1">
-                          Einsatz-Steuerung (Beenden / Pausieren / Reaktivieren)
+                          {currentOperation.status === 'planned'
+                            ? 'Angelegter Einsatz (Starten / Bearbeiten / Entfernen)'
+                            : 'Einsatz-Steuerung (Beenden / Pausieren / Reaktivieren)'}
                         </div>
                         <div className="grid grid-cols-2 gap-1.5">
                           {currentOperation.status === 'planned' ? (
@@ -1171,6 +1283,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                                   ✏️ Bearbeiten
                                 </button>
                               )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowOpDropdown(false);
+                                  showConfirmModal({
+                                    title: 'Angelegten Einsatz entfernen',
+                                    message: `Möchten Sie den noch nicht gestarteten Einsatz "${currentOperation.title}" wieder entfernen?`,
+                                    confirmLabel: 'Einsatz entfernen',
+                                    isDanger: true,
+                                    onConfirm: () => {
+                                      deleteOperation(currentOperation.id);
+                                    },
+                                  });
+                                }}
+                                className="col-span-2 py-1.5 px-2 rounded-lg bg-red-600/30 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/40 text-[10px] font-bold transition flex items-center justify-center gap-1 font-mono cursor-pointer"
+                                title="Angelegten Einsatz entfernen"
+                              >
+                                🗑️ Angelegten Einsatz entfernen
+                              </button>
                             </>
                           ) : currentOperation.status === 'active' ? (
                             <button
