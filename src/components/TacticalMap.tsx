@@ -65,6 +65,7 @@ import {
 import { useDraggable } from '../hooks/useDraggable';
 import { GeoImportModal } from './GeoImportModal';
 import { OfflineMapModal } from './OfflineMapModal';
+import { AreaPartitionModal } from './AreaPartitionModal';
 import { ImportedTrack, ImportedWaypoint } from '../lib/geoImport';
 
 function escapeHtml(str: unknown): string {
@@ -236,6 +237,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     currentUser,
     myLocation,
     setSectorStatus,
+    updateSector,
     deleteSector,
     updateSearchArea,
     clearGpsTracks,
@@ -367,12 +369,180 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   } = useDraggable({ storageKey: 'weather_widget' });
   const [drawnPoints, setDrawnPoints] = useState<[number, number][]>([]);
   const [drawMode, setDrawMode] = useState<'pen' | 'click'>('pen');
+  const [drawTarget, setDrawTarget] = useState<'sector' | 'searchArea'>('sector');
   const [strokeHistory, setStrokeHistory] = useState<[number, number][][]>([]);
+  const [snapIndicator, setSnapIndicator] = useState<[number, number] | null>(null);
+  const [isPartitionModalOpen, setIsPartitionModalOpen] = useState(false);
+  const [partitionModalPolygon, setPartitionModalPolygon] = useState<[number, number][] | null>(null);
+  const [editingBoundarySectorId, setEditingBoundarySectorId] = useState<string | null>(null);
+  const [editingBoundaryPoints, setEditingBoundaryPoints] = useState<[number, number][]>([]);
   const [selectedSector, setSelectedSector] = useState<SearchSector | null>(null);
   const [isCapturingSnapshot, setIsCapturingSnapshot] = useState(false);
   const [snapshotSavedNotice, setSnapshotSavedNotice] = useState(false);
   const isAdminOrEL = Boolean(currentUser && isUserAdminOrEL(currentUser));
   const canManageOps = isAdminOrEL;
+
+  // Keep a ref of current sectors & searchAreaPolygon for real-time magnetic snapping without tearing down listeners
+  const sectorsSnapRef = useRef<{
+    sectors: SearchSector[];
+    searchAreaPolygon?: [number, number][];
+  }>({ sectors: [] });
+  sectorsSnapRef.current = {
+    sectors: currentOperation?.sectors || [],
+    searchAreaPolygon: currentOperation?.searchAreaPolygon,
+  };
+  const snappedKeysRef = useRef<Set<string>>(new Set());
+  const strokeHistoryRef = useRef<[number, number][][]>([]);
+  strokeHistoryRef.current = strokeHistory;
+
+  const snapLatLngToExistingSectors = useCallback(
+    (
+      map: L.Map,
+      latlng: L.LatLng,
+      options?: {
+        excludeSectorId?: string;
+        startPoint?: [number, number] | null;
+        vertexThresholdPx?: number;
+        edgeThresholdPx?: number;
+      }
+    ): { point: [number, number]; snapped: boolean; snappedToStart?: boolean } => {
+      const vertexThreshold = options?.vertexThresholdPx ?? 22;
+      const edgeThreshold = options?.edgeThresholdPx ?? 20;
+      const targetPx = map.latLngToContainerPoint(latlng);
+
+      // 1. Check snap to start point (clean contour closing)
+      if (options?.startPoint) {
+        const startPx = map.latLngToContainerPoint([options.startPoint[0], options.startPoint[1]]);
+        const distToStart = targetPx.distanceTo(startPx);
+        if (distToStart <= 24) {
+          return {
+            point: [options.startPoint[0], options.startPoint[1]],
+            snapped: true,
+            snappedToStart: true,
+          };
+        }
+      }
+
+      const candidatePolygons: [number, number][][] = [];
+      const { sectors, searchAreaPolygon } = sectorsSnapRef.current;
+      for (const sec of sectors) {
+        if (options?.excludeSectorId && sec.id === options.excludeSectorId) continue;
+        if (sec.polygon && sec.polygon.length >= 2) {
+          candidatePolygons.push(sec.polygon);
+        }
+      }
+      if (searchAreaPolygon && searchAreaPolygon.length >= 2) {
+        candidatePolygons.push(searchAreaPolygon);
+      }
+
+      // 2. Check snap to existing vertices (< 22 px)
+      let bestVertex: [number, number] | null = null;
+      let bestVertexDist = vertexThreshold;
+      for (const poly of candidatePolygons) {
+        for (const pt of poly) {
+          const vPx = map.latLngToContainerPoint([pt[0], pt[1]]);
+          const d = targetPx.distanceTo(vPx);
+          if (d < bestVertexDist) {
+            bestVertexDist = d;
+            bestVertex = [pt[0], pt[1]];
+          }
+        }
+      }
+      if (bestVertex) {
+        return { point: bestVertex, snapped: true };
+      }
+
+      // 3. Check snap to existing boundary segments (< 20 px)
+      let bestEdgePt: [number, number] | null = null;
+      let bestEdgeDist = edgeThreshold;
+      for (const poly of candidatePolygons) {
+        const len = poly.length;
+        for (let i = 0; i < len; i++) {
+          const a = poly[i];
+          const b = poly[(i + 1) % len];
+          const pA = map.latLngToContainerPoint([a[0], a[1]]);
+          const pB = map.latLngToContainerPoint([b[0], b[1]]);
+          const dx = pB.x - pA.x;
+          const dy = pB.y - pA.y;
+          const segLenSq = dx * dx + dy * dy;
+          if (segLenSq < 1) continue;
+          const t = Math.max(0, Math.min(1, ((targetPx.x - pA.x) * dx + (targetPx.y - pA.y) * dy) / segLenSq));
+          const projX = pA.x + t * dx;
+          const projY = pA.y + t * dy;
+          const distPx = Math.hypot(targetPx.x - projX, targetPx.y - projY);
+          if (distPx < bestEdgeDist) {
+            bestEdgeDist = distPx;
+            bestEdgePt = [
+              Number((a[0] + t * (b[0] - a[0])).toFixed(6)),
+              Number((a[1] + t * (b[1] - a[1])).toFixed(6)),
+            ];
+          }
+        }
+      }
+      if (bestEdgePt) {
+        return { point: bestEdgePt, snapped: true };
+      }
+
+      return {
+        point: [Number(latlng.lat.toFixed(6)), Number(latlng.lng.toFixed(6))],
+        snapped: false,
+      };
+    },
+    []
+  );
+
+  // Simplify freehand polygon with Douglas-Peucker (turf.simplify) while preserving snapped vertices
+  const simplifyDrawnPolygon = useCallback(
+    (points: [number, number][], modeUsed: 'pen' | 'click'): [number, number][] => {
+      if (points.length < 3) return points;
+      let cleaned = [...points];
+      if (
+        cleaned.length > 3 &&
+        Math.abs(cleaned[0][0] - cleaned[cleaned.length - 1][0]) < 1e-6 &&
+        Math.abs(cleaned[0][1] - cleaned[cleaned.length - 1][1]) < 1e-6
+      ) {
+        cleaned.pop();
+      }
+      if (modeUsed === 'click' || cleaned.length <= 6) {
+        return cleaned;
+      }
+      try {
+        const ring: [number, number][] = cleaned.map(([lat, lng]) => [lng, lat]);
+        ring.push([cleaned[0][1], cleaned[0][0]]);
+        const geoPoly = turf.polygon([ring]);
+        const simplified = turf.simplify(geoPoly, { tolerance: 0.00007, highQuality: true });
+        const simpCoords = simplified.geometry.coordinates[0];
+        if (simpCoords && simpCoords.length >= 4) {
+          const rawSimplified: [number, number][] = simpCoords
+            .slice(0, -1)
+            .map(([lng, lat]) => [Number(lat.toFixed(6)), Number(lng.toFixed(6))]);
+
+          // Keep any vertices from cleaned that were Either kept by Douglas-Peucker OR magnetically snapped to a neighbor
+          const simpKeySet = new Set(rawSimplified.map((p) => `${p[0].toFixed(6)},${p[1].toFixed(6)}`));
+          const merged: [number, number][] = [];
+          for (const pt of cleaned) {
+            const key = `${pt[0].toFixed(6)},${pt[1].toFixed(6)}`;
+            if (simpKeySet.has(key) || snappedKeysRef.current.has(key)) {
+              const prev = merged[merged.length - 1];
+              if (!prev || Math.abs(prev[0] - pt[0]) > 1e-6 || Math.abs(prev[1] - pt[1]) > 1e-6) {
+                merged.push(pt);
+              }
+            }
+          }
+          if (merged.length >= 3) {
+            return merged;
+          }
+          if (rawSimplified.length >= 3) {
+            return rawSimplified;
+          }
+        }
+      } catch (err) {
+        console.warn('Douglas-Peucker turf.simplify fallback:', err);
+      }
+      return cleaned;
+    },
+    []
+  );
 
   // EZ Navigation Modal state for interactive coordination transfer to GPS/Navi apps
   const [ezNavData, setEzNavData] = useState<{
@@ -1115,43 +1285,71 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     return () => clearTimeout(t);
   }, [isMapLight, activeBaseMap]);
 
-  // Handle Sector Drawing (Freehand Pen and Click Vertex Modes)
+  // Handle Sector Drawing (Freehand Pen and Click Vertex Modes) with Snap-to-Vertex & 2-Finger Pinch-to-Zoom
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map || !isDrawingSector) return;
+    if (!map || !isDrawingSector) {
+      setSnapIndicator(null);
+      return;
+    }
 
     if (drawMode === 'click') {
-      // Click Mode: Add single vertex on click
+      // Click Mode: Add single vertex on click with magnetic snapping
       map.dragging.enable();
       map.touchZoom.enable();
 
+      const handleMouseMoveClick = (e: L.LeafletMouseEvent) => {
+        const res = snapLatLngToExistingSectors(map, e.latlng);
+        setSnapIndicator(res.snapped ? res.point : null);
+      };
+
       const handleClick = (e: L.LeafletMouseEvent) => {
-        const newPt: [number, number] = [e.latlng.lat, e.latlng.lng];
         setDrawnPoints((prev) => {
-          const next = [...prev, newPt];
+          const startPt = prev.length >= 3 ? prev[0] : null;
+          const res = snapLatLngToExistingSectors(map, e.latlng, { startPoint: startPt });
+          if (res.snapped) {
+            snappedKeysRef.current.add(`${res.point[0].toFixed(6)},${res.point[1].toFixed(6)}`);
+            setSnapIndicator(res.point);
+          } else {
+            setSnapIndicator(null);
+          }
+          // If user clicked right onto the start point to close the contour and already has >= 3 vertices, don't duplicate
+          if (res.snappedToStart && prev.length >= 3) {
+            return prev;
+          }
+          const next = [...prev, res.point];
           setStrokeHistory((h) => [...h, next]);
           return next;
         });
       };
 
+      map.on('mousemove', handleMouseMoveClick);
       map.on('click', handleClick);
       return () => {
+        map.off('mousemove', handleMouseMoveClick);
         map.off('click', handleClick);
+        setSnapIndicator(null);
       };
     } else {
-      // Pen / Freehand Mode: Drag continuous stroke
-      // Disable map dragging so touch/pen draws on canvas
+      // Pen / Freehand Mode: Drag continuous stroke with 2-finger Pinch-to-Zoom support
       map.dragging.disable();
-      map.touchZoom.disable();
+      map.touchZoom.enable();
       map.doubleClickZoom.disable();
 
       const container = map.getContainer();
 
       const startStroke = (latlng: L.LatLng) => {
         isPenDrawingRef.current = true;
-        const pt: [number, number] = [latlng.lat, latlng.lng];
-        currentStrokeRef.current = [pt];
-        setDrawnPoints([pt]);
+        snappedKeysRef.current.clear();
+        const res = snapLatLngToExistingSectors(map, latlng);
+        if (res.snapped) {
+          snappedKeysRef.current.add(`${res.point[0].toFixed(6)},${res.point[1].toFixed(6)}`);
+          setSnapIndicator(res.point);
+        } else {
+          setSnapIndicator(null);
+        }
+        currentStrokeRef.current = [res.point];
+        setDrawnPoints([res.point]);
       };
 
       const moveStroke = (latlng: L.LatLng) => {
@@ -1159,12 +1357,17 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         const last = currentStrokeRef.current[currentStrokeRef.current.length - 1];
         if (!last) return;
 
-        // Add point if moved at least ~4-5 meters (approx 0.00004 deg)
-        const dLat = Math.abs(latlng.lat - last[0]);
-        const dLng = Math.abs(latlng.lng - last[1]);
-        if (dLat > 0.000035 || dLng > 0.000035) {
-          const newPt: [number, number] = [latlng.lat, latlng.lng];
-          currentStrokeRef.current.push(newPt);
+        const startPt = currentStrokeRef.current.length > 6 ? currentStrokeRef.current[0] : null;
+        const res = snapLatLngToExistingSectors(map, latlng, { startPoint: startPt });
+        setSnapIndicator(res.snapped ? res.point : null);
+
+        const dLat = Math.abs(res.point[0] - last[0]);
+        const dLng = Math.abs(res.point[1] - last[1]);
+        if ((res.snapped && (dLat > 1e-6 || dLng > 1e-6)) || dLat > 0.000035 || dLng > 0.000035) {
+          if (res.snapped) {
+            snappedKeysRef.current.add(`${res.point[0].toFixed(6)},${res.point[1].toFixed(6)}`);
+          }
+          currentStrokeRef.current.push(res.point);
           setDrawnPoints([...currentStrokeRef.current]);
         }
       };
@@ -1172,9 +1375,13 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       const endStroke = () => {
         if (!isPenDrawingRef.current) return;
         isPenDrawingRef.current = false;
+        setSnapIndicator(null);
         if (currentStrokeRef.current.length > 2) {
-          const finished = [...currentStrokeRef.current];
-          setStrokeHistory((h) => [...h, finished]);
+          // Cleanly close contour & simplify via Douglas-Peucker (turf.simplify) while preserving snapped points
+          const simplified = simplifyDrawnPolygon(currentStrokeRef.current, 'pen');
+          currentStrokeRef.current = simplified;
+          setDrawnPoints(simplified);
+          setStrokeHistory((h) => [...h, simplified]);
         }
       };
 
@@ -1183,15 +1390,35 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         startStroke(e.latlng);
       };
       const handleMouseMove = (e: L.LeafletMouseEvent) => {
-        moveStroke(e.latlng);
+        if (isPenDrawingRef.current) {
+          moveStroke(e.latlng);
+        } else {
+          const res = snapLatLngToExistingSectors(map, e.latlng);
+          setSnapIndicator(res.snapped ? res.point : null);
+        }
       };
       const handleMouseUp = () => {
         endStroke();
       };
 
-      // Native Touch / Pointer event handlers for Apple Pencil / Stylus
+      // Native Touch / Pointer event handlers for Apple Pencil / Stylus + 2-Finger Pinch-to-Zoom
       const handleTouchStart = (e: TouchEvent) => {
+        if (e.touches.length >= 2) {
+          // 2-Finger gesture (Pinch-to-Zoom / Pan): abort any accidental single-finger stroke stub
+          if (isPenDrawingRef.current) {
+            isPenDrawingRef.current = false;
+            setSnapIndicator(null);
+            const prevH = strokeHistoryRef.current;
+            const restored = prevH.length > 0 ? prevH[prevH.length - 1] : [];
+            currentStrokeRef.current = restored;
+            setDrawnPoints(restored);
+          }
+          map.dragging.enable();
+          map.touchZoom.enable();
+          return;
+        }
         if (e.touches.length === 1) {
+          map.dragging.disable();
           const touch = e.touches[0];
           const rect = container.getBoundingClientRect();
           const point = L.point(touch.clientX - rect.left, touch.clientY - rect.top);
@@ -1202,6 +1429,19 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       };
 
       const handleTouchMove = (e: TouchEvent) => {
+        if (e.touches.length >= 2) {
+          if (isPenDrawingRef.current) {
+            isPenDrawingRef.current = false;
+            setSnapIndicator(null);
+            const prevH = strokeHistoryRef.current;
+            const restored = prevH.length > 0 ? prevH[prevH.length - 1] : [];
+            currentStrokeRef.current = restored;
+            setDrawnPoints(restored);
+          }
+          map.dragging.enable();
+          map.touchZoom.enable();
+          return;
+        }
         if (isPenDrawingRef.current && e.touches.length === 1) {
           const touch = e.touches[0];
           const rect = container.getBoundingClientRect();
@@ -1213,9 +1453,12 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       };
 
       const handleTouchEnd = (e: TouchEvent) => {
-        if (isPenDrawingRef.current) {
+        if (isPenDrawingRef.current && e.touches.length === 0) {
           endStroke();
           e.preventDefault();
+        }
+        if (e.touches.length === 0) {
+          map.dragging.disable();
         }
       };
 
@@ -1237,9 +1480,10 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         container.removeEventListener('touchstart', handleTouchStart);
         container.removeEventListener('touchmove', handleTouchMove);
         container.removeEventListener('touchend', handleTouchEnd);
+        setSnapIndicator(null);
       };
     }
-  }, [isDrawingSector, drawMode]);
+  }, [isDrawingSector, drawMode, snapLatLngToExistingSectors, simplifyDrawnPolygon]);
 
   // EZ Repositioning via Long-Press (Mobile Hold & Desktop Right-Click) or Tap in Placement Mode
   useEffect(() => {
@@ -1330,20 +1574,125 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     };
   }, [triggerEzRepositionModal, mode]);
 
-  // Render temporary drawing polygon & vertex markers & area label
+  // Render temporary drawing polygon, snap indicator, & interactive boundary editor
   useEffect(() => {
     if (!drawLayerRef.current) return;
     drawLayerRef.current.clearLayers();
 
+    // 1. Render Magnetic Snap Indicator (if active during drawing)
+    if (snapIndicator && isDrawingSector) {
+      const snapRing = L.circleMarker(snapIndicator, {
+        radius: 10,
+        color: '#10b981',
+        fillColor: '#34d399',
+        fillOpacity: 0.35,
+        weight: 2.5,
+      });
+      snapRing.bindTooltip('🧲 An Nachbargrenze eingerastet', {
+        permanent: false,
+        direction: 'top',
+      });
+      drawLayerRef.current.addLayer(snapRing);
+    }
+
+    // 2. Interactive Sector Boundary Editing Mode (✏️ Grenzen)
+    if (editingBoundarySectorId && editingBoundaryPoints.length >= 3) {
+      const editPoly = L.polygon(editingBoundaryPoints, {
+        color: '#f59e0b',
+        dashArray: '6, 4',
+        fillColor: '#fbbf24',
+        fillOpacity: 0.28,
+        weight: 3,
+      });
+      drawLayerRef.current.addLayer(editPoly);
+
+      const livePts: [number, number][] = editingBoundaryPoints.map((p) => [p[0], p[1]]);
+
+      editingBoundaryPoints.forEach((pt, idx) => {
+        const vertexIcon = L.divIcon({
+          className: 'custom-boundary-vertex-handle',
+          html: `<div style="width:20px;height:20px;border-radius:50%;background:#f59e0b;border:2.5px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;color:#0f172a;font-size:9px;font-weight:900;font-family:monospace;cursor:grab;">${idx + 1}</div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10],
+        });
+
+        const vertexMarker = L.marker(pt, {
+          icon: vertexIcon,
+          draggable: true,
+          zIndexOffset: 1500,
+        });
+
+        vertexMarker.bindTooltip(`Eckpunkt ${idx + 1} ziehen (🧲 rastet an Nachbarn ein)`, {
+          direction: 'top',
+          offset: [0, -10],
+        });
+
+        vertexMarker.on('drag', (e: L.LeafletEvent) => {
+          const m = e.target as L.Marker;
+          const map = mapInstanceRef.current;
+          if (!map) return;
+          const res = snapLatLngToExistingSectors(map, m.getLatLng(), {
+            excludeSectorId: editingBoundarySectorId,
+          });
+          if (res.snapped) {
+            m.setLatLng(res.point);
+          }
+          livePts[idx] = res.point;
+          editPoly.setLatLngs(livePts);
+        });
+
+        vertexMarker.on('dragend', (e: L.LeafletEvent) => {
+          const m = e.target as L.Marker;
+          const map = mapInstanceRef.current;
+          const raw = m.getLatLng();
+          const finalPt = map
+            ? snapLatLngToExistingSectors(map, raw, { excludeSectorId: editingBoundarySectorId }).point
+            : ([Number(raw.lat.toFixed(6)), Number(raw.lng.toFixed(6))] as [number, number]);
+          setEditingBoundaryPoints((prev) =>
+            prev.map((oldPt, i) => (i === idx ? finalPt : oldPt))
+          );
+        });
+
+        drawLayerRef.current?.addLayer(vertexMarker);
+
+        // Add midpoint '+' handle to insert a new vertex along the segment
+        const nextPt = editingBoundaryPoints[(idx + 1) % editingBoundaryPoints.length];
+        const midLat = Number(((pt[0] + nextPt[0]) / 2).toFixed(6));
+        const midLng = Number(((pt[1] + nextPt[1]) / 2).toFixed(6));
+        const midIcon = L.divIcon({
+          className: 'custom-boundary-midpoint-handle',
+          html: `<div style="width:14px;height:14px;border-radius:50%;background:#1e293b;border:1.5px solid #fbbf24;color:#fbbf24;font-size:10px;line-height:11px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0.85;box-shadow:0 1px 4px rgba(0,0,0,0.5);" title="Zwischenpunkt einfügen">+</div>`,
+          iconSize: [14, 14],
+          iconAnchor: [7, 7],
+        });
+        const midMarker = L.marker([midLat, midLng], {
+          icon: midIcon,
+          zIndexOffset: 1400,
+        });
+        midMarker.bindTooltip('Klicken: Neuen Eckpunkt einfügen', { direction: 'top' });
+        midMarker.on('click', () => {
+          setEditingBoundaryPoints((prev) => {
+            const copy = [...prev];
+            copy.splice(idx + 1, 0, [midLat, midLng]);
+            return copy;
+          });
+        });
+        drawLayerRef.current?.addLayer(midMarker);
+      });
+    }
+
     if (drawnPoints.length === 0) return;
+
+    const strokeColor = drawTarget === 'searchArea' ? '#a855f7' : '#3b82f6';
+    const fillColor = drawTarget === 'searchArea' ? '#c084fc' : '#60a5fa';
 
     // Draw vertex points only in click mode or for start/end
     if (drawMode === 'click') {
       drawnPoints.forEach((pt, idx) => {
         const marker = L.circleMarker(pt, {
           radius: 5,
-          color: '#3b82f6',
-          fillColor: '#60a5fa',
+          color: strokeColor,
+          fillColor: fillColor,
           fillOpacity: 1,
           weight: 2,
         });
@@ -1355,8 +1704,8 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       if (drawnPoints.length > 0) {
         const startMarker = L.circleMarker(drawnPoints[0], {
           radius: 6,
-          color: '#3b82f6',
-          fillColor: '#93c5fd',
+          color: strokeColor,
+          fillColor: fillColor,
           fillOpacity: 0.9,
           weight: 2,
         });
@@ -1367,9 +1716,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     if (drawnPoints.length > 1) {
       // Draw line or polygon preview
       const poly = L.polygon(drawnPoints, {
-        color: '#3b82f6',
-        dashArray: drawMode === 'click' ? '6, 6' : undefined,
-        fillColor: '#3b82f6',
+        color: strokeColor,
+        dashArray: drawMode === 'click' || drawTarget === 'searchArea' ? '6, 6' : undefined,
+        fillColor: strokeColor,
         fillOpacity: 0.25,
         weight: 3.5,
       });
@@ -1382,7 +1731,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         const areaLabel = L.marker(center, {
           icon: L.divIcon({
             className: 'custom-area-label',
-            html: `<div style="background:#0F172A;color:#60a5fa;border:1px solid #3b82f6;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:bold;font-family:monospace;white-space:nowrap;box-shadow:0 4px 10px rgba(0,0,0,0.5);">📐 ca. ${ha} ha</div>`,
+            html: `<div style="background:#0F172A;color:${fillColor};border:1px solid ${strokeColor};padding:2px 8px;border-radius:6px;font-size:11px;font-weight:bold;font-family:monospace;white-space:nowrap;box-shadow:0 4px 10px rgba(0,0,0,0.5);">📐 ca. ${ha} ha</div>`,
             iconSize: [80, 24],
             iconAnchor: [40, 12],
           }),
@@ -1390,7 +1739,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         drawLayerRef.current.addLayer(areaLabel);
       }
     }
-  }, [drawnPoints, drawMode]);
+  }, [drawnPoints, drawMode, drawTarget, snapIndicator, isDrawingSector, editingBoundarySectorId, editingBoundaryPoints, snapLatLngToExistingSectors]);
 
   // Render Point Last Seen (PLS), Home Address, Range Rings & HQ
   useEffect(() => {
@@ -1944,7 +2293,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       const saBadgeIcon = L.divIcon({
         className: 'search-area-center-label',
         html: `
-          <div class="transform -translate-x-1/2 -translate-y-1/2 px-3 py-1 rounded-full text-xs font-mono font-bold shadow-lg flex items-center gap-1.5 whitespace-nowrap bg-purple-950/90 text-purple-200 border border-purple-500 ring-2 ring-purple-500/30">
+          <div class="cursor-pointer transform -translate-x-1/2 -translate-y-1/2 px-3 py-1 rounded-full text-xs font-mono font-bold shadow-lg flex items-center gap-1.5 whitespace-nowrap bg-purple-950/90 text-purple-200 border border-purple-500 ring-2 ring-purple-500/30 hover:bg-purple-900">
             <span>🗺️ ${escapeHtml(currentOperation.searchAreaName || 'Haupt-Suchgebiet')}</span>
             <span class="text-[10px] text-purple-300 font-normal">(${totalHectares.toFixed(1)} ha)</span>
           </div>
@@ -1952,7 +2301,15 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         iconSize: [0, 0],
       });
 
-      const saLabelMarker = L.marker([saCenterLat, saCenterLng], { icon: saBadgeIcon, interactive: false });
+      const saLabelMarker = L.marker([saCenterLat, saCenterLng], { icon: saBadgeIcon, interactive: isAdminOrEL && !isArchiveMode });
+      if (isAdminOrEL && !isArchiveMode) {
+        saLabelMarker.on('click', () => {
+          if (currentOperation.searchAreaPolygon && currentOperation.searchAreaPolygon.length >= 3) {
+            setPartitionModalPolygon(currentOperation.searchAreaPolygon);
+            setIsPartitionModalOpen(true);
+          }
+        });
+      }
 
       sectorsLayerRef.current.addLayer(searchAreaPoly);
       sectorsLayerRef.current.addLayer(saLabelMarker);
@@ -3005,31 +3362,74 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       {/* Drawing Mode Banner Overlay */}
       {isDrawingSector && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] w-[95%] max-w-2xl bg-[#1E293B]/95 text-slate-100 p-3 sm:p-4 rounded-2xl shadow-2xl border border-blue-500/80 backdrop-blur-md flex flex-col gap-3 font-sans">
+        <div
+          className={`absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] w-[95%] max-w-2xl bg-[#1E293B]/95 text-slate-100 p-3 sm:p-4 rounded-2xl shadow-2xl border backdrop-blur-md flex flex-col gap-3 font-sans ${
+            drawTarget === 'searchArea' ? 'border-purple-500/80' : 'border-blue-500/80'
+          }`}
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-700">
             <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30">
+              <span
+                className={`p-1.5 rounded-lg border ${
+                  drawTarget === 'searchArea'
+                    ? 'bg-purple-600/20 text-purple-400 border-purple-500/30'
+                    : 'bg-blue-600/20 text-blue-400 border-blue-500/30'
+                }`}
+              >
                 <PenTool className="w-4 h-4" />
               </span>
               <div>
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
-                  Sektor-Zeichnen
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-400 font-normal">
-                    {drawMode === 'pen' ? '🖊️ Freihand / Stift (Stylus/Touch)' : '📐 Punkt-für-Punkt (Klick)'}
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex flex-wrap items-center gap-2">
+                  <span>{drawTarget === 'searchArea' ? '🗺️ Gesamt-Suchgebiet zeichnen' : '🎯 Sektor zeichnen'}</span>
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded border font-normal ${
+                      drawTarget === 'searchArea'
+                        ? 'bg-purple-500/20 text-purple-300 border-purple-400'
+                        : 'bg-blue-500/20 text-blue-300 border-blue-400'
+                    }`}
+                  >
+                    {drawMode === 'pen' ? '🖊️ Freihand / Stift' : '📐 Eckpunkte (Klick)'}
                   </span>
                 </h3>
                 <p className="text-[10px] text-slate-400 font-mono">
                   {drawMode === 'pen'
-                    ? 'Mit Pen, Finger oder Maus eine geschlossene Kontur über das Suchgebiet ziehen.'
-                    : 'Auf die Karte tippen, um nacheinander Eckpunkte zu setzen.'}
+                    ? '🧲 Rastet an Nachbarn ein • 🔍 2-Finger-Zoom aktiv • Kontur wird automatisch geglättet'
+                    : '🧲 Auf Karte tippen für Eckpunkte (rastet automatisch an bestehenden Sektorgrenzen ein)'}
                 </p>
               </div>
             </div>
 
-            {/* Live Stats Badge */}
-            <div className="flex items-center gap-2 font-mono text-xs">
+            {/* Target Mode Switcher (🗺️ Suchgebiet vs 🎯 Sektor) & Live Stats Badge */}
+            <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+              <div className="flex items-center p-0.5 rounded-xl bg-slate-900 border border-slate-700 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setDrawTarget('searchArea')}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
+                    drawTarget === 'searchArea'
+                      ? 'bg-purple-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                  title="Gesamt-Suchgebiet zeichnen und anschließend automatisch in Teilsektoren aufteilen"
+                >
+                  🗺️ Suchgebiet
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDrawTarget('sector')}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
+                    drawTarget === 'sector'
+                      ? 'bg-blue-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                  title="Einzelnen Suchsektor zeichnen"
+                >
+                  🎯 Sektor
+                </button>
+              </div>
+
               <span className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300">
-                📍 {drawnPoints.length} Punkte
+                📍 {drawnPoints.length} Pkt.
               </span>
               {drawnPoints.length >= 3 && (
                 <span className="px-2.5 py-1 rounded-lg bg-emerald-950 border border-emerald-600 text-emerald-300 font-bold">
@@ -3048,7 +3448,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 onClick={() => setDrawMode('pen')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
                   drawMode === 'pen'
-                    ? 'bg-blue-600 text-white shadow'
+                    ? drawTarget === 'searchArea'
+                      ? 'bg-purple-600 text-white shadow'
+                      : 'bg-blue-600 text-white shadow'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
@@ -3060,7 +3462,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                 onClick={() => setDrawMode('click')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
                   drawMode === 'click'
-                    ? 'bg-blue-600 text-white shadow'
+                    ? drawTarget === 'searchArea'
+                      ? 'bg-purple-600 text-white shadow'
+                      : 'bg-blue-600 text-white shadow'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
@@ -3070,7 +3474,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
             </div>
 
             {/* Actions: Undo, Clear, Cancel, Save */}
-            <div className="flex items-center gap-1.5 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
               <button
                 type="button"
                 onClick={() => {
@@ -3120,19 +3524,89 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  if (drawnPoints.length >= 3 && onFinishDrawing) {
-                    onFinishDrawing(drawnPoints);
+                  if (drawnPoints.length < 3) return;
+                  const finalCoords = simplifyDrawnPolygon(drawnPoints, drawMode);
+                  const ha = calculatePolygonHectares(finalCoords);
+                  if (drawTarget === 'searchArea') {
+                    updateSearchArea(finalCoords, 'Haupt-Suchgebiet', ha);
+                    setPartitionModalPolygon(finalCoords);
+                    setIsPartitionModalOpen(true);
+                    setDrawnPoints([]);
+                    setStrokeHistory([]);
+                    if (onCancelDrawing) onCancelDrawing();
+                  } else if (onFinishDrawing) {
+                    onFinishDrawing(finalCoords);
                     setDrawnPoints([]);
                     setStrokeHistory([]);
                   }
                 }}
                 disabled={drawnPoints.length < 3}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-lg font-bold transition cursor-pointer shadow text-[11px] uppercase tracking-wider"
+                className={`flex items-center gap-1.5 px-4 py-1.5 disabled:opacity-40 text-white rounded-lg font-bold transition cursor-pointer shadow text-[11px] uppercase tracking-wider ${
+                  drawTarget === 'searchArea'
+                    ? 'bg-purple-600 hover:bg-purple-500'
+                    : 'bg-blue-600 hover:bg-blue-500'
+                }`}
               >
                 <Check className="w-3.5 h-3.5" />
-                Sektor übernehmen
+                {drawTarget === 'searchArea' ? '🗺️ Suchgebiet aufteilen' : '🎯 Sektor übernehmen'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Boundary Editing Banner Overlay (✏️ Grenzen) */}
+      {editingBoundarySectorId && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] w-[95%] max-w-2xl bg-[#1E293B]/95 text-slate-100 p-3 sm:p-4 rounded-2xl shadow-2xl border-2 border-amber-500/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 font-sans">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 font-bold text-sm">
+              ✏️
+            </span>
+            <div>
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                <span>
+                  Grenzen anpassen:{' '}
+                  {currentOperation?.sectors.find((s) => s.id === editingBoundarySectorId)?.name || 'Sektor'}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px]">
+                  📏 {calculatePolygonHectares(editingBoundaryPoints)} ha ({editingBoundaryPoints.length} Eckpunkte)
+                </span>
+              </h3>
+              <p className="text-[10px] text-slate-300 font-mono mt-0.5">
+                🧲 Ziehe die Eckpunkte zum Anpassen (rasten automatisch an Nachbarsektoren ein). Klicke auf + für neue Ecken.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setEditingBoundarySectorId(null);
+                setEditingBoundaryPoints([]);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer text-[11px] font-bold"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (editingBoundarySectorId && editingBoundaryPoints.length >= 3) {
+                  const newHa = calculatePolygonHectares(editingBoundaryPoints);
+                  updateSector(editingBoundarySectorId, {
+                    polygon: editingBoundaryPoints,
+                    areaHectares: newHa,
+                  });
+                }
+                setEditingBoundarySectorId(null);
+                setEditingBoundaryPoints([]);
+              }}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold transition cursor-pointer shadow text-[11px] uppercase tracking-wider"
+            >
+              <Check className="w-3.5 h-3.5" />
+              Grenzen speichern
+            </button>
           </div>
         </div>
       )}
@@ -3362,6 +3836,31 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               <Layers className="w-3.5 h-3.5 text-blue-400" />
               <span>Ebenen</span>
             </button>
+
+            {isAdminOrEL && !isDrawingSector && !isArchiveMode && onStartFreehandDrawing && (
+              <>
+                <button
+                  onClick={() => {
+                    setDrawTarget('searchArea');
+                    onStartFreehandDrawing();
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white rounded-lg text-xs font-bold transition cursor-pointer border border-purple-500/50 font-mono"
+                  title="Gesamt-Suchgebiet zeichnen & automatisch aufteilen"
+                >
+                  <span>🗺️ Suchgebiet</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setDrawTarget('sector');
+                    onStartFreehandDrawing();
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white rounded-lg text-xs font-bold transition cursor-pointer border border-blue-500/50 font-mono"
+                  title="Einzelnen Suchsektor zeichnen"
+                >
+                  <span>🎯 Sektor</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -4031,27 +4530,58 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               </div>
 
               {isAdminOrEL && !isDrawingSector && (
-                <div className="pt-2 border-t border-slate-700 flex gap-1.5">
+                <div className="pt-2 border-t border-slate-700 space-y-1.5">
+                  <span className="text-[10px] text-slate-400 font-mono block uppercase font-bold">
+                    GEBIET & SEKTOREN ZEICHNEN:
+                  </span>
                   {onStartFreehandDrawing && (
-                    <button
-                      onClick={() => onStartFreehandDrawing()}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow transition cursor-pointer font-mono"
-                      title="Freihand-Suchsektor einzeichnen"
-                    >
-                      <PenTool className="w-3.5 h-3.5" />
-                      Zeichnen 🖊️
-                    </button>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        onClick={() => {
+                          setDrawTarget('searchArea');
+                          onStartFreehandDrawing();
+                        }}
+                        className="flex items-center justify-center gap-1 px-2 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-lg shadow transition cursor-pointer font-mono"
+                        title="Gesamt-Suchgebiet zeichnen & anschließend automatisch aufteilen"
+                      >
+                        <span>🗺️ Suchgebiet</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setDrawTarget('sector');
+                          onStartFreehandDrawing();
+                        }}
+                        className="flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow transition cursor-pointer font-mono"
+                        title="Einzelnen Suchsektor einzeichnen"
+                      >
+                        <span>🎯 Sektor</span>
+                      </button>
+                    </div>
                   )}
-                  {onOpenSectorEditor && (
-                    <button
-                      onClick={() => onOpenSectorEditor()}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 transition cursor-pointer font-mono"
-                      title="Sektor per Dialog erstellen"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Sektor +
-                    </button>
-                  )}
+                  <div className="flex gap-1.5">
+                    {currentOperation?.searchAreaPolygon && currentOperation.searchAreaPolygon.length >= 3 && (
+                      <button
+                        onClick={() => {
+                          setPartitionModalPolygon(currentOperation.searchAreaPolygon || null);
+                          setIsPartitionModalOpen(true);
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-purple-950/80 hover:bg-purple-900 text-purple-200 text-[11px] font-bold rounded-lg border border-purple-500/50 transition cursor-pointer font-mono"
+                        title="Vorhandenes Haupt-Suchgebiet automatisch in Teilsektoren aufteilen"
+                      >
+                        <span>📐 Aufteilen</span>
+                      </button>
+                    )}
+                    {onOpenSectorEditor && (
+                      <button
+                        onClick={() => onOpenSectorEditor()}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 transition cursor-pointer font-mono"
+                        title="Sektor per Dialog erstellen"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Sektor +
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -4200,6 +4730,20 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   <CheckCircle2 className="w-4 h-4" />
                   {selectedSector.status === 'searched' ? 'Status zurücksetzen' : 'Als abgesucht markieren (Grün)'}
                 </button>
+
+                {isAdminOrEL && !isArchiveMode && (
+                  <button
+                    onClick={() => {
+                      setEditingBoundarySectorId(selectedSector.id);
+                      setEditingBoundaryPoints(selectedSector.polygon.map((p) => [p[0], p[1]]));
+                      setSelectedSector(null);
+                    }}
+                    className="px-3 py-2.5 bg-amber-950/90 hover:bg-amber-900 text-amber-300 hover:text-white rounded-xl text-xs font-semibold cursor-pointer border border-amber-700/80 font-mono flex items-center gap-1 transition"
+                    title="Eckpunkte und Grenzen interaktiv auf der Karte verschieben"
+                  >
+                    <span>✏️ Grenzen</span>
+                  </button>
+                )}
 
                 {isAdminOrEL && onOpenSectorEditor && (
                   <button
@@ -5126,6 +5670,18 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
         onClose={() => setIsOfflineModalOpen(false)}
         operationTitle={currentOperation?.title}
         searchBounds={operationSearchBounds}
+      />
+
+      {/* Area Partition Modal (Automatic gapless sub-sector generation from master Search Area) */}
+      <AreaPartitionModal
+        isOpen={isPartitionModalOpen && Boolean((partitionModalPolygon || currentOperation?.searchAreaPolygon)?.length && (partitionModalPolygon || currentOperation?.searchAreaPolygon)!.length >= 3)}
+        onClose={() => setIsPartitionModalOpen(false)}
+        polygonPoints={partitionModalPolygon || currentOperation?.searchAreaPolygon || []}
+        defaultCenter={weatherTarget}
+        onApplySectors={(sectors) => {
+          addMultipleSectors(sectors);
+          setIsPartitionModalOpen(false);
+        }}
       />
     </div>
   );

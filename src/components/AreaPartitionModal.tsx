@@ -191,6 +191,8 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
   onApplySectors,
 }) => {
   // Split configuration
+  const [splitMode, setSplitMode] = useState<'grid' | 'voronoi'>('grid');
+  const [voronoiCount, setVoronoiCount] = useState(4);
   const [rows, setRows] = useState(2);
   const [cols, setCols] = useState(2);
   const [namingPattern, setNamingPattern] = useState<'nato' | 'matrix' | 'compass' | 'numbers'>('nato');
@@ -200,8 +202,6 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
 
   // Default box size in meters if no polygon was drawn
   const [boxRadiusMeters, setBoxRadiusMeters] = useState(600);
-
-  if (!isOpen) return null;
 
   // Determine bounding box
   const boundingBox = useMemo(() => {
@@ -238,10 +238,51 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
   // Compute sub-sectors
   const generatedSectors = useMemo(() => {
     const list: Omit<SearchSector, 'id' | 'operationId'>[] = [];
+    const rowLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+    if (splitMode === 'voronoi') {
+      const basePoly: [number, number][] =
+        polygonPoints && polygonPoints.length >= 3
+          ? polygonPoints
+          : [
+              [boundingBox.maxLat, boundingBox.minLng],
+              [boundingBox.maxLat, boundingBox.maxLng],
+              [boundingBox.minLat, boundingBox.maxLng],
+              [boundingBox.minLat, boundingBox.minLng],
+            ];
+      const voronoiPolys = generateVoronoiSectors(basePoly, voronoiCount);
+      if (voronoiPolys.length > 0) {
+        voronoiPolys.forEach((cellPolygon, idx) => {
+          const hectares = calculatePolygonHectares(cellPolygon);
+          let suffix = '';
+          if (namingPattern === 'nato') {
+            suffix = NATO_PHONETIC[idx % NATO_PHONETIC.length];
+          } else if (namingPattern === 'matrix') {
+            suffix = `A${idx + 1}`;
+          } else {
+            suffix = `${idx + 1}`;
+          }
+          const name = basePrefix.trim() ? `${basePrefix.trim()} ${suffix}` : suffix;
+          const color = SECTOR_PALETTE[idx % SECTOR_PALETTE.length];
+          list.push({
+            name,
+            color,
+            status: 'open',
+            priority,
+            polygon: cellPolygon,
+            areaHectares: hectares,
+            notes: notes ? `${notes} (Voronoi-Cluster ${idx + 1})` : `Automatisches Teilgebiet (K-Means/Voronoi ${idx + 1})`,
+            assignedUserIds: [],
+            assignedEquipment: [],
+          });
+        });
+        return list;
+      }
+    }
+
     const latStep = (boundingBox.maxLat - boundingBox.minLat) / rows;
     const lngStep = (boundingBox.maxLng - boundingBox.minLng) / cols;
 
-    const rowLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
     let count = 0;
 
     for (let r = 0; r < rows; r++) {
@@ -263,6 +304,8 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
           const clipped = clipPolygonToRect(polygonPoints, cellBottom, cellTop, cellLeft, cellRight);
           if (clipped.length >= 3) {
             cellPolygon = clipped;
+          } else {
+            continue;
           }
         }
 
@@ -276,7 +319,7 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
         } else if (namingPattern === 'compass') {
           if (rows === 2 && cols === 2) {
             const compassLabels = ['NW (Nord-West)', 'NO (Nord-Ost)', 'SW (Süd-West)', 'SO (Süd-Ost)'];
-            suffix = compassLabels[count];
+            suffix = compassLabels[count] || `${count + 1}`;
           } else if (rows === 2 && cols === 1) {
             suffix = r === 0 ? 'Nord' : 'Süd';
           } else if (rows === 1 && cols === 2) {
@@ -308,11 +351,13 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
     }
 
     return list;
-  }, [boundingBox, rows, cols, namingPattern, basePrefix, priority, notes]);
+  }, [boundingBox, splitMode, voronoiCount, rows, cols, namingPattern, basePrefix, priority, notes, polygonPoints]);
 
   const totalHectares = useMemo(() => {
     return generatedSectors.reduce((sum, s) => sum + (s.areaHectares || 0), 0);
   }, [generatedSectors]);
+
+  if (!isOpen) return null;
 
   const handleApply = () => {
     if (generatedSectors.length === 0) return;
@@ -358,16 +403,17 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
             <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
               Schnellauswahl Raster-Aufteilung:
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               <button
                 type="button"
                 onClick={() => {
+                  setSplitMode('grid');
                   setRows(2);
                   setCols(2);
                   setNamingPattern('nato');
                 }}
                 className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col gap-1 ${
-                  rows === 2 && cols === 2
+                  splitMode === 'grid' && rows === 2 && cols === 2
                     ? 'bg-blue-600/30 border-blue-500 text-white ring-1 ring-blue-500'
                     : 'bg-white dark:bg-slate-900/80 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-800'
                 }`}
@@ -382,12 +428,13 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
+                  setSplitMode('grid');
                   setRows(2);
                   setCols(1);
                   setNamingPattern('compass');
                 }}
                 className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col gap-1 ${
-                  rows === 2 && cols === 1
+                  splitMode === 'grid' && rows === 2 && cols === 1
                     ? 'bg-blue-600/30 border-blue-500 text-white ring-1 ring-blue-500'
                     : 'bg-white dark:bg-slate-900/80 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-800'
                 }`}
@@ -402,12 +449,13 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
+                  setSplitMode('grid');
                   setRows(1);
                   setCols(2);
                   setNamingPattern('compass');
                 }}
                 className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col gap-1 ${
-                  rows === 1 && cols === 2
+                  splitMode === 'grid' && rows === 1 && cols === 2
                     ? 'bg-blue-600/30 border-blue-500 text-white ring-1 ring-blue-500'
                     : 'bg-white dark:bg-slate-900/80 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-800'
                 }`}
@@ -422,12 +470,13 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
+                  setSplitMode('grid');
                   setRows(3);
                   setCols(2);
                   setNamingPattern('matrix');
                 }}
                 className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col gap-1 ${
-                  rows === 3 && cols === 2
+                  splitMode === 'grid' && rows === 3 && cols === 2
                     ? 'bg-blue-600/30 border-blue-500 text-white ring-1 ring-blue-500'
                     : 'bg-white dark:bg-slate-900/80 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-800'
                 }`}
@@ -438,44 +487,85 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
                 </div>
                 <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Matrix (A1 bis C2)</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSplitMode('voronoi');
+                  setVoronoiCount(4);
+                  setNamingPattern('nato');
+                }}
+                className={`p-2.5 rounded-xl border text-left transition cursor-pointer flex flex-col gap-1 col-span-2 sm:col-span-1 ${
+                  splitMode === 'voronoi'
+                    ? 'bg-purple-600/30 border-purple-500 text-white ring-1 ring-purple-500'
+                    : 'bg-white dark:bg-slate-900/80 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-800'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm">Voronoi</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">K-Means</span>
+                </div>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Gleichmäßige Teilflächen</span>
+              </button>
             </div>
           </div>
 
           {/* Detailed Custom Grid Controls */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white dark:bg-slate-900/60 p-3.5 rounded-xl border border-slate-300 dark:border-slate-700/80">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                Zeilen (Nord ↔ Süd):
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="range"
-                  min="1"
-                  max="5"
-                  value={rows}
-                  onChange={(e) => setRows(parseInt(e.target.value))}
-                  className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                />
-                <span className="font-bold text-blue-400 w-6 text-center">{rows}</span>
+            {splitMode === 'voronoi' ? (
+              <div className="sm:col-span-2">
+                <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                  Anzahl Teilsektoren (K-Means / Voronoi):
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="2"
+                    max="8"
+                    value={voronoiCount}
+                    onChange={(e) => setVoronoiCount(parseInt(e.target.value))}
+                    className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                  />
+                  <span className="font-bold text-purple-400 w-8 text-center">{voronoiCount}</span>
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                    Zeilen (Nord ↔ Süd):
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="1"
+                      max="5"
+                      value={rows}
+                      onChange={(e) => setRows(parseInt(e.target.value))}
+                      className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    />
+                    <span className="font-bold text-blue-400 w-6 text-center">{rows}</span>
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                Spalten (West ↔ Ost):
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="range"
-                  min="1"
-                  max="5"
-                  value={cols}
-                  onChange={(e) => setCols(parseInt(e.target.value))}
-                  className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                />
-                <span className="font-bold text-blue-400 w-6 text-center">{cols}</span>
-              </div>
-            </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                    Spalten (West ↔ Ost):
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="1"
+                      max="5"
+                      value={cols}
+                      onChange={(e) => setCols(parseInt(e.target.value))}
+                      className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    />
+                    <span className="font-bold text-blue-400 w-6 text-center">{cols}</span>
+                  </div>
+                </div>
+              </>
+            )}
 
             <div>
               <label className="block text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
@@ -544,14 +634,14 @@ export const AreaPartitionModal: React.FC<AreaPartitionModalProps> = ({
                 Vorschau der generierten Sektoren ({generatedSectors.length}):
               </label>
               <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                ca. {(totalHectares / generatedSectors.length).toFixed(1)} ha pro Sektor
+                ca. {generatedSectors.length > 0 ? (totalHectares / generatedSectors.length).toFixed(1) : '0.0'} ha pro Sektor
               </span>
             </div>
 
             <div
               className="grid gap-2 p-3 bg-slate-100 dark:bg-slate-950/80 rounded-xl border border-slate-200 dark:border-slate-800 overflow-y-auto flex-1"
               style={{
-                gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+                gridTemplateColumns: `repeat(${splitMode === 'voronoi' ? Math.min(3, voronoiCount) : cols}, minmax(0, 1fr))`,
               }}
             >
               {generatedSectors.map((sector, idx) => (

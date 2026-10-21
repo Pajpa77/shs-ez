@@ -425,18 +425,25 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto flex-1 p-1 bg-white dark:bg-slate-900/60 rounded-xl border border-slate-300 dark:border-slate-700">
               {allUsers.map((user) => {
                 const isAssigned = assignedUserIds.includes(user.id);
+                const otherAssignedSector = (currentOperation?.sectors || []).find(
+                  (s) =>
+                    s.id !== sector?.id &&
+                    (s.assignedUserIds?.includes(user.id) || (user.assignedSectorId && user.assignedSectorId === s.id))
+                );
                 return (
                   <button
                     type="button"
                     key={user.id}
                     onClick={() => toggleUserAssignment(user.id)}
-                    className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center justify-between font-mono ${
+                    className={`p-2 rounded-xl border text-left transition cursor-pointer flex items-center justify-between gap-1.5 font-mono ${
                       isAssigned
                         ? 'bg-blue-500/20 border-blue-500 text-blue-200 ring-1 ring-blue-400/40'
+                        : otherAssignedSector
+                        ? 'bg-amber-950/30 border-amber-500/50 text-slate-300 hover:bg-slate-800'
                         : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:bg-slate-800'
                     }`}
                   >
-                    <div className="flex items-center gap-2 truncate">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
                       <div className="h-7 w-7 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-800 shrink-0 border border-slate-300 dark:border-slate-700">
                         {user.photoUrl ? (
                           <img src={user.photoUrl} alt={user.name} className="h-full w-full object-cover" />
@@ -446,12 +453,17 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
                           </div>
                         )}
                       </div>
-                      <div className="truncate">
-                        <div className="font-bold text-xs text-white leading-tight">{user.name}</div>
-                        <div className="text-[10px] text-blue-400 font-mono">{user.callSign}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-xs text-white leading-tight truncate">{user.name}</div>
+                        <div className="text-[10px] text-blue-400 font-mono truncate">{user.callSign}</div>
+                        {otherAssignedSector && (
+                          <div className="mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/50 text-amber-300 text-[9px] font-bold truncate max-w-full">
+                            <span>⚠️ In: {otherAssignedSector.name}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <span className="text-xs">{isAssigned ? '✅' : '➕'}</span>
+                    <span className="text-xs shrink-0">{isAssigned ? '✅' : '➕'}</span>
                   </button>
                 );
               })}
