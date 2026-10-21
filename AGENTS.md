@@ -1,6 +1,6 @@
 # SHS-EZ – Verbindliche Architektur-, Rollen- und Betriebsregeln
 
-Diese Regeln gelten **ausnahmslos** für alle Änderungen am Projekt **SHS-EZ (Suchhundestaffel Einsatzzentrale)** und dürfen niemals ohne ausdrückliche Anweisung des Users geändert oder umgangen werden.
+Diese Regeln gelten **ausnahmslos** für alle Änderungen am Projekt **SHS-EZ (Spürhunde Salzlandkreis Einsatzzentrale – WICHTIG: SHS steht für Spürhunde Salzlandkreis, nicht Suchhundestaffel!)** und dürfen niemals ohne ausdrückliche Anweisung des Users geändert oder umgangen werden.
 
 ## 1. Login-Ablauf & Zwei getrennte Auswahlseiten (`src/components/LoginScreen.tsx`)
 - **Niemals die Auswahlseite nach dem Login überspringen!**
