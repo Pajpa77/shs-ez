@@ -304,10 +304,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
   // Auto scroll and mark as read
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const isUserTyping = document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA';
 
     if (chatMessages.length > prevMessagesLengthRef.current) {
       markChatAsRead();
+
+      if (!isUserTyping) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
 
       if (autoPlayAudio) {
         const newestMsg = chatMessages[chatMessages.length - 1];
@@ -512,6 +516,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
   // Keyboard Push-To-Talk shortcut for laptops/dispatchers (Press & hold Spacebar when not typing)
   useEffect(() => {
+    // Disable spacebar PTT on touch devices to prevent virtual keyboard conflict
+    if ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeEl = document.activeElement;
       const isInput = activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA' || (activeEl as HTMLElement)?.isContentEditable;
@@ -1272,8 +1279,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                     ? `Sektor ${activeSector.name}`
                     : activeTargetUser?.callSign || activeTargetUser?.name || 'Kanal'
                 }...`}
-                className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-slate-50 text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/50 placeholder-slate-500 shadow-inner"
+                className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-slate-50 text-base sm:text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/50 placeholder-slate-500 shadow-inner"
                 autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
               />
 
               {/* Send Button */}
@@ -1525,15 +1534,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
             </div>
           )}
 
-          {/* ── MOBILE: Chat View ─────────────────────────────────────────── */}
-          {mobileView === 'chat' && (
-            <div className="lg:hidden flex-1 flex flex-col bg-[#0F172A] overflow-hidden min-w-0">
-              {renderChatAreaContent()}
-            </div>
-          )}
-
-          {/* ── DESKTOP: Chat Area ────────────────────────────────────────── */}
-          <div className="hidden lg:flex flex-1 flex-col bg-[#0F172A] overflow-hidden min-w-0">
+          {/* ── UNIFIED Chat Area (Visible on Desktop OR when mobileView === 'chat') ── */}
+          <div className={`flex-1 flex-col bg-[#0F172A] overflow-hidden min-w-0 ${mobileView === 'chat' ? 'flex' : 'hidden lg:flex'}`}>
             {renderChatAreaContent()}
           </div>
         </div>
