@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { User, UserRole, EquipmentType, isFirstAdmin, isOwner, isUserAdmin, isUserEL, isUserAdminOrEL } from '../types';
 import { compressImageFile } from '../lib/imageUtils';
@@ -108,6 +108,26 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const barcodeCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const activeBarcodeValue = memberId.trim() || activeUser?.memberId || activeUser?.id || 'SHS-000000';
+
+  // Sortierte Benutzer für den Account-Streifen: Maria (First-Admin) zuerst, dann Admins/EL, dann Sucher, jeweils alphabetisch
+  const sortedUsers = useMemo(() => {
+    return [...allUsers].sort((a, b) => {
+      // 1. Maria (First-Admin / App-Owner) immer an erster Stelle
+      const aIsFirst = isFirstAdmin(a);
+      const bIsFirst = isFirstAdmin(b);
+      if (aIsFirst && !bIsFirst) return -1;
+      if (!aIsFirst && bIsFirst) return 1;
+
+      // 2. Admins & Einsatzleitung zuerst
+      const aIsAdmin = a.role === 'admin' || a.role === 'einsatzleitung' || a.isAdmin || a.canLeadOperations;
+      const bIsAdmin = b.role === 'admin' || b.role === 'einsatzleitung' || b.isAdmin || b.canLeadOperations;
+      if (aIsAdmin && !bIsAdmin) return -1;
+      if (!aIsAdmin && bIsAdmin) return 1;
+
+      // 3. Alphabetisch nach Name
+      return a.name.localeCompare(b.name, 'de', { sensitivity: 'base' });
+    });
+  }, [allUsers]);
 
   useEffect(() => {
     if (!isOpen || !activeBarcodeValue) return;
@@ -430,79 +450,94 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
           </button>
         </div>
 
-        {/* Account Selector Bar for Admins */}
-        <div className="bg-slate-100 dark:bg-slate-950/60 p-2.5 border-b border-slate-300 dark:border-slate-700/80">
-          <div className="flex items-center justify-between mb-1.5 px-1">
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider font-mono">
-              👥 Account auswählen ({allUsers.length} registriert):
+        {/* Account Selector Bar for Admins (Farblich abgehoben im Neon-Pink des animierten Login-Hündchens #ec4899 / #ff1493 / #ff00ff) */}
+        <div className="p-3 border-y border-[#ff1493]/60 shadow-[inset_0_1px_16px_rgba(255,20,147,0.25),0_4px_18px_rgba(255,20,147,0.2)] bg-gradient-to-r from-[#24061f] via-[#3d0936] to-[#1c0418]">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs">🐕</span>
+              <span className="text-[11px] font-extrabold text-pink-300 uppercase tracking-wider font-mono drop-shadow-[0_0_8px_rgba(255,20,147,0.7)]">
+                👥 Accounts ({allUsers.length} registriert • Admins zuerst, dann A-Z):
+              </span>
+            </div>
+            <span className="text-[9px] text-pink-300/70 font-mono hidden sm:inline">
+              Seitlich scrollbar
             </span>
           </div>
-          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+          <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-thin">
             <button
               type="button"
               onClick={() => populateForm(null)}
-              className={`px-2.5 py-1.5 rounded-xl border text-left transition shrink-0 cursor-pointer font-mono text-[11px] flex items-center gap-2 ${
+              className={`px-3 py-2 rounded-xl border text-left transition shrink-0 cursor-pointer font-mono text-[11px] flex items-center gap-2 shadow-md ${
                 !activeUser
-                  ? 'bg-blue-600 border-blue-500 text-white shadow ring-2 ring-blue-400/50'
-                  : 'bg-white dark:bg-slate-900 border-dashed border-blue-500/50 text-blue-600 dark:text-blue-300 hover:bg-slate-50 dark:bg-slate-800'
+                  ? 'bg-pink-600 border-pink-300 text-white shadow-[0_0_12px_rgba(255,20,147,0.8)] ring-2 ring-pink-300'
+                  : 'bg-slate-900/90 border-dashed border-pink-500/60 text-pink-200 hover:bg-pink-950/60 hover:border-pink-400'
               }`}
             >
               <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-xs ${
-                !activeUser ? 'bg-white/20 text-white' : 'bg-blue-600/10 text-blue-600 dark:text-blue-400'
+                !activeUser ? 'bg-white/20 text-white' : 'bg-pink-600/30 text-pink-300 border border-pink-500/50'
               }`}>
                 +
               </div>
               <div>
-                <div className="font-bold">{!activeUser ? 'Neuen Account (aktiv)' : 'Neuen Account'}</div>
+                <div className="font-bold">{!activeUser ? 'Neuen Account (aktiv)' : 'Neuer Account'}</div>
                 <div className="text-[9px] font-normal opacity-80">Formular leeren</div>
               </div>
             </button>
-            {allUsers.map((u) => {
+            {sortedUsers.map((u) => {
               const isSelected = activeUser?.id === u.id;
               const isOwnerUser = isFirstAdmin(u);
+              const isAdminUser = u.role === 'admin' || u.role === 'einsatzleitung' || u.isAdmin || u.canLeadOperations;
               return (
                 <button
                   type="button"
                   key={u.id}
                   onClick={() => populateForm(u)}
-                  className={`px-2.5 py-1.5 rounded-xl border text-left transition shrink-0 cursor-pointer font-mono text-[11px] flex items-center gap-2 ${
+                  className={`px-3 py-2 rounded-xl border text-left transition shrink-0 cursor-pointer font-mono text-[11px] flex items-center gap-2.5 shadow-sm ${
                     isSelected
                       ? isOwnerUser
-                        ? 'bg-slate-50 dark:bg-amber-500/25 border-amber-400 text-white shadow ring-1 ring-amber-400/50'
-                        : 'bg-blue-500/25 border-blue-400 text-white shadow'
+                        ? 'bg-amber-500/30 border-amber-400 text-white shadow-[0_0_15px_rgba(251,191,36,0.6)] ring-2 ring-amber-300'
+                        : 'bg-pink-600 border-pink-300 text-white shadow-[0_0_15px_rgba(255,20,147,0.8)] ring-2 ring-pink-400'
                       : isOwnerUser
-                      ? 'bg-slate-50 dark:bg-amber-950/40 border-amber-500/50 text-amber-200 hover:bg-slate-50 dark:bg-amber-900/40'
-                      : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-800'
+                      ? 'bg-amber-950/70 border-amber-500/70 text-amber-200 hover:bg-amber-900/70'
+                      : isAdminUser
+                      ? 'bg-slate-900/90 border-pink-500/40 text-slate-100 hover:bg-pink-950/50 hover:border-pink-400'
+                      : 'bg-slate-950/85 border-slate-700/80 text-slate-300 hover:bg-slate-900 hover:border-pink-500/30'
                   }`}
                 >
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[9px] uppercase border ${
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] uppercase border shrink-0 ${
                     isOwnerUser
-                      ? 'bg-slate-50 dark:bg-amber-500/30 text-amber-200 border-amber-400/60'
-                      : 'bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-200 border border-slate-400 dark:border-slate-600'
+                      ? 'bg-amber-500/30 text-amber-200 border-amber-400/80'
+                      : isAdminUser
+                      ? 'bg-red-950/80 text-red-200 border-red-500/80'
+                      : 'bg-slate-800 text-slate-200 border-slate-600'
                   }`}>
-                    {isOwnerUser ? '👑' : u.name.charAt(0)}
+                    {isOwnerUser ? '👑' : u.photoUrl ? (
+                      <img src={u.photoUrl} alt={u.name} className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      u.name.charAt(0)
+                    )}
                   </div>
                   <div>
-                    <div className="font-bold flex items-center gap-1">
-                      <span>{u.name}</span>
+                    <div className="font-bold flex items-center gap-1.5 leading-tight">
+                      <span className="truncate max-w-[130px]">{u.name}</span>
                       {isOwnerUser ? (
-                        <span className="text-[8px] px-1 py-0.2 rounded border font-mono font-bold bg-slate-50 dark:bg-amber-500/20 text-amber-300 border-amber-400/60">
+                        <span className="text-[8px] px-1 py-0.2 rounded border font-mono font-bold bg-amber-500/20 text-amber-300 border-amber-400/60 shrink-0">
                           OWNER
                         </span>
                       ) : (u.role === 'admin' || u.role === 'einsatzleitung' || u.isAdmin) ? (
-                        <span className={`text-[8px] px-1 py-0.2 rounded border font-mono font-bold ${
+                        <span className={`text-[8px] px-1 py-0.2 rounded border font-mono font-bold shrink-0 ${
                           u.role === 'admin'
-                            ? 'bg-red-950 text-red-300 border-red-800'
+                            ? 'bg-red-950 text-red-300 border-red-700'
                             : u.isAdmin
-                            ? 'bg-slate-50 dark:bg-amber-950 text-amber-300 border-amber-800'
-                            : 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                            ? 'bg-amber-950 text-amber-300 border-amber-700'
+                            : 'bg-emerald-950 text-emerald-300 border-emerald-700'
                         }`}>
                           {u.role === 'admin' ? 'ADM' : u.isAdmin ? 'EL+ADM' : 'EL'}
                         </span>
                       ) : null}
                     </div>
-                    <div className="text-[9px] text-slate-500 dark:text-slate-400 font-normal">
-                      {u.callSign}
+                    <div className="text-[9px] text-pink-300/80 font-normal">
+                      {u.callSign || u.username}
                     </div>
                   </div>
                 </button>
