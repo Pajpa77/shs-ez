@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
-import { User, ChatMessage, SearchTeam, SearchOperation, isFirstAdmin, isUserAdmin, isUserEL } from '../types';
+import { User, ChatMessage, SearchTeam, SearchOperation, isFirstAdmin, isUserAdmin, isUserEL, isUserAdminOrEL } from '../types';
 import {
   Send,
   Radio,
@@ -265,10 +265,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     }
   }, [currentOperation?.id]);
 
-  const isAdmin = currentUser ? (isUserAdmin(currentUser) || isUserEL(currentUser)) : false;
+  const isAdmin = currentUser ? isUserAdminOrEL(currentUser) : false;
+  const isGuest = currentUser?.role === 'observer';
+  const hasActiveOps = Boolean(currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused'));
+
+  const prevChatTargetTimestampRef = useRef<number>(0);
+  const prevInitialDirectUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (activeChatTarget) {
+    if (activeChatTarget && activeChatTarget.timestamp !== prevChatTargetTimestampRef.current) {
+      prevChatTargetTimestampRef.current = activeChatTarget.timestamp;
       setMainTab('channels');
       if (activeChatTarget.targetUser || activeChatTarget.channel === 'direct') {
         setActiveScope('responders');
@@ -280,14 +286,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         setActiveChannel(activeChatTarget.channel);
       }
       setMobileView('chat');
-    } else if (initialDirectUser) {
+    } else if (initialDirectUser && initialDirectUser.id !== prevInitialDirectUserIdRef.current) {
+      prevInitialDirectUserIdRef.current = initialDirectUser.id;
       setMainTab('channels');
       setActiveScope('responders');
       setActiveChannel(initialDirectUser.id);
-    } else if (currentUser?.role === 'observer') {
-      setActiveChannel('admins');
+      setMobileView('chat');
     }
-  }, [activeChatTarget, initialDirectUser, currentUser]);
+  }, [activeChatTarget, initialDirectUser]);
+
+  // Observer/Gast & Non-Admin Schutz: Führungskanal nur für Admin/EL
+  useEffect(() => {
+    if (!isAdmin && activeChannel === 'admins') {
+      setActiveChannel('all');
+    }
+  }, [isAdmin, activeChannel]);
 
   // Auto scroll and mark as read
   useEffect(() => {
@@ -412,9 +425,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
           !activeChannel.startsWith('sec-') &&
           !activeChannel.startsWith('team-');
 
+        const targetOpId = hasActiveOps && currentOperation
+          ? currentOperation.id
+          : (effectiveOperation?.id || 'general');
+
         sendChatMessage({
           text: '🎙️ CB-Funk Sprachübertragung',
           channel: activeChannel,
+          operationId: targetOpId,
           isDirect,
           recipientId: isDirect ? activeChannel : undefined,
           audioUrl: base64Audio,
@@ -526,7 +544,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
     };
   }, [isRecording]);
 
-  const effectiveOperation = allOperations.find((o) => o.id === selectedOpId) || currentOperation || null;
+  const effectiveOperation = hasActiveOps
+    ? currentOperation
+    : (allOperations.find((o) => o.id === selectedOpId) || currentOperation || null);
 
   const currentUserId = currentUser?.id || '';
 
@@ -575,19 +595,31 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       }
 
       // Filter by operation scope
-      if (effectiveOperation && msg.operationId !== effectiveOperation.id) return false;
+      if (hasActiveOps && currentOperation) {
+        if (msg.operationId !== currentOperation.id && msg.operationId !== 'general') {
+          return false;
+        }
+      } else if (effectiveOperation && selectedOpId && selectedOpId !== 'general') {
+        if (msg.operationId !== effectiveOperation.id && msg.operationId !== 'general') {
+          return false;
+        }
+      } else {
+        if (msg.operationId && msg.operationId !== 'general') {
+          return false;
+        }
+      }
 
       // Filter by active channel / direct user
       if (activeChannel === 'all') {
-        return msg.channel === 'all';
+        return msg.channel === 'all' || msg.channel === 'general';
       } else if (activeChannel === 'admins') {
         return isAdmin ? msg.channel === 'admins' : false;
       } else if (activeChannel === 'ez_contact') {
         if (msg.channel !== 'ez_contact') return false;
         if (isAdmin) return true;
-        const sender = allUsers.find(u => u.id === msg.senderId);
-        const senderIsAdmin = sender ? (sender.role === 'admin' || sender.role === 'einsatzleitung' || sender.isAdmin) : false;
-        return msg.senderId === currentUserId || senderIsAdmin;
+        const sender = allUsers.find((u) => u.id === msg.senderId);
+        const senderIsAdmin = sender ? isUserAdminOrEL(sender) : false;
+        return msg.senderId === currentUserId || (msg.recipientId ? msg.recipientId === currentUserId : senderIsAdmin);
       } else if (activeChannel.startsWith('sec-') || activeChannel.startsWith('team-')) {
         return msg.channel === activeChannel;
       } else {
@@ -595,15 +627,22 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
         return (
           (msg.senderId === currentUserId && msg.recipientId === activeChannel) ||
           (msg.senderId === activeChannel && msg.recipientId === currentUserId) ||
-          msg.channel === activeChannel
+          (msg.isDirect && msg.recipientId === activeChannel && msg.senderId === currentUserId)
         );
       }
     });
-  }, [chatMessages, activeScope, effectiveOperation, activeChannel, currentUserId, isAdmin, allUsers]);
+  }, [chatMessages, effectiveOperation, selectedOpId, hasActiveOps, currentOperation, activeChannel, currentUserId, isAdmin, allUsers]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() && !includeLocation) return;
+    if (isGuest) return; // Reine Leseansicht für Gast/Beobachter
+
+    // Sicherheitsprüfung: Nur Admins/EL dürfen im Führungskanal senden
+    if (activeChannel === 'admins' && !isAdmin) {
+      setActiveChannel('all');
+      return;
+    }
 
     const isDirect =
       activeChannel !== 'all' &&
@@ -613,7 +652,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       !activeChannel.startsWith('sec-') &&
       !activeChannel.startsWith('team-');
 
-    const targetOpId = effectiveOperation?.id || 'general';
+    const targetOpId = hasActiveOps && currentOperation
+      ? currentOperation.id
+      : (effectiveOperation?.id || 'general');
 
     sendChatMessage({
       text: inputText.trim() || (includeLocation ? '📍 GPS-Standort übermittelt' : ''),
@@ -687,7 +728,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
   };
 
   // ─── Channel Sidebar Content ──────────────────────────────────────────────
-  const ChannelSidebarContent = () => (
+  const renderChannelSidebarContent = () => (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Scope Toggle */}
       <div className="grid grid-cols-2 gap-1 p-1 bg-slate-900 border border-slate-700/80 rounded-xl text-xs font-semibold mb-3 shrink-0">
@@ -966,7 +1007,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
   );
 
   // ─── Chat Area Content ────────────────────────────────────────────────────
-  const ChatAreaContent = () => (
+  const renderChatAreaContent = () => (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Channel Header */}
       <div className="bg-slate-800/90 px-4 py-3 border-b border-slate-700/80 flex items-center gap-3 shrink-0 shadow-sm">
@@ -1144,79 +1185,110 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
       )}
 
       {/* Input Bar */}
-      <form onSubmit={handleSend} className="bg-slate-900 border-t border-slate-700/80 p-3 space-y-2.5 shrink-0">
-        {/* GPS toggle row */}
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => setIncludeLocation(!includeLocation)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
-              includeLocation
-                ? 'bg-blue-500/20 text-blue-300 border-blue-500'
-                : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-700'
-            }`}
-          >
-            <MapPin className="w-3.5 h-3.5" />
-            <span>GPS</span>
-          </button>
-
-          <div className="text-[10px] text-slate-500 font-mono hidden sm:flex items-center gap-1 bg-slate-800/60 px-2 py-1 rounded border border-slate-700/60">
-            <span>🎙️ Halten = Funk</span>
-            <span className="text-slate-600">•</span>
-            <kbd className="px-1 py-0.5 rounded bg-slate-900 border border-slate-700 text-amber-300 font-mono">Leertaste</kbd>
+      <div className="bg-slate-900 border-t border-slate-700/80 p-3 space-y-2.5 shrink-0">
+        {isGuest ? (
+          /* Gastzugang: Reine Leseansicht */
+          <div className="bg-slate-800/90 border border-slate-700 rounded-xl p-3 flex items-center justify-between gap-3 text-xs text-slate-300">
+            <div className="flex items-center gap-2.5">
+              <span className="text-lg">👁️</span>
+              <div>
+                <strong className="text-white block">Gastzugang (Reine Leseansicht)</strong>
+                <span className="text-slate-400 text-[11px]">
+                  Im Funkchat können nur aktive Einsatzkräfte und Leitung Nachrichten senden.
+                </span>
+              </div>
+            </div>
+            <span className="px-2 py-0.5 rounded bg-slate-700 text-slate-300 text-[10px] font-mono shrink-0">
+              Nur Lesen
+            </span>
           </div>
-        </div>
+        ) : (
+          <form onSubmit={handleSend} className="space-y-2.5">
+            {/* GPS toggle row */}
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setIncludeLocation(!includeLocation)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+                  includeLocation
+                    ? 'bg-blue-500/20 text-blue-300 border-blue-500'
+                    : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-700'
+                }`}
+                title="Aktuelle GPS-Position an diesen Funkspruch anhängen"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span>GPS {includeLocation ? 'Aktiv' : ''}</span>
+              </button>
 
-        {/* Text + PTT + Send */}
-        <div className="flex items-center gap-2">
-          {/* PTT Button */}
-          <button
-            type="button"
-            onPointerDown={handlePttPointerDown}
-            onPointerUp={handlePttPointerUp}
-            onPointerCancel={handlePttPointerCancel}
-            onClick={handlePttButtonClick}
-            onContextMenu={(e) => e.preventDefault()}
-            title={isRecording ? 'Klicken zum Beenden und Senden' : 'Gedrückt halten zum Sprechen'}
-            className={`h-12 w-14 rounded-xl flex flex-col items-center justify-center gap-0.5 font-bold transition cursor-pointer shrink-0 border select-none touch-none ${
-              isRecording
-                ? 'bg-red-600 text-white border-red-500 animate-pulse shadow-lg ring-2 ring-red-400/60'
-                : 'bg-amber-500 hover:bg-amber-400 text-slate-900 border-amber-400 shadow active:scale-95'
-            }`}
-          >
-            <Mic className="w-5 h-5" />
-            <span className="text-[9px] font-bold tracking-wide">{isRecording ? 'SENDEN' : 'PTT'}</span>
-          </button>
+              <div className="text-[10px] text-slate-500 font-mono hidden sm:flex items-center gap-1 bg-slate-800/60 px-2 py-1 rounded border border-slate-700/60">
+                <span>🎙️ Halten = Funk</span>
+                <span className="text-slate-600">•</span>
+                <kbd className="px-1 py-0.5 rounded bg-slate-900 border border-slate-700 text-amber-300 font-mono">Leertaste</kbd>
+                <span className="text-slate-600">•</span>
+                <span>Enter = Senden</span>
+              </div>
+            </div>
 
-          {/* Text input */}
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder={`An ${
-              activeChannel === 'all'
-                ? 'alle Einheiten'
-                : activeChannel === 'ez_contact'
-                ? 'Einsatzzentrale'
-                : activeChannel === 'admins'
-                ? 'Einsatzleitung'
-                : activeSector
-                ? `Sektor ${activeSector.name}`
-                : activeTargetUser?.callSign || 'Kanal'
-            }...`}
-            className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-slate-50 text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/50 placeholder-slate-500 shadow-inner"
-          />
+            {/* Text + PTT + Send */}
+            <div className="flex items-center gap-2">
+              {/* PTT Button */}
+              <button
+                type="button"
+                onPointerDown={handlePttPointerDown}
+                onPointerUp={handlePttPointerUp}
+                onPointerCancel={handlePttPointerCancel}
+                onClick={handlePttButtonClick}
+                onContextMenu={(e) => e.preventDefault()}
+                title={isRecording ? 'Klicken zum Beenden und Senden' : 'Gedrückt halten zum Sprechen (oder Leertaste)'}
+                className={`h-12 w-14 rounded-xl flex flex-col items-center justify-center gap-0.5 font-bold transition cursor-pointer shrink-0 border select-none touch-none ${
+                  isRecording
+                    ? 'bg-red-600 text-white border-red-500 animate-pulse shadow-lg ring-2 ring-red-400/60'
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-900 border-amber-400 shadow active:scale-95'
+                }`}
+              >
+                <Mic className="w-5 h-5" />
+                <span className="text-[9px] font-bold tracking-wide">{isRecording ? 'SENDEN' : 'PTT'}</span>
+              </button>
 
-          {/* Send Button */}
-          <button
-            type="submit"
-            disabled={!inputText.trim() && !includeLocation}
-            className="h-12 w-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg disabled:opacity-40 transition cursor-pointer flex items-center justify-center shrink-0 active:scale-95"
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        </div>
-      </form>
+              {/* Text input */}
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend(e);
+                  }
+                }}
+                placeholder={`An ${
+                  activeChannel === 'all'
+                    ? 'alle Einheiten (Einsatzfunk)'
+                    : activeChannel === 'ez_contact'
+                    ? 'Einsatzzentrale'
+                    : activeChannel === 'admins'
+                    ? 'Einsatzleitung (Führungskanal)'
+                    : activeSector
+                    ? `Sektor ${activeSector.name}`
+                    : activeTargetUser?.callSign || activeTargetUser?.name || 'Kanal'
+                }...`}
+                className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-slate-50 text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/50 placeholder-slate-500 shadow-inner"
+                autoComplete="off"
+              />
+
+              {/* Send Button */}
+              <button
+                type="submit"
+                disabled={!inputText.trim() && !includeLocation}
+                className="h-12 w-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg disabled:opacity-40 transition cursor-pointer flex items-center justify-center shrink-0 active:scale-95"
+                title="Nachricht senden (Enter)"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 
@@ -1433,7 +1505,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
           {/* ── DESKTOP: Left Sidebar ─────────────────────────────────────── */}
           <div className="hidden lg:flex w-72 xl:w-80 flex-col bg-[#1E293B] border-r border-slate-700/80 p-3 shrink-0 overflow-hidden">
-            <ChannelSidebarContent />
+            {renderChannelSidebarContent()}
           </div>
 
           {/* ── MOBILE: Channel List View ─────────────────────────────────── */}
@@ -1449,20 +1521,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <ChannelSidebarContent />
+              {renderChannelSidebarContent()}
             </div>
           )}
 
           {/* ── MOBILE: Chat View ─────────────────────────────────────────── */}
           {mobileView === 'chat' && (
             <div className="lg:hidden flex-1 flex flex-col bg-[#0F172A] overflow-hidden min-w-0">
-              <ChatAreaContent />
+              {renderChatAreaContent()}
             </div>
           )}
 
           {/* ── DESKTOP: Chat Area ────────────────────────────────────────── */}
           <div className="hidden lg:flex flex-1 flex-col bg-[#0F172A] overflow-hidden min-w-0">
-            <ChatAreaContent />
+            {renderChatAreaContent()}
           </div>
         </div>
       )}

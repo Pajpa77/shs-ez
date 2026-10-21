@@ -5540,6 +5540,10 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
     setChatMessages((prev) => [...prev, newMsg]);
     syncChatToCloud(newMsg);
+    broadcastChannelRef.current?.postMessage({
+      type: 'NEW_CHAT',
+      payload: newMsg,
+    });
     if (data.isAlert) {
       playAlertSound('emergency_alarm');
     } else if (data.isVoiceMessage) {

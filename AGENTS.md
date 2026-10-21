@@ -15,15 +15,16 @@ Diese Regeln gelten **ausnahmslos** für alle Änderungen am Projekt **SHS-EZ (S
   3. **👁️ Als Gast / Betrachter** (reine Leseansicht ohne eigenen Standort)
   4. **🛰️ Persönlicher Trackingtest (10 / 20 / 30 Min.)** (separat, darf jeder)
 - **Karten- & Tracking-Verhalten ohne aktiven Einsatz:**
-  - Es werden lediglich die **aktuellen Standorte (Pins)** der angemeldeten Nutzer (Admins & aktive Nutzer) auf der Karte angezeigt – **ohne Aufzeichnung einer Trackingspur (Linie)** und ohne Bündelung im EZ-Pin.
+  - Bei regulärer Anmeldung (Admin / aktiver Nutzer) werden lediglich die **aktuellen Standorte (Pins)** auf der Karte angezeigt – **ohne Aufzeichnung einer Trackingspur (Linie)** und ohne Bündelung im EZ-Pin.
+  - **AUSNAHME Trackingtest (`🛰️ Persönlicher Trackingtest`):** Dies gilt **nicht** für den Trackingtest! Beim Trackingtest wird **immer** die komplette GPS-Testspur (Linie, Start-/Endpunkt, Richtungspfeile, Statistik, Karte & PDF/E-Mail-Protokoll) aufgezeichnet und angezeigt – völlig unabhängig davon, ob ein Einsatz aktiv ist oder nicht.
 
 ### B) Auswahlseite BEI AKTIVEM EINSATZ (`hasActiveOps` – `status === 'active' || status === 'paused'`)
 - **Nur im aktiven Einsatz** melden sich Admins entweder **in der EZ** oder **als Sucher** an:
   1. **Für Admins / Einsatzleitung (`isUserAdminOrEL`):**
      - **🏢 In der EZ (`ez_command`):** Kein GPS-Tracking / keine Trackingspur-Aufzeichnung. Werden auf der Karte **nicht** als gesonderter Pin angezeigt, sondern direkt **im EZ-Pin (`📡 EZ`)** aufgeführt.
      - **🦺 Als Sucher (`searcher`):** Eigener Pin auf der Karte. Sobald bereit gesetzt, wird die Suchspur aufgezeichnet.
-  2. **Für Sucher / Einsatzkräfte:**
-     - **🦺 Als Sucher anmelden (`searcher`):** Sobald sie vom Admin bereit gesetzt werden (per Barcode-Scan oder Button `🟢 Bereit`), werden sie getrackt und ihre Suchspur wird auf der Karte aufgezeichnet, um am Ende genau zu sehen, wo gesucht wurde und wo nicht.
+  2. **Für Sucher (Nicht-Admins):**
+     - Werden als **„Aktiver Nutzer / Sucher“** (`🦺 Als aktiver Nutzer / Sucher anmelden`, `searcher`) bezeichnet und fungieren im Einsatz als Sucher: Sobald sie vom Admin bereit gesetzt werden (per Barcode-Scan oder Button `🟢 Bereit`), werden sie getrackt und ihre Suchspur wird auf der Karte aufgezeichnet, um am Ende genau zu sehen, wo gesucht wurde und wo nicht.
   3. **👁️ Als Gast / Betrachter:** Reine Leseansicht der Einsatzkarte ohne eigenes GPS-Tracking.
   4. **🛰️ Persönlicher Trackingtest (10 / 20 / 30 Min.):** Eigenständige, separate Funktion der App (darf jeder jederzeit starten).
 

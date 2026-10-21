@@ -860,7 +860,7 @@ export const LoginScreen: React.FC = () => {
                             </div>
                           </div>
                         ) : (
-                          /* ── FÜR REGULÄRE EINSATZKRÄFTE IM AKTIVEN EINSATZ: ALS SUCHER ── */
+                          /* ── FÜR REGULÄRE EINSATZKRÄFTE IM AKTIVEN EINSATZ: AKTIVER NUTZER / SUCHER ── */
                           <button
                             type="button"
                             onClick={() => handleRoleSelected('active')}
@@ -869,10 +869,10 @@ export const LoginScreen: React.FC = () => {
                             <div>
                               <div className="flex items-center justify-between">
                                 <span className="text-sm font-bold text-white uppercase flex items-center gap-2">
-                                  <span>🦺</span> Als Sucher anmelden
+                                  <span>🦺</span> Als aktiver Nutzer / Sucher anmelden
                                 </span>
                                 <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">
-                                  Einsatzkraft
+                                  Aktiver Nutzer / Sucher
                                 </span>
                               </div>
                               <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
@@ -880,7 +880,7 @@ export const LoginScreen: React.FC = () => {
                               </p>
                             </div>
                             <div className="w-full py-2.5 px-3 rounded-lg bg-emerald-600 group-hover:bg-emerald-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
-                              <span>Als Sucher {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
+                              <span>Als aktiver Nutzer / Sucher {activeOperations.length > 1 ? '→ Einsatz wählen' : 'starten'}</span>
                               <ArrowRight className="w-3.5 h-3.5" />
                             </div>
                           </button>
