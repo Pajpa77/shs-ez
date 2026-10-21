@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { User, ChatMessage, SearchTeam, SearchOperation, isFirstAdmin, isUserAdmin, isUserEL, isUserAdminOrEL } from '../types';
+import { exportChatHistoryPdf, exportLogbookPdf, exportAlertsPdf } from '../lib/chatPdfExport';
 import {
   Send,
   Radio,
@@ -1357,48 +1358,53 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
 
         {/* Right: Action Buttons */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {/* Verlauf */}
-          <button
-            type="button"
-            onClick={() => setShowHistoryModal(true)}
-            className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-blue-300 transition cursor-pointer flex items-center gap-1.5"
-            title="Vollständigen Chatverlauf einsehen"
-          >
-            <MessageSquare className="w-4 h-4" />
-            <span className="hidden sm:inline text-xs font-semibold">Verlauf</span>
-          </button>
+          {/* Verlauf, Logbuch & Alarme nur bei aktivem Einsatz anzeigen */}
+          {hasActiveOps && (
+            <>
+              {/* Verlauf */}
+              <button
+                type="button"
+                onClick={() => setShowHistoryModal(true)}
+                className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-blue-300 transition cursor-pointer flex items-center gap-1.5"
+                title="Vollständigen Chatverlauf einsehen & dokumentieren"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span className="hidden sm:inline text-xs font-semibold">Verlauf</span>
+              </button>
 
-          {/* Logbuch */}
-          <button
-            type="button"
-            onClick={() => setShowLogbookModal(true)}
-            className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition cursor-pointer flex items-center gap-1.5 relative"
-            title="System-Logbuch"
-          >
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline text-xs font-semibold">Logbuch</span>
-            {logbookMessages.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white text-[8px] font-bold flex items-center justify-center">
-                {logbookMessages.length > 9 ? '9+' : logbookMessages.length}
-              </span>
-            )}
-          </button>
+              {/* Logbuch */}
+              <button
+                type="button"
+                onClick={() => setShowLogbookModal(true)}
+                className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition cursor-pointer flex items-center gap-1.5 relative"
+                title="System-Logbuch (Ein- & Ausloggvorgänge)"
+              >
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline text-xs font-semibold">Logbuch</span>
+                {logbookMessages.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-600 text-white text-[8px] font-bold flex items-center justify-center">
+                    {logbookMessages.length > 9 ? '9+' : logbookMessages.length}
+                  </span>
+                )}
+              </button>
 
-          {/* Alarme */}
-          <button
-            type="button"
-            onClick={() => setShowAlertsModal(true)}
-            className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-200 transition cursor-pointer flex items-center gap-1.5 relative"
-            title="Alarme & Statusänderungen"
-          >
-            <AlertTriangle className="w-4 h-4 text-red-400" />
-            <span className="hidden sm:inline text-xs font-semibold">Alarme</span>
-            {alertMessages.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-600 text-white text-[8px] font-bold flex items-center justify-center">
-                {alertMessages.length > 9 ? '9+' : alertMessages.length}
-              </span>
-            )}
-          </button>
+              {/* Alarme */}
+              <button
+                type="button"
+                onClick={() => setShowAlertsModal(true)}
+                className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 border border-red-800/60 text-red-200 transition cursor-pointer flex items-center gap-1.5 relative"
+                title="Alarme & Statusänderungen"
+              >
+                <AlertTriangle className="w-4 h-4 text-red-400" />
+                <span className="hidden sm:inline text-xs font-semibold">Alarme</span>
+                {alertMessages.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-600 text-white text-[8px] font-bold flex items-center justify-center">
+                    {alertMessages.length > 9 ? '9+' : alertMessages.length}
+                  </span>
+                )}
+              </button>
+            </>
+          )}
 
           {/* CB AutoPlay */}
           <button
@@ -1573,13 +1579,23 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {isFirstAdmin(currentUser) && (
+                {isAdmin && (
                   <button
-                    onClick={() => { window.print(); setTimeout(() => clearChatHistory(), 1000); }}
-                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer hidden sm:flex"
-                    title="Als PDF speichern und Verlauf leeren"
+                    onClick={() => {
+                      const opTitle = effectiveOperation?.title || 'Einsatz';
+                      const messagesToExport = chatMessages.filter((m) => {
+                        if (m.channel === 'system' || m.channel === 'logs' || m.text.includes('hat sich soeben eingeloggt') || m.text.includes('hat das System verlassen')) return false;
+                        if (!historySearchQuery.trim()) return true;
+                        const q = historySearchQuery.toLowerCase();
+                        return m.text.toLowerCase().includes(q) || m.senderName.toLowerCase().includes(q) || m.senderCallSign.toLowerCase().includes(q);
+                      });
+                      exportChatHistoryPdf(messagesToExport, opTitle);
+                      clearChatHistory();
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow"
+                    title="Als PDF exportieren und Verlauf leeren (wird automatisch in den Einsatzbericht übernommen)"
                   >
-                    PDF & Leeren
+                    <span>📄 PDF &amp; Leeren</span>
                   </button>
                 )}
                 <button onClick={() => setShowHistoryModal(false)} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
@@ -1640,12 +1656,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {isFirstAdmin(currentUser) && (
+                {isAdmin && (
                   <button
-                    onClick={() => { window.print(); setTimeout(() => clearLogbook(), 1000); }}
-                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer hidden sm:flex"
+                    onClick={() => {
+                      const opTitle = effectiveOperation?.title || 'Einsatz';
+                      exportLogbookPdf(logbookMessages, opTitle);
+                      clearLogbook();
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow"
+                    title="System-Logbuch als PDF exportieren und leeren (wird automatisch in das Einsatz-Tagebuch übernommen)"
                   >
-                    PDF & Leeren
+                    <span>📄 PDF &amp; Leeren</span>
                   </button>
                 )}
                 <button onClick={() => setShowLogbookModal(false)} className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
@@ -1690,12 +1711,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ initialDirectUser }) => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {isFirstAdmin(currentUser) && (
+                {isAdmin && (
                   <button
-                    onClick={() => { window.print(); setTimeout(() => clearAlerts(), 1000); }}
-                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/40 border border-red-500 text-red-300 font-bold text-xs transition cursor-pointer hidden sm:flex"
+                    onClick={() => {
+                      const opTitle = effectiveOperation?.title || 'Einsatz';
+                      exportAlertsPdf(alertMessages, findings || [], opTitle);
+                      clearAlerts();
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-red-600/30 hover:bg-red-600/50 border border-red-500 text-red-200 font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow"
+                    title="Alarme & Fundmeldungen als PDF exportieren und leeren"
                   >
-                    PDF & Leeren
+                    <span>📄 PDF &amp; Leeren</span>
                   </button>
                 )}
                 <button onClick={() => setShowAlertsModal(false)} className="p-2 rounded-lg bg-black/30 hover:bg-black/50 text-white">

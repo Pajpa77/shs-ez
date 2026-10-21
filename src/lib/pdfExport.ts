@@ -173,23 +173,58 @@ export const generateOperationPDF = async (
     yPos += 4;
   }
 
-  
-    // 6. Map Snapshot
-    try {
-      const imgData = await captureTacticalMapScreenshot(operation, userLocations, allUsers);
-      if (imgData) {
-        pdf.addPage();
-        pdf.setFontSize(14);
-        pdf.text('6. Gesamte Lagekarte (Standort & Suchspuren)', 105, 18, { align: 'center' });
-        const pdfWidth = 180;
-        const pdfHeight = (750 * pdfWidth) / 1200;
-        pdf.addImage(imgData, 'JPEG', 15, 25, pdfWidth, pdfHeight);
-      }
-    } catch (e) {
-      console.warn('Map snapshot failed for PDF', e);
-    }
+  // 6. Funk- und Chatprotokoll (Archivierte Funksprüche & Einsatzkommunikation)
+  const chatList = operation.archivedChatMessages && operation.archivedChatMessages.length > 0
+    ? operation.archivedChatMessages
+    : [];
 
-    // 7. Individual User Detail Maps
+  if (chatList.length > 0) {
+    if (yPos > 230) {
+      pdf.addPage();
+      yPos = 20;
+    }
+    pdf.setFontSize(13);
+    pdf.text('6. Funk- und Chatprotokoll (Einsatzkommunikation)', 15, yPos);
+    yPos += 6;
+    pdf.setFontSize(9);
+
+    const sortedChat = [...chatList].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    sortedChat.forEach((msg) => {
+      const timeStr = new Date(msg.timestamp).toLocaleString('de-DE');
+      const sender = msg.senderName ? `${msg.senderName} (${msg.senderCallSign || 'Funk'})` : 'System';
+      const channel = msg.channel ? `[Kanal: ${msg.channel.toUpperCase()}]` : '';
+      const alertTag = msg.isAlert ? '[ALARM] ' : '';
+      const chatLine = `[${timeStr}] ${channel} ${alertTag}${sender}: ${msg.text}`;
+      const splitLines = pdf.splitTextToSize(chatLine, 175);
+      pdf.text(splitLines, 18, yPos);
+      yPos += (splitLines.length * 4.5) + 2;
+      if (yPos > 270) {
+        pdf.addPage();
+        yPos = 20;
+      }
+    });
+    yPos += 4;
+  }
+
+  // 7. Map Snapshot
+  try {
+    const imgData = await captureTacticalMapScreenshot(operation, userLocations, allUsers);
+    if (imgData) {
+      pdf.addPage();
+      pdf.setFontSize(14);
+      pdf.text('7. Gesamte Lagekarte (Standort & Suchspuren)', 105, 18, { align: 'center' });
+      const pdfWidth = 180;
+      const pdfHeight = (750 * pdfWidth) / 1200;
+      pdf.addImage(imgData, 'JPEG', 15, 25, pdfWidth, pdfHeight);
+    }
+  } catch (e) {
+    console.warn('Map snapshot failed for PDF', e);
+  }
+
+  // 8. Individual User Detail Maps
     try {
       const usersWithTracks = new Set<string>();
       if (operation.archivedTracks) {
