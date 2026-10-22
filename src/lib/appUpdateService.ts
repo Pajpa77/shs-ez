@@ -12,7 +12,7 @@ export interface AppInstallerPluginInterface {
 
 export const AppInstaller = registerPlugin<AppInstallerPluginInterface>('AppInstaller');
 
-export const CURRENT_APP_VERSION = '6.6.0';
+export const CURRENT_APP_VERSION = '6.7.0';
 export const DEFAULT_STORAGE_APK_PATH = 'apk/shs-ez-latest.apk';
 
 export interface AppReleaseInfo {

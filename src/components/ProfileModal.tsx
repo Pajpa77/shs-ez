@@ -312,40 +312,52 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
   };
 
   return (
-    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md overflow-y-auto font-sans">
-      <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-xl text-black dark:text-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+      <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-xl text-slate-100 flex flex-col max-h-[92vh] overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-white dark:bg-slate-900/90 p-4 border-b border-slate-300 dark:border-slate-700 flex items-center justify-between">
+        <div className="bg-slate-900 p-4 border-b border-slate-700 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-blue-400 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-xl">
+            <div className="h-10 w-10 rounded-xl bg-slate-800 text-blue-400 border border-slate-700 flex items-center justify-center font-bold text-xl shrink-0">
               <User className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-white uppercase tracking-wide">Mein Einsatzprofil & Daten</h2>
                 {isFirstAdmin(currentUser) && (
-                  <span className="px-2 py-0.5 rounded-full bg-slate-50 dark:bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold flex items-center gap-1">
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold flex items-center gap-1">
                     <span>👑</span>
                     <span>First Admin / App-Owner</span>
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+              <p className="text-xs text-slate-400 font-mono">
                 {isFirstAdmin(currentUser)
                   ? 'Du bist der unantastbare App-Owner. Nur du kannst dein eigenes Profil und deine Rechte ändern.'
                   : 'Diese Angaben werden auf der Lagekarte für die Einsatzleitung angezeigt'}
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 flex items-center justify-center transition cursor-pointer"
-          >
-            <X className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="submit"
+              form="profile-edit-form"
+              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold transition cursor-pointer flex items-center gap-1.5 shadow uppercase tracking-wider font-mono text-xs"
+              title="Profil sofort speichern"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>Speichern</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center transition cursor-pointer text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSave} className="p-5 space-y-4 max-h-[calc(100vh-6rem)] sm:overflow-y-auto flex-1 text-xs">
+        <form id="profile-edit-form" onSubmit={handleSave} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
           {savedSuccess && (
             <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500 text-emerald-300 font-bold flex items-center gap-2 font-mono">
               <CheckCircle className="w-4 h-4" />
@@ -779,25 +791,26 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
               </div>
             )}
           </div>
-
-          {/* Footer Actions */}
-          <div className="pt-3 border-t border-slate-300 dark:border-slate-700 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 uppercase tracking-wider font-mono text-xs"
-            >
-              Schließen
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition cursor-pointer flex items-center gap-1.5 shadow uppercase tracking-wider font-mono text-xs"
-            >
-              <Save className="w-3.5 h-3.5" />
-              Profil speichern
-            </button>
-          </div>
         </form>
+
+        {/* Sticky Footer Actions - IMMER SICHTBAR */}
+        <div className="p-3.5 sm:p-4 bg-slate-900 border-t border-slate-700 flex items-center justify-between shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition cursor-pointer border border-slate-700 uppercase tracking-wider font-mono text-xs"
+          >
+            Schließen
+          </button>
+          <button
+            type="submit"
+            form="profile-edit-form"
+            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition cursor-pointer flex items-center gap-2 shadow-lg uppercase tracking-wider font-mono text-xs shadow-blue-900/50"
+          >
+            <Save className="w-4 h-4" />
+            <span>Profil speichern</span>
+          </button>
+        </div>
       </div>
 
       {showMemberCardModal && currentUser && (

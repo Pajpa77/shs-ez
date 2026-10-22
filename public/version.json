@@ -1,7 +1,7 @@
 {
-  "version": "6.6.0",
+  "version": "6.7.0",
   "apkUrl": "https://shs-ea.web.app/shs-ez-latest.apk",
   "releaseDate": "2026-10-22",
-  "releaseNotes": "v6.6.0: Vollautomatischer In-App-Installer, Behebung gelöschter Einsätze (Multi-Device-Cache) & Zwangsabmeldung bei Deaktivierung durch Einsatzleitung.",
+  "releaseNotes": "v6.7.0: Speichern-Button im Profil-Editor für alle Nutzer fixiert & erreichbar gemacht. Schnellspeichern im Header. Vollautomatischer In-App-Installer aktiv.",
   "fileSizeMb": "10.3 MB"
 }
