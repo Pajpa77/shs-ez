@@ -8,11 +8,11 @@ async function main() {
 
   const docRef = doc(db, 'system_config', 'app_version');
   const releaseData = {
-    version: '6.6.0',
+    version: '7.0.0',
     apkUrl: 'https://shs-ea.web.app/shs-ez-latest.apk',
     releaseDate: '2026-10-22',
-    releaseNotes: 'v6.6.0: Behebt Synchronisationsfehler bei gelöschten Einsätzen & automatische Abmeldung inaktiver Einsatzkräfte. Update-Service & Gerät merken aktiv.',
-    fileSizeMb: 'ca. 31 MB',
+    releaseNotes: 'v7.0.0: Meilenstein Release mit vollständigem U18-Jugendgruppen-Modul, separatem Trackingtest, sicherem externen Browser-Aufruf für dipul/Zonen und neuem UI.',
+    fileSizeMb: 'ca. 11 MB',
     updatedAt: new Date().toISOString()
   };
 

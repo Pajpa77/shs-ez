@@ -30,12 +30,14 @@ const ShareAppModal = lazy(() => import('./components/ShareAppModal').then(m => 
 const SearchTeamsModal = lazy(() => import('./components/SearchTeamsModal').then(m => ({ default: m.SearchTeamsModal })));
 const UserListPdfModal = lazy(() => import('./components/UserListPdfModal').then(m => ({ default: m.UserListPdfModal })));
 import { TrackingTestOverlay } from './components/TrackingTestOverlay';
+import { YouthAppRoot } from './youth/YouthAppRoot';
 import { QuotaNotificationBanner } from './components/QuotaNotificationBanner';
 import { DroneFeedWidget } from './components/DroneFeedWidget';
 import { FloatingMapControlsBar } from './components/FloatingMapControlsBar';
 
 import { useWakeLock } from './hooks/useWakeLock';
 import { usePWAInstall } from './hooks/usePWAInstall';
+import { openExternalUrl } from './lib/appUpdateService';
 
 import { Finding, SearchSector, User, SearchOperation, isUserAdmin, isUserEL, isUserAdminOrEL } from './types';
 import {
@@ -79,6 +81,9 @@ const MainApp: React.FC = () => {
     uiScale,
     setUiScale,
     activeTrackingTest,
+    startTrackingTest,
+    isYouthModuleActive,
+    setYouthModuleActive,
     confirmModalState,
     dismissConfirmModal,
     showConfirmModal,
@@ -146,6 +151,32 @@ const MainApp: React.FC = () => {
       window.removeEventListener('popstate', handlePopState);
     };
   }, [currentUser, setActiveAlertNotification, isOperationActive]);
+
+  // Global click interceptor: ensures any external link (e.g. dipul, navigation apps) opens in an external browser
+  // without unloading the React app, terminating the session, or triggering beforeunload warnings.
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement)?.closest('a');
+      if (!anchor) return;
+      const href = anchor.getAttribute('href');
+      if (!href) return;
+
+      // Handle external web links or links with target="_blank"
+      if (href.startsWith('http://') || href.startsWith('https://')) {
+        const isInternalHost = href.startsWith(window.location.origin);
+        if (!isInternalHost || anchor.target === '_blank') {
+          e.preventDefault();
+          e.stopPropagation();
+          openExternalUrl(href);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleDocumentClick, { capture: true });
+    return () => {
+      document.removeEventListener('click', handleDocumentClick, { capture: true });
+    };
+  }, []);
 
   // Activate Wake Lock & Background GPS Heartbeat whenever user is logged in
   const isTrackingActive = Boolean(currentUser || isOperationActive || activeTrackingTest);
@@ -231,6 +262,20 @@ const MainApp: React.FC = () => {
 
   const [isUserListPdfOpen, setIsUserListPdfOpen] = useState(false);
   const [directChatTarget, setDirectChatTarget] = useState<User | null>(null);
+
+  // Youth Group Module (v7.0) - Completely isolated sub-system
+  if (isYouthModuleActive) {
+    return (
+      <YouthAppRoot
+        adultUsers={allUsers}
+        onExitYouthModule={() => setYouthModuleActive(false)}
+        onStartTrackingTest={(user, duration) => {
+          setYouthModuleActive(false);
+          startTrackingTest(user, duration);
+        }}
+      />
+    );
+  }
 
   // If not authenticated, show login
   if (!currentUser) {

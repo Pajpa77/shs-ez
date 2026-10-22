@@ -8,11 +8,33 @@ export interface AppInstallerPluginInterface {
   canInstallPackages(): Promise<{ canInstall: boolean }>;
   openInstallPermissionSettings(): Promise<void>;
   downloadAndInstall(options: { url: string }): Promise<{ status: string; message?: string; downloadId?: number }>;
+  openExternalUrl(options: { url: string }): Promise<void>;
 }
 
 export const AppInstaller = registerPlugin<AppInstallerPluginInterface>('AppInstaller');
 
-export const CURRENT_APP_VERSION = '6.7.0';
+/**
+ * Safely opens an external URL on Android via native browser Intent (FLAG_ACTIVITY_NEW_TASK),
+ * keeping the SHS-EZ app alive in the background without unloading, reloading or logging out!
+ */
+export const openExternalUrl = async (url: string) => {
+  if (!url) return;
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await AppInstaller.openExternalUrl({ url });
+      return;
+    } catch (err) {
+      console.warn('[App] Native openExternalUrl failed, falling back to window.open:', err);
+    }
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
+};
+
+if (typeof window !== 'undefined') {
+  (window as any).openExternalUrl = openExternalUrl;
+}
+
+export const CURRENT_APP_VERSION = '7.0.0';
 export const DEFAULT_STORAGE_APK_PATH = 'apk/shs-ez-latest.apk';
 
 export interface AppReleaseInfo {

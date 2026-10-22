@@ -29,6 +29,11 @@
         </provider>
     </application>
 
+    <!-- Camera permission for Barcode / Badge Scanning & Photo Upload -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
     <!-- Essential SAR / GPS Telemetry Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />

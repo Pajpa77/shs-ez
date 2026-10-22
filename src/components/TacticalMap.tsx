@@ -71,6 +71,7 @@ import { GeoImportModal } from './GeoImportModal';
 import { OfflineMapModal } from './OfflineMapModal';
 import { AreaPartitionModal } from './AreaPartitionModal';
 import { ImportedTrack, ImportedWaypoint } from '../lib/geoImport';
+import { openExternalUrl } from '../lib/appUpdateService';
 
 function escapeHtml(str: unknown): string {
   if (str === null || str === undefined) return '';
@@ -5730,7 +5731,15 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
               </div>
 
               <div className="p-2.5 pt-0 mt-2 border-t border-slate-700 text-amber-300/90 leading-snug">
-                ⚠️ Für tagesaktuelle Details (NOTAMs) und Klick-Abfragen auf Zonen: <a href="https://maptool-dipul.dfs.de/" target="_blank" rel="noopener noreferrer" className="underline text-amber-200 hover:text-white">Offizielles dipul-Maptool öffnen</a>.
+                ⚠️ Für tagesaktuelle Details (NOTAMs) und Klick-Abfragen auf Zonen:
+                <button
+                  type="button"
+                  onClick={() => openExternalUrl('https://maptool-dipul.dfs.de/')}
+                  className="mt-1.5 w-full flex items-center justify-center gap-1.5 py-1.5 px-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 hover:text-white border border-amber-500/40 rounded-lg text-xs font-semibold transition active:scale-95 shadow-sm"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                  <span>Offizielles dipul-Maptool im Browser öffnen (App bleibt aktiv ↗)</span>
+                </button>
               </div>
               <div className="p-2.5 pt-0 mt-0 text-slate-500 text-[9px]">Quelle: DFS Deutsche Flugsicherung GmbH / dipul (CC BY-ND 4.0)</div>
             </div>

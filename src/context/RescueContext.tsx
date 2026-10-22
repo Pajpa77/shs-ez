@@ -259,6 +259,10 @@ interface RescueContextType {
   startTrackingTest: (user: User, duration: 10 | 20 | 30) => void;
   stopTrackingTest: () => void;
   saveTrackingTestResult: (save: boolean) => void;
+
+  // Youth Group Module (v7.0)
+  isYouthModuleActive: boolean;
+  setYouthModuleActive: (active: boolean) => void;
 }
 
 const RescueContext = createContext<RescueContextType | undefined>(undefined);
@@ -1231,6 +1235,21 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const [activeTrackingTest, setActiveTrackingTestState] = useState<TrackingTestSession | null>(null);
   const activeTrackingTestRef = useRef<TrackingTestSession | null>(null);
+
+  const [isYouthModuleActive, setIsYouthModuleActive] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('rescue_is_youth_active') === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  const setYouthModuleActive = useCallback((active: boolean) => {
+    setIsYouthModuleActive(active);
+    try {
+      sessionStorage.setItem('rescue_is_youth_active', active ? '1' : '0');
+    } catch {}
+  }, []);
 
   const setActiveTrackingTest = useCallback((session: TrackingTestSession | null | ((prev: TrackingTestSession | null) => TrackingTestSession | null)) => {
     setActiveTrackingTestState(prev => {
@@ -6066,6 +6085,8 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         startTrackingTest,
         stopTrackingTest,
         saveTrackingTestResult,
+        isYouthModuleActive,
+        setYouthModuleActive,
         chatToasts,
         dismissChatToast,
         activeChatTarget,

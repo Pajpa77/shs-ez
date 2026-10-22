@@ -48,6 +48,24 @@ public class AppInstallerPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void openExternalUrl(PluginCall call) {
+        String url = call.getString("url");
+        if (url == null || url.isEmpty()) {
+            call.reject("URL is missing");
+            return;
+        }
+
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Failed to open URL: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
     public void downloadAndInstall(PluginCall call) {
         String url = call.getString("url");
         if (url == null || url.isEmpty()) {

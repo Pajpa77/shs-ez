@@ -286,3 +286,6 @@ html, body {
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+/* Custom Tactical DivIcon Container reset */
+.leaflet-div-icon, .custom-youth-pin, .youth-ez-pin, .custom-responder-marker, .custom-ez-pin, .finding-pin { background: transparent !important; border: none !important; }

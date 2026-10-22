@@ -53,3 +53,26 @@ Diese Regeln gelten **ausnahmslos** für alle Änderungen am Projekt **SHS-EZ (S
 
 ## 4. Karten-Bedienoberfläche (`src/components/TacticalMap.tsx` & `src/components/FloatingMapControlsBar.tsx`)
 - Die Buttons für **Karten-Darkmode (Mond/Sonne)** und **Drohnen-Stream (Funkantenne `RadioTower`)** befinden sich gesammelt im oberen rechten Bedienfenster (**Wetter / GPS / Ebenen** in `src/components/TacticalMap.tsx`), nicht verstreut in der unteren Zoom-Leiste.
+
+## 5. Jugendgruppe (U18 – Version 7.0)
+- **Vollständige Kapselung & Zero-Regression**:
+  - Die Jugendgruppe ist als **vollständig eigenständiges Modul** (`src/youth/`) realisiert – analog zum Trackingtest.
+  - Die Haupt-App und die Realeinsatz-Logik der Erwachsenen bleiben zu 100 % geschützt und unberührt.
+- **Strikte Account- & Daten-Trennung**:
+  - Kinder-Accounts (U18) werden in einem separaten Speicherbereich (`rescue_youth_users_*` / `youth_users`) geführt und dürfen **niemals** mit Erwachsenen-Accounts vermischt werden oder in der Erwachsenen-Kräfteliste auftauchen.
+  - Kinder haben vereinfachte, kindgerechte Zugänge (4-stellige PIN, Schnellauswahl) und keinen Zugriff auf sensible Realeinsatzdaten, Akten oder Archive der Erwachsenen.
+- **Strikte Übungs-Logik („Nur Übung!“)**:
+  - In der Jugendgruppe gibt es **niemals Realeinsätze** (🔵/🔴).
+  - Es existieren ausschließlich Übungen:
+    - Geplant: **⚪ Weiß**
+    - Aktiv: **🟡 Gelb** (bei reiner Jugendübung) bzw. **🟣 Lila** (bei gemeinsamer Übung)
+    - Pausiert: **🟠 Orange**
+- **Jugend-Admin (Erwachsener/Jugendleiter)**:
+  - Nur Erwachsene mit verifizierten Admin-Rechten der Haupt-App können sich als Jugend-Admin anmelden.
+  - Der Jugend-Admin erhält das **Jugend-Adminboard** zur Verwaltung der Kinder-Accounts, Anlegen/Steuern von Übungen und Sektoren.
+- **Gemeinsame Übung („Erwachsene vs. Jugend“)**:
+  - Wird **ausschließlich im Jugendmodul** geführt (nicht in der Haupt-App!).
+  - Erwachsene Einsatzkräfte können der gemeinsamen Übung im Jugendmodul mit ihren gewohnten Zugangsdaten beitreten und werden dort als **🦺 Team Erwachsene** geführt.
+  - Kinder agieren als **🎒 Team Jugend**.
+  - Die taktische Karte und der Funk trennen und koordinieren beide Teams sauber.
+

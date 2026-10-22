@@ -64,6 +64,7 @@ export const LoginScreen: React.FC = () => {
     setUserActiveStatus,
     isOperationActive,
     startTrackingTest,
+    setYouthModuleActive,
   } = useRescue();
 
   // Dynamic status theme for the "SPÜRHUNDE-SALZLANDKREIS E.V." badge:
@@ -371,6 +372,17 @@ export const LoginScreen: React.FC = () => {
         );
 
     if (!foundUser) {
+      // Sicherheits-Prüfung: Versucht ein Jugendlicher sich in der Erwachsenen-App anzumelden?
+      const isYouthMatch = Boolean(
+        targetUser.toLowerCase().includes('jungspürer') ||
+        ['felix', 'lena', 'tim', 'sophie', 'max', 'lukas'].includes(targetUser.toLowerCase()) ||
+        targetUser.toLowerCase().startsWith('youth-')
+      );
+      if (isYouthMatch) {
+        setErrorMsg('👶 Dieses Konto gehört zur Jugendgruppe (U18). Die Haupt-Einsatzzentrale ist nur für Erwachsene zugelassen. Bitte wechsle unten zur Spürhunde Jugendgruppe!');
+        return;
+      }
+
       handleFailedAttempt();
       return;
     }
@@ -606,7 +618,7 @@ export const LoginScreen: React.FC = () => {
 
           <div className="pt-6 mt-6 border-t border-blue-700/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-blue-200 font-mono">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-cyan-300">v6.7</span>
+              <span className="font-bold text-cyan-300">v7.0</span>
               {isNative ? (
                 <button
                   type="button"
@@ -1019,6 +1031,31 @@ export const LoginScreen: React.FC = () => {
                               </button>
                             </div>
                           )}
+
+                          {/* ── SEPARATE FUNKTION: JUGENDGRUPPE (U18 & ÜBUNGSBETRIEB) ── */}
+                          <button
+                            type="button"
+                            onClick={() => setYouthModuleActive(true)}
+                            className="w-full p-4 rounded-xl bg-[#000840] hover:bg-[#001073] border-2 border-cyan-400/80 hover:border-cyan-300 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-lg mt-2"
+                          >
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold uppercase flex items-center gap-2 text-cyan-200">
+                                  <span>🎒</span> Zur Spürhunde Jugendgruppe (U18)
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded font-mono border font-bold bg-cyan-950 text-cyan-300 border-cyan-700">
+                                  U18 &amp; Übung
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
+                                Separates Modul für Kinder &amp; Jugendliche (U18). Ausschließlich Übungsbetrieb – vollständig isoliert von den Realeinsätzen der Erwachsenen.
+                              </p>
+                            </div>
+                            <div className="w-full py-2.5 px-3 rounded-lg bg-cyan-600 group-hover:bg-cyan-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
+                              <span>Zur Jugendgruppe wechseln</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </div>
+                          </button>
                         </div>
                       </div>
                     </>
@@ -1173,6 +1210,31 @@ export const LoginScreen: React.FC = () => {
                               </button>
                             </div>
                           )}
+
+                          {/* ── SEPARATE FUNKTION: JUGENDGRUPPE (U18 & ÜBUNGSBETRIEB) ── */}
+                          <button
+                            type="button"
+                            onClick={() => setYouthModuleActive(true)}
+                            className="w-full p-4 rounded-xl bg-[#000840] hover:bg-[#001073] border-2 border-cyan-400/80 hover:border-cyan-300 text-left transition cursor-pointer flex flex-col justify-between gap-3 group shadow-lg mt-2"
+                          >
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold uppercase flex items-center gap-2 text-cyan-200">
+                                  <span>🎒</span> Zur Spürhunde Jugendgruppe (U18)
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded font-mono border font-bold bg-cyan-950 text-cyan-300 border-cyan-700">
+                                  U18 &amp; Übung
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-blue-100 mt-2 font-sans leading-relaxed">
+                                Separates Modul für Kinder &amp; Jugendliche (U18). Ausschließlich Übungsbetrieb – vollständig isoliert von den Realeinsätzen der Erwachsenen.
+                              </p>
+                            </div>
+                            <div className="w-full py-2.5 px-3 rounded-lg bg-cyan-600 group-hover:bg-cyan-500 text-white font-bold text-xs uppercase font-mono text-center flex items-center justify-center gap-1.5 shadow">
+                              <span>Zur Jugendgruppe wechseln</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </div>
+                          </button>
                         </div>
                       </div>
                     </>
@@ -1456,6 +1518,21 @@ export const LoginScreen: React.FC = () => {
                   </div>
                 )}
 
+                {/* Direct Entry to Youth Group */}
+                <div className="pt-3 border-t border-blue-700/60 mt-3 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setYouthModuleActive(true)}
+                    className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-blue-900 via-cyan-900 to-blue-900 hover:from-blue-800 hover:to-blue-800 border-2 border-cyan-400/80 text-cyan-200 hover:text-white font-bold text-xs uppercase tracking-wider font-mono transition cursor-pointer shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <span className="text-base">🎒</span>
+                    <span>Zur Spürhunde Jugendgruppe (U18)</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-cyan-400" />
+                  </button>
+                  <span className="text-[10px] text-blue-300 font-sans mt-1 block">
+                    Eigenständiger Übungsbereich für Kinder &amp; Jugendliche (ohne Realeinsätze)
+                  </span>
+                </div>
               </div>
             )}
           </div>
