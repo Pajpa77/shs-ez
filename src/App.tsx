@@ -264,7 +264,7 @@ const MainApp: React.FC = () => {
   const [directChatTarget, setDirectChatTarget] = useState<User | null>(null);
 
   // Youth Group Module (v7.0) - Completely isolated sub-system
-  if (isYouthModuleActive) {
+  if (isYouthModuleActive && !activeTrackingTest?.isActive) {
     return (
       <YouthAppRoot
         adultUsers={allUsers}
@@ -277,8 +277,8 @@ const MainApp: React.FC = () => {
     );
   }
 
-  // If not authenticated, show login
-  if (!currentUser) {
+  // If not authenticated and no tracking test is running, show login
+  if (!currentUser && !activeTrackingTest?.isActive) {
     return (
       <div className="fixed inset-0 w-full h-full overflow-y-auto bg-reflex-blue z-[9999]" style={{ backgroundColor: '#001489', WebkitOverflowScrolling: 'touch' }}>
         <LoginScreen />
@@ -286,7 +286,7 @@ const MainApp: React.FC = () => {
     );
   }
 
-  const isAdmin = isUserAdmin(currentUser);
+  const isAdmin = Boolean(currentUser && isUserAdmin(currentUser));
 
   const isAnyModalOpen =
     isFindingModalOpen ||
@@ -358,7 +358,7 @@ const MainApp: React.FC = () => {
               Möchten Sie sich wirklich von Ihrem aktuellen Account abmelden?
               <br />
               <strong className="text-white font-mono mt-1 block">
-                {currentUser.name} ({currentUser.callSign || currentUser.role})
+                {currentUser?.name || 'Benutzer'} ({currentUser?.callSign || currentUser?.role || 'Einsatzkraft'})
               </strong>
               <span className="text-xs text-slate-400 block mt-1">
                 Dieser Logout wird im Einsatzprotokoll dokumentiert und ändert Ihren Status auf offline.

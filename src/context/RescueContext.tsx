@@ -1294,26 +1294,6 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return unsub;
   }, []);
 
-  // Derived active objects
-  const currentUser = useMemo(() => {
-    if (!currentUserId || allUsers.length === 0) return null;
-    const baseUser = allUsers.find((u) => u.id === currentUserId);
-    if (!baseUser) return null;
-    return {
-      ...baseUser,
-      operationalRole: baseUser.operationalRole || operationalRole,
-    };
-  }, [currentUserId, allUsers, operationalRole]);
-
-  // Keep mobile screen awake via Screen Wake Lock API during active GPS recording (Status Grün) or Tracking Test
-  const isTrackingWakeLockActive = Boolean(
-    (isRealGpsActive &&
-      (currentUser?.arrivalStatus === 'ready' ||
-        (currentUser?.id && userArrivalStatuses[currentUser.id] === 'ready'))) ||
-      activeTrackingTest?.isActive
-  );
-  useWakeLock(isTrackingWakeLockActive);
-
   // Single active device session ID to prevent double login / session conflicts
   const deviceSessionId = useMemo(() => {
     try {
@@ -1332,6 +1312,53 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return `session-${Math.random().toString(36).substring(2, 11)}-${Date.now()}`;
     }
   }, []);
+
+  // Derived active objects
+  const currentUser = useMemo(() => {
+    if (!currentUserId) return null;
+    const baseUser = allUsers.find((u) => u.id === currentUserId);
+    if (baseUser) {
+      return {
+        ...baseUser,
+        operationalRole: baseUser.operationalRole || operationalRole,
+        // When running an active tracking test, ensure user is marked active, ready, and on current device session
+        ...(activeTrackingTest?.isActive && activeTrackingTest.userId === currentUserId
+          ? {
+              isActive: true,
+              activeSessionId: deviceSessionId,
+              arrivalStatus: 'ready' as const,
+              operationalRole: 'searcher' as const,
+            }
+          : {}),
+      };
+    }
+    // When a youth user or guest starts a tracking test outside allUsers
+    if (activeTrackingTest?.isActive && activeTrackingTest.userId === currentUserId) {
+      return {
+        id: activeTrackingTest.userId,
+        name: activeTrackingTest.userName,
+        username: activeTrackingTest.userName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+        role: 'responder' as const,
+        callSign: activeTrackingTest.userName,
+        licensePlate: 'TEST-TRACK',
+        equipment: [],
+        isActive: true,
+        activeSessionId: deviceSessionId,
+        arrivalStatus: 'ready' as const,
+        operationalRole: 'searcher' as const,
+      };
+    }
+    return null;
+  }, [currentUserId, allUsers, operationalRole, activeTrackingTest, deviceSessionId]);
+
+  // Keep mobile screen awake via Screen Wake Lock API during active GPS recording (Status Grün) or Tracking Test
+  const isTrackingWakeLockActive = Boolean(
+    (isRealGpsActive &&
+      (currentUser?.arrivalStatus === 'ready' ||
+        (currentUser?.id && userArrivalStatuses[currentUser.id] === 'ready'))) ||
+      activeTrackingTest?.isActive
+  );
+  useWakeLock(isTrackingWakeLockActive);
 
   // Continuous heartbeat for active session (only pings while this device owns the active session)
   useEffect(() => {
@@ -1358,6 +1385,8 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Real-time check to prevent simultaneous double logins on the same account from ANOTHER device/tab
   useEffect(() => {
     if (!currentUser || !currentUser.isActive || !currentUser.activeSessionId) return;
+    // CRITICAL: Never auto-logout during active personal tracking test
+    if (activeTrackingTestRef.current?.isActive) return;
 
     // Check if the user's active session ID in Firestore matches this tab's deviceSessionId
     const isSameSession = currentUser.activeSessionId === deviceSessionId;
@@ -1384,6 +1413,8 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Remote deactivation listener: if an Admin deactivates this user remotely or ends their session
   useEffect(() => {
     if (!currentUser) return;
+    // CRITICAL: Never auto-logout during active personal tracking test
+    if (activeTrackingTestRef.current?.isActive) return;
 
     if (!currentUser.isActive) {
       console.warn('[Remote Deactivation] Current user account was deactivated remotely by an administrator. Logging out.');
@@ -5862,11 +5893,25 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     };
     
     setActiveTrackingTest(session);
-    // Automatically switch to responder mode for tracking
-    updateUser(user.id, { role: 'responder', isActive: true });
+    
+    // For registered users in allUsers, activate with current deviceSessionId
+    const targetUser = allUsers.find((u) => u.id === user.id);
+    if (targetUser) {
+      updateUser(user.id, {
+        isActive: true,
+        activeSessionId: deviceSessionId,
+        lastHeartbeat: Date.now(),
+        lastSeen: 'Online (Trackingtest)',
+        operationalRole: 'searcher',
+      });
+    }
+
     setUserArrivalStatuses(prev => ({ ...prev, [user.id]: 'ready' }));
     setIsRealGpsActive(true);
     setCurrentUserId(user.id);
+    try {
+      localStorage.setItem(STORAGE_KEY_CURRENT_USER, user.id);
+    } catch {}
 
     // Immediately fetch a GPS position so the marker appears on the map right away,
     // before watchPosition delivers its first update (which can take several seconds).
@@ -5902,7 +5947,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
         { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }
       );
     }
-  }, [updateUser]);
+  }, [allUsers, deviceSessionId, updateUser]);
 
   const stopTrackingTest = useCallback(() => {
     setActiveTrackingTest((prev) => {

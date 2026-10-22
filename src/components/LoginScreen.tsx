@@ -1012,8 +1012,11 @@ export const LoginScreen: React.FC = () => {
                                     type="button"
                                     onClick={() => {
                                       if (verifiedUser) {
+                                        const userToTest = verifiedUser;
                                         setTestDuration(d as 10 | 20 | 30);
-                                        startTrackingTest(verifiedUser, d as 10 | 20 | 30);
+                                        setShowTestDuration(false);
+                                        setVerifiedUser(null);
+                                        startTrackingTest(userToTest, d as 10 | 20 | 30);
                                       }
                                     }}
                                     className="py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-lg transition cursor-pointer"
@@ -1191,8 +1194,11 @@ export const LoginScreen: React.FC = () => {
                                     type="button"
                                     onClick={() => {
                                       if (verifiedUser) {
+                                        const userToTest = verifiedUser;
                                         setTestDuration(d as 10 | 20 | 30);
-                                        startTrackingTest(verifiedUser, d as 10 | 20 | 30);
+                                        setShowTestDuration(false);
+                                        setVerifiedUser(null);
+                                        startTrackingTest(userToTest, d as 10 | 20 | 30);
                                       }
                                     }}
                                     className="py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-lg transition cursor-pointer"
