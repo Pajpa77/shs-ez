@@ -2,6 +2,6 @@
   "version": "6.6.0",
   "apkUrl": "https://shs-ea.web.app/shs-ez-latest.apk",
   "releaseDate": "2026-10-22",
-  "releaseNotes": "v6.6.0: Behebt Fehler bei gelöschten Einsätzen & automatische Abmeldung, wenn Einsatzleitung den User abmeldet.",
-  "fileSizeMb": "31 MB"
+  "releaseNotes": "v6.6.0: Vollautomatischer In-App-Installer, Behebung gelöschter Einsätze (Multi-Device-Cache) & Zwangsabmeldung bei Deaktivierung durch Einsatzleitung.",
+  "fileSizeMb": "10.3 MB"
 }

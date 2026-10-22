@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { db, storage } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
+
+export interface AppInstallerPluginInterface {
+  canInstallPackages(): Promise<{ canInstall: boolean }>;
+  openInstallPermissionSettings(): Promise<void>;
+  downloadAndInstall(options: { url: string }): Promise<{ status: string; message?: string; downloadId?: number }>;
+}
+
+export const AppInstaller = registerPlugin<AppInstallerPluginInterface>('AppInstaller');
 
 export const CURRENT_APP_VERSION = '6.6.0';
 export const DEFAULT_STORAGE_APK_PATH = 'apk/shs-ez-latest.apk';
@@ -111,6 +119,11 @@ export const useAppUpdateCheck = () => {
   const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
+    // Only check APK updates when running as native Android app
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+
     let mounted = true;
     setIsChecking(true);
     getLatestReleaseInfo()
@@ -155,6 +168,27 @@ export const triggerApkDownload = (apkUrl: string): void => {
   } catch (err) {
     console.error('[AppUpdate] Failed to trigger APK download:', err);
     window.location.href = apkUrl;
+  }
+};
+
+/**
+ * Triggers the automatic in-app download and native Android installer prompt.
+ */
+export const triggerInAppUpdate = async (
+  apkUrl: string
+): Promise<{ success: boolean; status?: string; message?: string }> => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const res = await AppInstaller.downloadAndInstall({ url: apkUrl });
+      return { success: true, status: res.status, message: res.message };
+    } catch (err: any) {
+      console.warn('[AppUpdate] Native AppInstaller failed, falling back to browser download:', err);
+      triggerApkDownload(apkUrl);
+      return { success: false, message: err?.message || 'Download fehlgeschlagen' };
+    }
+  } else {
+    triggerApkDownload(apkUrl);
+    return { success: true, status: 'web_download' };
   }
 };
 

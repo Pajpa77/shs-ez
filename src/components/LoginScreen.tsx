@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useRescue } from '../context/RescueContext';
 import { User, EquipmentType, UserRole, isUserAdmin, isUserEL, isUserAdminOrEL, isFirstAdmin } from '../types';
 import { getOpTheme } from './Navbar';
@@ -35,6 +36,7 @@ import {
   Clock,
   ShieldCheck,
   Users,
+  RefreshCw,
 } from 'lucide-react';
 
 const STORAGE_KEY_REMEMBERED_DEVICE = 'rescue_app_remembered_device_user_id_slk_v4';
@@ -188,6 +190,29 @@ export const LoginScreen: React.FC = () => {
   const [testDuration, setTestDuration] = useState<10 | 20 | 30>(10);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const { hasUpdate, latestInfo } = useAppUpdateCheck();
+  const isNative = Capacitor.isNativePlatform();
+  const [isWebUpdating, setIsWebUpdating] = useState(false);
+
+  const handleWebUpdate = async () => {
+    setIsWebUpdating(true);
+    try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) {
+          await reg.update();
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Web update check error:', err);
+    } finally {
+      setTimeout(() => {
+        window.location.reload();
+      }, 250);
+    }
+  };
 
   // 2-step flow: pendingSessionMode is set when user picks role (leadership/active/observer) but there are
   // multiple active operations → user must then pick which operation to join.
@@ -582,22 +607,35 @@ export const LoginScreen: React.FC = () => {
           <div className="pt-6 mt-6 border-t border-blue-700/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-blue-200 font-mono">
             <div className="flex items-center gap-2">
               <span className="font-bold text-cyan-300">v6.6</span>
-              <button
-                type="button"
-                onClick={() => setIsUpdateModalOpen(true)}
-                className={`px-2 py-0.5 rounded text-[10px] font-bold transition cursor-pointer flex items-center gap-1 shadow-sm ${
-                  hasUpdate
-                    ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-200 animate-pulse'
-                    : 'bg-blue-900/90 hover:bg-blue-800 text-cyan-300 border border-cyan-400/50'
-                }`}
-                title="App aktualisieren oder neueste APK über Firebase herunterladen"
-              >
-                {hasUpdate ? (
-                  <span>🔔 Update verfügbar (v{latestInfo?.version})</span>
-                ) : (
-                  <span>🔄 App aktualisieren</span>
-                )}
-              </button>
+              {isNative ? (
+                <button
+                  type="button"
+                  onClick={() => setIsUpdateModalOpen(true)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition cursor-pointer flex items-center gap-1 shadow-sm ${
+                    hasUpdate
+                      ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-200 animate-pulse'
+                      : 'bg-blue-900/90 hover:bg-blue-800 text-cyan-300 border border-cyan-400/50'
+                  }`}
+                  title="Neueste APK über Firebase herunterladen & installieren"
+                >
+                  {hasUpdate ? (
+                    <span>🔔 Update verfügbar (v{latestInfo?.version})</span>
+                  ) : (
+                    <span>🔄 App-Update</span>
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleWebUpdate}
+                  disabled={isWebUpdating}
+                  className="px-2 py-0.5 rounded bg-blue-900/90 hover:bg-blue-800 text-cyan-300 border border-cyan-400/50 text-[10px] font-bold transition cursor-pointer flex items-center gap-1 shadow-sm disabled:opacity-50"
+                  title="Web-App auf den neuesten Stand bringen"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isWebUpdating ? 'animate-spin' : ''}`} />
+                  <span>{isWebUpdating ? 'Aktualisiere...' : '🔄 App-Update'}</span>
+                </button>
+              )}
             </div>
             <span className="text-emerald-300 font-bold flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
@@ -1423,7 +1461,9 @@ export const LoginScreen: React.FC = () => {
           </div>
         </div>
       </div>
-      <AppUpdateModal isOpen={isUpdateModalOpen} onClose={() => setIsUpdateModalOpen(false)} />
+      {isNative && (
+        <AppUpdateModal isOpen={isUpdateModalOpen} onClose={() => setIsUpdateModalOpen(false)} />
+      )}
       <SniffingDogAnimation />
     </div>
   );

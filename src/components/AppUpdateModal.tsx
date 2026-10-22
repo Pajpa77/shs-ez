@@ -15,7 +15,7 @@ import {
   CURRENT_APP_VERSION,
   AppReleaseInfo,
   getLatestReleaseInfo,
-  triggerApkDownload,
+  triggerInAppUpdate,
   isAndroidApk,
   isNativeApp,
 } from '../lib/appUpdateService';
@@ -63,21 +63,24 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose 
 
   if (!isOpen) return null;
 
-  const handleDownloadClick = () => {
+  const [statusMessage, setStatusMessage] = useState<string>('');
+
+  const handleDownloadClick = async () => {
     if (!releaseInfo?.apkUrl) return;
     setDownloadStarted(true);
-    triggerApkDownload(releaseInfo.apkUrl);
-  };
-
-  const handleWebRefresh = () => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()));
+    setStatusMessage('Download wird gestartet...');
+    try {
+      const res = await triggerInAppUpdate(releaseInfo.apkUrl);
+      if (res.status === 'permission_needed') {
+        setStatusMessage(res.message || 'Bitte erlaube das Installieren unbekannter Apps in den Android-Einstellungen und tippe erneut.');
+      } else if (res.status === 'download_started') {
+        setStatusMessage('Lade Update herunter... Sobald der Download beendet ist, öffnet sich automatisch das Android-Installationsfenster!');
+      } else {
+        setStatusMessage('Download gestartet. Bitte Android-Benachrichtigung beachten.');
+      }
+    } catch (err: any) {
+      setStatusMessage('Fehler beim Starten des Updates: ' + (err?.message || 'Unbekannter Fehler'));
     }
-    if ('caches' in window) {
-      caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
-    }
-    localStorage.removeItem('shs_ez_cache_version');
-    window.location.reload();
   };
 
   return (
@@ -94,7 +97,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose 
                 App-Aktualisierung (Firebase)
               </h3>
               <p className="text-[11px] text-blue-200">
-                {isNative ? 'Android APK Direkt-Update' : 'Web- & APK-Verwaltung'}
+                Android APK Direkt-Update
               </p>
             </div>
           </div>
@@ -161,12 +164,12 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose 
               <div className="p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-700/50 space-y-2 text-[11px] font-sans">
                 <div className="font-bold text-cyan-300 font-mono uppercase tracking-wider text-[10px] flex items-center gap-1.5">
                   <Cloud className="w-3.5 h-3.5" />
-                  <span>Update-Ablauf über Firebase Storage</span>
+                  <span>Automatischer In-App-Installer</span>
                 </div>
                 <ol className="list-decimal list-inside space-y-1 text-blue-100">
-                  <li>Tippe unten auf <strong>„APK herunterladen &amp; installieren“</strong>.</li>
-                  <li>Der Download startet direkt aus dem sicheren SHS-EA Firebase Bucket.</li>
-                  <li>Öffne die heruntergeladene Datei und tippe auf <strong>„Aktualisieren“</strong>.</li>
+                  <li>Tippe unten auf <strong>„Update jetzt automatisch installieren“</strong>.</li>
+                  <li>Die Datei wird sicher im Hintergrund heruntergeladen.</li>
+                  <li>Das Android-Systemfenster öffnet sich automatisch – tippe nur noch auf <strong>„Aktualisieren“</strong>.</li>
                 </ol>
                 <p className="text-[10px] text-emerald-300 font-mono mt-1">
                   ✓ Alle Einstellungen, Standorte &amp; gemerkten Geräte bleiben erhalten!
@@ -177,7 +180,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose 
                 <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-600 text-emerald-200 flex items-center gap-2.5 animate-in fade-in">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span className="text-[11px]">
-                    Download gestartet! Bitte prüfe den Download-Ordner oder tippe auf die Android-Benachrichtigung zum Installieren.
+                    {statusMessage || 'Download läuft... Der Installationsdialog öffnet sich automatisch nach Abschluss.'}
                   </span>
                 </div>
               )}
@@ -193,19 +196,8 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose 
               className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 cursor-pointer transition"
             >
               <Download className="w-4 h-4" />
-              <span>📲 APK herunterladen &amp; installieren</span>
+              <span>🚀 Update jetzt automatisch installieren</span>
             </button>
-
-            {!isNative && (
-              <button
-                type="button"
-                onClick={handleWebRefresh}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#001050] hover:bg-[#001870] border border-[#2B42F2] text-cyan-300 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Web-Cache leeren &amp; Web-App neu laden</span>
-              </button>
-            )}
           </div>
         </div>
 
