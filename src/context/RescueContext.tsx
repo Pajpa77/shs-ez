@@ -1361,6 +1361,33 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [currentUser?.activeSessionId, currentUser?.isActive, currentUser?.name, deviceSessionId]);
 
+  // Remote deactivation listener: if an Admin deactivates this user remotely or ends their session
+  useEffect(() => {
+    if (!currentUser) return;
+
+    if (!currentUser.isActive) {
+      console.warn('[Remote Deactivation] Current user account was deactivated remotely by an administrator. Logging out.');
+      setCurrentUserId('');
+      setIsLogoutConfirmOpen(false);
+      try {
+        localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
+      } catch {}
+
+      playAlertSound('notification');
+      setActiveAlertNotification({
+        title: '⚠️ Abgemeldet durch Einsatzleitung',
+        message: `Ihr Benutzerkonto (${currentUser.name}) wurde durch die Einsatzleitung / einen Administrator abgemeldet.`,
+        timestamp: new Date().toLocaleTimeString(),
+      });
+      setAuthNotification({
+        type: 'logout',
+        title: 'Abgemeldet durch Einsatzleitung',
+        message: 'Sie wurden durch einen Administrator abgemeldet.',
+        timestamp: new Date().toLocaleTimeString(),
+      });
+    }
+  }, [currentUser?.isActive, currentUser?.name]);
+
   const currentOperation =
     (currentOperationId
       ? allOperations.find(
@@ -1787,11 +1814,25 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               try {
                 localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify(cloudOps));
               } catch {}
+              setCurrentOperationIdState((prevId) => {
+                if (prevId && !cloudOps.some((o) => o.id === prevId)) {
+                  const nextActive = cloudOps.find((op) => op.status === 'active' || op.status === 'paused' || op.status === 'planned');
+                  const nextId = nextActive ? nextActive.id : '';
+                  try {
+                    if (nextId) localStorage.setItem(STORAGE_KEY_ACTIVE_OP, nextId);
+                    else localStorage.removeItem(STORAGE_KEY_ACTIVE_OP);
+                  } catch {}
+                  return nextId;
+                }
+                return prevId;
+              });
             } else {
               setAllOperations([]);
               try {
                 localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify([]));
+                localStorage.removeItem(STORAGE_KEY_ACTIVE_OP);
               } catch {}
+              setCurrentOperationIdState('');
             }
           } else if (
             !hasSeededOpsRef.current &&
@@ -1813,6 +1854,14 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 );
               }
             });
+          } else {
+            // Snapshot is empty: no operations exist in Firestore!
+            setAllOperations([]);
+            try {
+              localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify([]));
+              localStorage.removeItem(STORAGE_KEY_ACTIVE_OP);
+            } catch {}
+            setCurrentOperationIdState('');
           }
         },
         (err) => {
@@ -2220,6 +2269,25 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         try {
           localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify(cloudOps));
         } catch {}
+        setCurrentOperationIdState((prevId) => {
+          if (prevId && !cloudOps.some((o) => o.id === prevId)) {
+            const nextActive = cloudOps.find((op) => op.status === 'active' || op.status === 'paused' || op.status === 'planned');
+            const nextId = nextActive ? nextActive.id : '';
+            try {
+              if (nextId) localStorage.setItem(STORAGE_KEY_ACTIVE_OP, nextId);
+              else localStorage.removeItem(STORAGE_KEY_ACTIVE_OP);
+            } catch {}
+            return nextId;
+          }
+          return prevId;
+        });
+      } else {
+        setAllOperations([]);
+        try {
+          localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify([]));
+          localStorage.removeItem(STORAGE_KEY_ACTIVE_OP);
+        } catch {}
+        setCurrentOperationIdState('');
       }
 
       // 2. Refresh User Locations

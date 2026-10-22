@@ -4,7 +4,7 @@ import { db, storage } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, getDownloadURL } from 'firebase/storage';
 
-export const CURRENT_APP_VERSION = '6.5.0';
+export const CURRENT_APP_VERSION = '6.6.0';
 export const DEFAULT_STORAGE_APK_PATH = 'apk/shs-ez-latest.apk';
 
 export interface AppReleaseInfo {

@@ -66,5 +66,10 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read, write: if true;
     }
+
+    // System Configuration & App Version Updates
+    match /system_config/{configId} {
+      allow read, write: if true;
+    }
   }
 }
