@@ -1,4 +1,5 @@
 import { SearchSector } from '../types';
+import { saveFile } from './fileDownloadHelper';
 
 function escapeXml(str: unknown): string {
   if (str === null || str === undefined) return '';
@@ -10,7 +11,7 @@ function escapeXml(str: unknown): string {
     .replace(/'/g, '&apos;');
 }
 
-export const exportSectorAsKml = (sector: SearchSector) => {
+export const exportSectorAsKml = async (sector: SearchSector): Promise<void> => {
   if (!sector.polygon || sector.polygon.length < 3) {
     alert('Dieser Sektor hat keine gültigen Koordinaten.');
     return;
@@ -64,20 +65,10 @@ export const exportSectorAsKml = (sector: SearchSector) => {
   </Document>
 </kml>`;
 
-  // Create a blob and trigger download
-  const blob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml' });
-  const url = URL.createObjectURL(blob);
-  
-  const a = document.createElement('a');
-  a.href = url;
-  // Clean up filename
   const safeName = sector.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-  a.download = `sektor_${safeName}.kml`;
-  
-  document.body.appendChild(a);
-  a.click();
-  
-  // Cleanup
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  await saveFile({
+    filename: `sektor_${safeName}.kml`,
+    mimeType: 'application/vnd.google-earth.kml+xml',
+    data: kmlContent,
+  });
 };

@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { YouthUser, YouthOperation } from './types';
+import { saveFile } from '../lib/fileDownloadHelper';
 
 export const generateYouthDiplomaPDF = async (
   user: YouthUser,
@@ -123,20 +124,15 @@ export const generateYouthDiplomaPDF = async (
     doc.text('Jugendleitung / Ausbilder', width / 2 - 35, 181, { align: 'center' });
     doc.text('Ausbildungsleitung SHS-EZ', width / 2 + 45, 181, { align: 'center' });
 
-    // Safe File Download trigger
+    // Safe File Download trigger (MediaStore on Android, Blob on Web)
     const cleanName = user.name.replace(/[^a-zA-Z0-9_-]/g, '_');
     const filename = `Spuerhunde_Jugend_Diplom_${cleanName}.pdf`;
 
-    // Direct blob download for maximum mobile browser / webview reliability
-    const pdfBlob = doc.output('blob');
-    const blobUrl = URL.createObjectURL(pdfBlob);
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    await saveFile({
+      filename,
+      mimeType: 'application/pdf',
+      data: doc,
+    });
   } catch (err) {
     console.error('PDF Diploma Generation Error:', err);
     alert('Das Diplom konnte leider nicht erstellt werden. Bitte versuche es erneut.');

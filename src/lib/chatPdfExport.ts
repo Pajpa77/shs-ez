@@ -1,10 +1,11 @@
 import { jsPDF } from 'jspdf';
 import { ChatMessage, Finding } from '../types';
+import { saveFile } from './fileDownloadHelper';
 
 /**
  * Generates and downloads a clean, multi-page PDF for Chatverlauf
  */
-export const exportChatHistoryPdf = (
+export const exportChatHistoryPdf = async (
   messages: ChatMessage[],
   operationTitle: string = 'Allgemein'
 ) => {
@@ -60,13 +61,17 @@ export const exportChatHistoryPdf = (
   }
 
   const safeOp = operationTitle.replace(/[^a-zA-Z0-9]/g, '_');
-  pdf.save(`Chatverlauf_${safeOp}_${new Date().toISOString().slice(0, 10)}.pdf`);
+  await saveFile({
+    filename: `Chatverlauf_${safeOp}_${new Date().toISOString().slice(0, 10)}.pdf`,
+    mimeType: 'application/pdf',
+    data: pdf,
+  });
 };
 
 /**
  * Generates and downloads a clean, multi-page PDF for System-Logbuch (Ein- und Ausloggen)
  */
-export const exportLogbookPdf = (
+export const exportLogbookPdf = async (
   messages: ChatMessage[],
   operationTitle: string = 'Allgemein'
 ) => {
@@ -120,13 +125,17 @@ export const exportLogbookPdf = (
   }
 
   const safeOp = operationTitle.replace(/[^a-zA-Z0-9]/g, '_');
-  pdf.save(`System_Logbuch_${safeOp}_${new Date().toISOString().slice(0, 10)}.pdf`);
+  await saveFile({
+    filename: `System_Logbuch_${safeOp}_${new Date().toISOString().slice(0, 10)}.pdf`,
+    mimeType: 'application/pdf',
+    data: pdf,
+  });
 };
 
 /**
  * Generates and downloads a clean, multi-page PDF for Alarme & Fundmeldungen
  */
-export const exportAlertsPdf = (
+export const exportAlertsPdf = async (
   alerts: ChatMessage[],
   findings: Finding[] = [],
   operationTitle: string = 'Allgemein'
@@ -234,5 +243,9 @@ export const exportAlertsPdf = (
   }
 
   const safeOp = operationTitle.replace(/[^a-zA-Z0-9]/g, '_');
-  pdf.save(`Alarme_und_Funde_${safeOp}_${new Date().toISOString().slice(0, 10)}.pdf`);
+  await saveFile({
+    filename: `Alarme_und_Funde_${safeOp}_${new Date().toISOString().slice(0, 10)}.pdf`,
+    mimeType: 'application/pdf',
+    data: pdf,
+  });
 };

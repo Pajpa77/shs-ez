@@ -1,15 +1,16 @@
 package de.shs.einsatzzentrale;
 
-import android.app.DownloadManager;
-import android.content.BroadcastReceiver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.database.Cursor;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.provider.Settings;
+import android.util.Base64;
+import android.widget.Toast;
 import androidx.core.content.FileProvider;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -17,13 +18,16 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 @CapacitorPlugin(name = "AppInstaller")
 public class AppInstallerPlugin extends Plugin {
-
-    private long downloadId = -1;
-    private BroadcastReceiver onDownloadComplete;
 
     @PluginMethod
     public void canInstallPackages(PluginCall call) {
@@ -66,6 +70,73 @@ public class AppInstallerPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void saveFileToDownloads(PluginCall call) {
+        String base64Data = call.getString("base64Data");
+        String filename = call.getString("filename");
+        String mimeType = call.getString("mimeType", "application/octet-stream");
+
+        if (base64Data == null || base64Data.isEmpty() || filename == null || filename.isEmpty()) {
+            call.reject("Data or filename missing");
+            return;
+        }
+
+        try {
+            if (base64Data.contains(",")) {
+                base64Data = base64Data.substring(base64Data.indexOf(",") + 1);
+            }
+            byte[] fileBytes = Base64.decode(base64Data, Base64.DEFAULT);
+            Context context = getContext();
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename);
+                values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType);
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+
+                Uri uri = context.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                if (uri != null) {
+                    OutputStream out = context.getContentResolver().openOutputStream(uri);
+                    if (out != null) {
+                        out.write(fileBytes);
+                        out.flush();
+                        out.close();
+                    }
+                }
+            } else {
+                File downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                if (!downloadDir.exists()) {
+                    downloadDir.mkdirs();
+                }
+                File outFile = new File(downloadDir, filename);
+                FileOutputStream fos = new FileOutputStream(outFile);
+                fos.write(fileBytes);
+                fos.flush();
+                fos.close();
+
+                MediaScannerConnection.scanFile(
+                    context,
+                    new String[]{outFile.getAbsolutePath()},
+                    new String[]{mimeType},
+                    null
+                );
+            }
+
+            getActivity().runOnUiThread(() -> {
+                Toast.makeText(context, "Gespeichert in Downloads: " + filename, Toast.LENGTH_LONG).show();
+            });
+
+            JSObject ret = new JSObject();
+            ret.put("success", true);
+            ret.put("filename", filename);
+            call.resolve(ret);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            call.reject("Fehler beim Speichern in Downloads: " + e.getMessage(), e);
+        }
+    }
+
+    @PluginMethod
     public void downloadAndInstall(PluginCall call) {
         String url = call.getString("url");
         if (url == null || url.isEmpty()) {
@@ -85,81 +156,115 @@ public class AppInstallerPlugin extends Plugin {
 
                 JSObject ret = new JSObject();
                 ret.put("status", "permission_needed");
-                ret.put("message", "Bitte erlaube 'Apps aus dieser Quelle installieren' und starte das Update erneut.");
+                ret.put("message", "Bitte erlaube 'Apps aus dieser Quelle installieren' und tippe erneut auf Herunterladen.");
                 call.resolve(ret);
                 return;
             }
         }
 
-        try {
-            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-            request.setTitle("SHS-EZ Update");
-            request.setDescription("Lade neueste SHS-EZ App-Version herunter...");
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            request.setMimeType("application/vnd.android.package-archive");
+        JSObject initialRet = new JSObject();
+        initialRet.put("status", "download_started");
+        initialRet.put("message", "Direkter Download gestartet...");
+        call.resolve(initialRet);
 
-            // Save to app's external files directory so FileProvider can access it safely
-            File destinationFile = new File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "shs-ez-update.apk");
-            if (destinationFile.exists()) {
-                destinationFile.delete();
-            }
-            request.setDestinationUri(Uri.fromFile(destinationFile));
+        // Run direct, reliable in-app download in background thread
+        new Thread(() -> {
+            File apkFile = new File(context.getCacheDir(), "shs-ez-update.apk");
+            try {
+                if (apkFile.exists()) {
+                    apkFile.delete();
+                }
 
-            DownloadManager downloadManager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
-            if (downloadManager == null) {
-                call.reject("DownloadManager unavailable");
-                return;
-            }
+                URL downloadUrl = new URL(url);
+                HttpURLConnection conn = (HttpURLConnection) downloadUrl.openConnection();
+                conn.setInstanceFollowRedirects(true);
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(45000);
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile) SHS-EZ-App");
+                conn.connect();
 
-            if (onDownloadComplete != null) {
-                try {
-                    context.unregisterReceiver(onDownloadComplete);
-                } catch (Exception ignored) {}
-            }
+                int responseCode = conn.getResponseCode();
+                int redirects = 0;
+                while ((responseCode == HttpURLConnection.HTTP_MOVED_PERM 
+                     || responseCode == HttpURLConnection.HTTP_MOVED_TEMP 
+                     || responseCode == HttpURLConnection.HTTP_SEE_OTHER 
+                     || responseCode == 307 
+                     || responseCode == 308) && redirects < 5) {
+                    String newUrl = conn.getHeaderField("Location");
+                    conn.disconnect();
+                    downloadUrl = new URL(newUrl);
+                    conn = (HttpURLConnection) downloadUrl.openConnection();
+                    conn.setInstanceFollowRedirects(true);
+                    conn.setConnectTimeout(15000);
+                    conn.setReadTimeout(45000);
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile) SHS-EZ-App");
+                    conn.connect();
+                    responseCode = conn.getResponseCode();
+                    redirects++;
+                }
 
-            downloadId = downloadManager.enqueue(request);
+                if (responseCode != HttpURLConnection.HTTP_OK) {
+                    throw new Exception("Server meldete HTTP " + responseCode);
+                }
 
-            onDownloadComplete = new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context ctx, Intent intent) {
-                    long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-                    if (id == downloadId) {
-                        try {
-                            ctx.unregisterReceiver(this);
-                        } catch (Exception ignored) {}
-                        onDownloadComplete = null;
+                int contentLength = conn.getContentLength();
+                InputStream in = new BufferedInputStream(conn.getInputStream(), 16384);
+                OutputStream out = new FileOutputStream(apkFile);
 
-                        // Verify download was successful
-                        DownloadManager.Query query = new DownloadManager.Query();
-                        query.setFilterById(downloadId);
-                        Cursor cursor = downloadManager.query(query);
-                        if (cursor != null && cursor.moveToFirst()) {
-                            int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
-                            if (statusIndex != -1 && cursor.getInt(statusIndex) == DownloadManager.STATUS_SUCCESSFUL) {
-                                triggerInstall(ctx, destinationFile);
-                            }
-                            cursor.close();
-                        } else {
-                            triggerInstall(ctx, destinationFile);
+                byte[] buffer = new byte[8192];
+                long totalBytes = 0;
+                int count;
+                int lastReportedPercent = 0;
+
+                while ((count = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, count);
+                    totalBytes += count;
+                    if (contentLength > 0) {
+                        int percent = (int) ((totalBytes * 100) / contentLength);
+                        if (percent - lastReportedPercent >= 3) {
+                            lastReportedPercent = percent;
+                            JSObject progressData = new JSObject();
+                            progressData.put("percent", percent);
+                            progressData.put("totalBytes", totalBytes);
+                            progressData.put("contentLength", contentLength);
+                            notifyListeners("downloadProgress", progressData);
                         }
                     }
                 }
-            };
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_EXPORTED);
-            } else {
-                context.registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+                out.flush();
+                out.close();
+                in.close();
+                conn.disconnect();
+
+                if (apkFile.exists() && apkFile.length() > 500000) {
+                    JSObject doneData = new JSObject();
+                    doneData.put("percent", 100);
+                    doneData.put("status", "complete");
+                    notifyListeners("downloadProgress", doneData);
+
+                    getActivity().runOnUiThread(() -> triggerInstall(context, apkFile));
+                } else {
+                    throw new Exception("Heruntergeladene APK-Datei ist ungültig (" + apkFile.length() + " Bytes)");
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                JSObject errData = new JSObject();
+                errData.put("status", "error");
+                errData.put("message", e.getMessage());
+                notifyListeners("downloadProgress", errData);
+
+                // Automatic fallback: trigger download in system browser
+                getActivity().runOnUiThread(() -> {
+                    try {
+                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                        browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        context.startActivity(browserIntent);
+                    } catch (Exception ignored) {}
+                });
             }
-
-            JSObject ret = new JSObject();
-            ret.put("status", "download_started");
-            ret.put("downloadId", downloadId);
-            call.resolve(ret);
-
-        } catch (Exception e) {
-            call.reject("Download failed: " + e.getMessage(), e);
-        }
+        }).start();
     }
 
     private void triggerInstall(Context context, File apkFile) {

@@ -3,6 +3,7 @@ import { useRescue } from '../context/RescueContext';
 import { User, UserRole, EquipmentType, isFirstAdmin, isOwner, isUserAdmin, isUserEL, isUserAdminOrEL } from '../types';
 import { compressImageFile } from '../lib/imageUtils';
 import JsBarcode from 'jsbarcode';
+import { saveFile } from '../lib/fileDownloadHelper';
 import {
   Users,
   Key,
@@ -164,13 +165,15 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     };
   }, [activeBarcodeValue, isOpen]);
 
-  const handleDownloadBarcodePNG = () => {
+  const handleDownloadBarcodePNG = async () => {
     if (!barcodeCanvasRef.current) return;
     const dataUrl = barcodeCanvasRef.current.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `Strichcode_${(name || activeUser?.name || 'User').replace(/\s+/g, '_')}_${activeBarcodeValue}.png`;
-    a.click();
+    const filename = `Strichcode_${(name || activeUser?.name || 'User').replace(/\s+/g, '_')}_${activeBarcodeValue}.png`;
+    await saveFile({
+      filename,
+      mimeType: 'image/png',
+      data: dataUrl,
+    });
   };
 
   const populateForm = (user: User | null) => {

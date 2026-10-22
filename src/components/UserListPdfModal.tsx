@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import JsBarcode from 'jsbarcode';
+import { saveFile } from '../lib/fileDownloadHelper';
 import { useRescue } from '../context/RescueContext';
 import { User, isUserAdmin, isFirstAdmin } from '../types';
 import {
@@ -170,7 +171,11 @@ export const UserListPdfModal: React.FC<UserListPdfModalProps> = ({ isOpen, onCl
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`Einsatzkraefte_Strichcode_Verzeichnis_${new Date().toISOString().slice(0, 10)}.pdf`);
+      await saveFile({
+        filename: `Einsatzkraefte_Strichcode_Verzeichnis_${new Date().toISOString().slice(0, 10)}.pdf`,
+        mimeType: 'application/pdf',
+        data: pdf,
+      });
     } catch (err) {
       console.error('PDF Export Error:', err);
       window.print();

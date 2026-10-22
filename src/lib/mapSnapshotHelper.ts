@@ -639,7 +639,12 @@ export async function generateTacticalMapWithRealMap(
   ctx.font = '10px monospace';
   ctx.fillText('SYMBOLE: 🟢 Startpunkt | ⚫ Endpunkt / Letzte Pos. | ➡️ Laufrichtung | 🏢 ELZ / Einsatzleitung | 🚩 Fundmeldung | 📐 Suchsektor', 24, keyY);
 
-  return canvas.toDataURL('image/jpeg', 0.92);
+  try {
+    return canvas.toDataURL('image/jpeg', 0.92);
+  } catch (err) {
+    console.warn('[Snapshot] Canvas tainted or export failed, falling back to clean tactical canvas:', err);
+    return generateTrackingTestSnapshot(session);
+  }
 }
 
 /**
@@ -1233,7 +1238,12 @@ export async function generateTrackingTestSnapshotWithMap(session: TrackingTestS
   ctx.fillStyle = '#94a3b8';
   ctx.fillText('Start / Ende', CANVAS_W - 133, footerY + 50);
 
-  return canvas.toDataURL('image/jpeg', 0.92);
+  try {
+    return canvas.toDataURL('image/jpeg', 0.92);
+  } catch (err) {
+    console.warn('[Snapshot] Canvas tainted or export failed, falling back to clean tactical canvas:', err);
+    return generateTrackingTestSnapshot(session);
+  }
 }
 
 /**

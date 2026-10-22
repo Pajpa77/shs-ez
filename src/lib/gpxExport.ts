@@ -1,4 +1,5 @@
 import { GpsPoint, ArchivedSearchTrack, SearchOperation } from '../types';
+import { saveFile } from './fileDownloadHelper';
 
 function escapeXml(str: unknown): string {
   if (str === null || str === undefined) return '';
@@ -18,7 +19,7 @@ function sanitizeFilename(str: string): string {
  * Exports a single searcher / K9 dog track as a standard GPX 1.1 file
  * Compatible with Garmin GPS handhelds (Alpha, Astro, GPSMAP), QGIS, CalTopo, OsmAnd, etc.
  */
-export function exportSingleTrackAsGpx(options: {
+export async function exportSingleTrackAsGpx(options: {
   points: GpsPoint[];
   callSign: string;
   userName?: string;
@@ -63,22 +64,19 @@ ${trackPointsXml}    </trkseg>
   </trk>
 </gpx>`;
 
-  const blob = new Blob([gpxContent], { type: 'application/gpx+xml;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
   const dateStr = new Date().toISOString().slice(0, 10);
-  a.download = `suchspur_${sanitizeFilename(callSign)}_${dateStr}.gpx`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const filename = `suchspur_${sanitizeFilename(callSign)}_${dateStr}.gpx`;
+  await saveFile({
+    filename,
+    mimeType: 'application/gpx+xml',
+    data: gpxContent,
+  });
 }
 
 /**
  * Exports all archived tracks of an operation as a consolidated multi-track GPX 1.1 file
  */
-export function exportOperationTracksAsGpx(operation: SearchOperation): void {
+export async function exportOperationTracksAsGpx(operation: SearchOperation): Promise<void> {
   const tracks = operation.archivedTracks || [];
   if (tracks.length === 0) {
     alert('Dieser Einsatz enthält keine archivierten Suchspuren.');
@@ -120,14 +118,11 @@ ${ptsXml}    </trkseg>
   </metadata>
 ${trkBlocksXml}</gpx>`;
 
-  const blob = new Blob([gpxContent], { type: 'application/gpx+xml;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
   const dateStr = (operation.createdAt || new Date().toISOString()).slice(0, 10);
-  a.download = `einsatz_alle_spuren_${sanitizeFilename(operation.title)}_${dateStr}.gpx`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const filename = `einsatz_alle_spuren_${sanitizeFilename(operation.title)}_${dateStr}.gpx`;
+  await saveFile({
+    filename,
+    mimeType: 'application/gpx+xml',
+    data: gpxContent,
+  });
 }

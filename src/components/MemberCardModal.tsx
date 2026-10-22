@@ -4,6 +4,7 @@ import { useRescue } from '../context/RescueContext';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
 import { X, Download, Copy, Printer, Check, CreditCard, QrCode as QrIcon, Barcode as BarIcon } from 'lucide-react';
+import { saveFile } from '../lib/fileDownloadHelper';
 
 interface MemberCardModalProps {
   user: User;
@@ -98,7 +99,7 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose 
   }, [barcodeValue]);
 
   // Save Barcode / QR Code as PNG image file
-  const handleDownloadPNG = () => {
+  const handleDownloadPNG = async () => {
     let dataUrl = '';
     let filename = '';
 
@@ -112,10 +113,11 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({ user, onClose 
 
     if (!dataUrl) return;
 
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = filename;
-    a.click();
+    await saveFile({
+      filename,
+      mimeType: 'image/png',
+      data: dataUrl,
+    });
   };
 
   // Copy Barcode Image to Clipboard

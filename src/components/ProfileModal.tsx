@@ -4,6 +4,7 @@ import { EquipmentType, isFirstAdmin } from '../types';
 import { compressImageFile } from '../lib/imageUtils';
 import { MemberCardModal } from './MemberCardModal';
 import JsBarcode from 'jsbarcode';
+import { saveFile } from '../lib/fileDownloadHelper';
 import {
   User,
   X,
@@ -186,13 +187,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     };
   }, [activeBarcodeValue, isOpen]);
 
-  const handleDownloadBarcodePNG = () => {
+  const handleDownloadBarcodePNG = async () => {
     if (!barcodeCanvasRef.current) return;
     const dataUrl = barcodeCanvasRef.current.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `Strichcode_${(name || currentUser?.name || 'User').replace(/\s+/g, '_')}_${activeBarcodeValue}.png`;
-    a.click();
+    const filename = `Strichcode_${(name || currentUser?.name || 'User').replace(/\s+/g, '_')}_${activeBarcodeValue}.png`;
+    await saveFile({
+      filename,
+      mimeType: 'image/png',
+      data: dataUrl,
+    });
   };
 
   // Query hardware battery status

@@ -16,6 +16,8 @@ import {
   AppReleaseInfo,
   getLatestReleaseInfo,
   triggerInAppUpdate,
+  openExternalUrl,
+  AppInstaller,
   isAndroidApk,
   isNativeApp,
 } from '../lib/appUpdateService';
@@ -29,10 +31,43 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose 
   const [loading, setLoading] = useState<boolean>(true);
   const [releaseInfo, setReleaseInfo] = useState<AppReleaseInfo | null>(null);
   const [downloadStarted, setDownloadStarted] = useState<boolean>(false);
+  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [statusMessage, setStatusMessage] = useState<string>('');
 
   const isNative = isNativeApp();
+
+  useEffect(() => {
+    let listenerHandle: any = null;
+    if (isNative) {
+      AppInstaller.addListener('downloadProgress', (data: any) => {
+        if (typeof data.percent === 'number') {
+          setDownloadProgress(data.percent);
+          if (data.percent < 100) {
+            setStatusMessage(`Lade APK herunter: ${data.percent}%...`);
+          } else {
+            setStatusMessage('Download abgeschlossen (100%)! Installationsdialog öffnet sich...');
+          }
+        }
+        if (data.status === 'complete') {
+          setDownloadProgress(100);
+          setStatusMessage('Download vollständig! Installationsdialog wird geöffnet...');
+        }
+        if (data.status === 'error') {
+          setErrorMsg(`Direktdownload: ${data.message || 'Abbruch'}. Browser-Download wurde geöffnet.`);
+          setStatusMessage('Browser-Download gestartet. Bitte Android-Download-Benachrichtigung öffnen.');
+        }
+      }).then(handle => {
+        listenerHandle = handle;
+      }).catch(() => {});
+    }
+
+    return () => {
+      if (listenerHandle && listenerHandle.remove) {
+        listenerHandle.remove();
+      }
+    };
+  }, [isNative]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -41,6 +76,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose 
     setLoading(true);
     setErrorMsg('');
     setDownloadStarted(false);
+    setDownloadProgress(null);
 
     getLatestReleaseInfo()
       .then((info) => {
@@ -67,6 +103,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose 
   const handleDownloadClick = async () => {
     if (!releaseInfo?.apkUrl) return;
     setDownloadStarted(true);
+    setDownloadProgress(0);
     setStatusMessage('Download wird gestartet...');
     try {
       const res = await triggerInAppUpdate(releaseInfo.apkUrl);
@@ -80,6 +117,12 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose 
     } catch (err: any) {
       setStatusMessage('Fehler beim Starten des Updates: ' + (err?.message || 'Unbekannter Fehler'));
     }
+  };
+
+  const handleBrowserFallbackClick = () => {
+    if (!releaseInfo?.apkUrl) return;
+    setStatusMessage('Öffne Download im externen Browser...');
+    openExternalUrl(releaseInfo.apkUrl);
   };
 
   return (
@@ -176,26 +219,56 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose 
               </div>
 
               {downloadStarted && (
-                <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-600 text-emerald-200 flex items-center gap-2.5 animate-in fade-in">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span className="text-[11px]">
-                    {statusMessage || 'Download läuft... Der Installationsdialog öffnet sich automatisch nach Abschluss.'}
-                  </span>
+                <div className="space-y-2 p-3.5 rounded-xl bg-[#000840] border border-cyan-500/60 animate-in fade-in">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-2 text-cyan-300 font-bold">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                      <span>{statusMessage}</span>
+                    </div>
+                    {downloadProgress !== null && (
+                      <span className="font-mono font-black text-white">{downloadProgress}%</span>
+                    )}
+                  </div>
+                  {downloadProgress !== null && (
+                    <div className="w-full bg-slate-900 rounded-full h-2.5 overflow-hidden border border-slate-700">
+                      <div
+                        className="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, Math.max(5, downloadProgress))}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {errorMsg && (
+                <div className="p-3 rounded-xl bg-red-950/80 border border-red-500 text-red-200 flex items-center gap-2 text-[11px]">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{errorMsg}</span>
                 </div>
               )}
             </>
           )}
 
           {/* Action Buttons */}
-          <div className="space-y-2 pt-2">
+          <div className="space-y-2.5 pt-2">
             <button
               type="button"
               disabled={loading || !releaseInfo?.apkUrl}
               onClick={handleDownloadClick}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 cursor-pointer transition"
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 cursor-pointer transition active:scale-98"
             >
               <Download className="w-4 h-4" />
               <span>🚀 Update jetzt automatisch installieren</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={loading || !releaseInfo?.apkUrl}
+              onClick={handleBrowserFallbackClick}
+              className="w-full py-2.5 px-4 rounded-xl bg-[#001489] hover:bg-blue-800/80 border border-[#2B42F2] disabled:opacity-50 text-cyan-200 hover:text-white font-bold text-xs uppercase tracking-wider shadow flex items-center justify-center gap-2 cursor-pointer transition active:scale-98"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+              <span>🌐 Direkt im Browser herunterladen (Alternative)</span>
             </button>
           </div>
         </div>

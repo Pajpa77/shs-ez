@@ -1,10 +1,5 @@
 import { initializeApp } from 'firebase/app';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import * as fs from 'fs';
-import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
-
-import { initializeApp } from 'firebase/app';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import * as fs from 'fs';
 import firebaseConfig from '../firebase-applet-config.json' with { type: 'json' };
@@ -55,7 +50,7 @@ async function main() {
     version: '7.0.0',
     apkUrl: latestUrl,
     releaseDate: '2026-10-22',
-    releaseNotes: 'v7.0.0: Meilenstein Release mit vollständigem U18-Jugendgruppen-Modul, separatem Trackingtest, sicherem externen Browser-Aufruf für dipul/Zonen und neuem UI.',
+    releaseNotes: 'v7.0.0: Meilenstein Release mit vollständigem U18-Jugendgruppen-Modul, separatem Trackingtest, direktem PDF/GPX/KML Download-Speichern in Android Downloads und neuem UI.',
     fileSizeMb: `ca. ${Math.round(apkBuffer.length / (1024 * 1024))} MB`,
     updatedAt: new Date().toISOString()
   };
@@ -65,11 +60,6 @@ async function main() {
   console.log('=== All Firebase Storage and Firestore updates completed successfully ===');
   process.exit(0);
 }
-
-main().catch(err => {
-  console.error('Failed to upload APK to Firebase Storage:', err);
-  process.exit(1);
-});
 
 main().catch(err => {
   console.error('Failed to upload APK to Firebase Storage:', err);

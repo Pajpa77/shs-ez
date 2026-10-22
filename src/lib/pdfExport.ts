@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { SearchOperation, User, UserLocationState } from '../types';
 import { captureTacticalMapScreenshot } from './mapSnapshotHelper';
+import { saveFile } from './fileDownloadHelper';
 
 export const generateOperationPDF = async (
   operation: SearchOperation, 
@@ -256,5 +257,9 @@ export const generateOperationPDF = async (
 
 
   const safeTitle = operation.title.replace(/[^a-zA-Z0-9]/g, '_');
-  pdf.save(`Einsatzprotokoll_${safeTitle}.pdf`);
+  await saveFile({
+    filename: `Einsatzprotokoll_${safeTitle}.pdf`,
+    mimeType: 'application/pdf',
+    data: pdf,
+  });
 };

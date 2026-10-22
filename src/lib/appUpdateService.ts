@@ -9,6 +9,11 @@ export interface AppInstallerPluginInterface {
   openInstallPermissionSettings(): Promise<void>;
   downloadAndInstall(options: { url: string }): Promise<{ status: string; message?: string; downloadId?: number }>;
   openExternalUrl(options: { url: string }): Promise<void>;
+  saveFileToDownloads(options: { base64Data: string; filename: string; mimeType: string }): Promise<{ success: boolean; filename?: string }>;
+  addListener(
+    eventName: 'downloadProgress',
+    listenerFunc: (data: { percent?: number; status?: string; message?: string; totalBytes?: number; contentLength?: number }) => void
+  ): Promise<any>;
 }
 
 export const AppInstaller = registerPlugin<AppInstallerPluginInterface>('AppInstaller');
@@ -176,7 +181,7 @@ export const useAppUpdateCheck = () => {
 export const triggerApkDownload = (apkUrl: string): void => {
   try {
     if (Capacitor.isNativePlatform()) {
-      window.open(apkUrl, '_system');
+      openExternalUrl(apkUrl);
     } else {
       const link = document.createElement('a');
       link.href = apkUrl;
@@ -189,7 +194,7 @@ export const triggerApkDownload = (apkUrl: string): void => {
     }
   } catch (err) {
     console.error('[AppUpdate] Failed to trigger APK download:', err);
-    window.location.href = apkUrl;
+    openExternalUrl(apkUrl);
   }
 };
 

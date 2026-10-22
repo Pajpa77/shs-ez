@@ -6,6 +6,7 @@ import { SearchOperation, OperationLogEntry, User, EquipmentType } from '../type
 import { TacticalMap } from './TacticalMap';
 import { exportOperationTracksAsGpx, exportSingleTrackAsGpx } from '../lib/gpxExport';
 import { captureTacticalMapScreenshot } from '../lib/mapSnapshotHelper';
+import { saveFile } from '../lib/fileDownloadHelper';
 import {
   Archive,
   FileText,
@@ -270,7 +271,11 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
 
       const safeTitle = selectedOp.title.replace(/[^a-zA-Z0-9]/g, '_');
       const filename = `Einsatzbericht_${safeTitle}_${selectedOp.id.slice(-6).toUpperCase()}.pdf`;
-      pdf.save(filename);
+      await saveFile({
+        filename,
+        mimeType: 'application/pdf',
+        data: pdf,
+      });
     } catch (err) {
       console.error('Programmatic PDF Export failed, trying window.print fallback...', err);
       window.print();
@@ -355,7 +360,7 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
   };
 
   // Export Protocol to CSV (Excel / Official Spreadsheets)
-  const handleExportCsv = () => {
+  const handleExportCsv = async () => {
     if (!selectedOp?.logs || selectedOp.logs.length === 0) {
       return;
     }
@@ -370,14 +375,13 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
         return `"${l.timestamp}";"${dateStr}";"${timeStr}";"${l.category}";"${l.authorName}";"${l.authorRole}";"${cleanText}"`;
       })
       .join('\n');
-    const blob = new Blob(['\ufeff' + header + rows], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
     const sanitizedTitle = (selectedOp.title || 'Einsatz').replace(/[^a-zA-Z0-9_-]/g, '_');
-    link.download = `Einsatzprotokoll_${sanitizedTitle}_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const filename = `Einsatzprotokoll_${sanitizedTitle}_${new Date().toISOString().slice(0, 10)}.csv`;
+    await saveFile({
+      filename,
+      mimeType: 'text/csv;charset=utf-8;',
+      data: '\ufeff' + header + rows,
+    });
   };
 
   // Copy full official debriefing report to clipboard (suitable for police / dispatch)
@@ -2460,14 +2464,11 @@ export const OperationsArchive: React.FC<OperationsArchiveProps> = ({
     try {
       const response = await fetch(url);
       const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
+      await saveFile({
+        filename,
+        mimeType: blob.type || 'image/jpeg',
+        data: blob,
+      });
     } catch (error) {
       console.error('Download failed', error);
       window.open(url, '_blank');

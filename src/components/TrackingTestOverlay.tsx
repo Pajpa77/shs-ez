@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Timer, LogOut, CheckCircle2, Loader2, FileText } from 'lucide-react';
+import { Timer, LogOut, CheckCircle2, Loader2, FileText, Download, Check } from 'lucide-react';
 import { useRescue } from '../context/RescueContext';
 import { generateTrackingTestSnapshotWithMap } from '../lib/mapSnapshotHelper';
 import { calculateTotalDistance } from '../lib/distanceCalc';
+import { saveFile } from '../lib/fileDownloadHelper';
 import { jsPDF } from 'jspdf';
 
 export const TrackingTestOverlay: React.FC = () => {
@@ -43,7 +44,7 @@ export const TrackingTestOverlay: React.FC = () => {
     try {
       setStatus('loading-map');
 
-      // 1. Generate map snapshot with real OSM tiles
+      // 1. Generate map snapshot
       const dataUrl = await generateTrackingTestSnapshotWithMap(activeTrackingTest);
       if (dataUrl) {
         setSnapshotUrl(dataUrl);
@@ -51,23 +52,13 @@ export const TrackingTestOverlay: React.FC = () => {
 
       setStatus('generating-pdf');
 
-      // 2. Generate and download PDF
-      if (dataUrl) {
-        await generateAndDownloadPDF(dataUrl);
-      }
+      // 2. Generate and download PDF directly into Android Downloads folder
+      await generateAndDownloadPDF(dataUrl || '');
 
       setStatus('done');
-
-      // 3. Save result + logout (after short delay so user sees the "done" state)
-      await new Promise((resolve) => setTimeout(resolve, 1800));
-      saveTrackingTestResult(true);
-
     } catch (err) {
       console.error('TrackingTest auto-complete failed:', err);
       setStatus('error');
-      // Still save & logout even if PDF failed
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      saveTrackingTestResult(true);
     }
   };
 
@@ -101,22 +92,29 @@ export const TrackingTestOverlay: React.FC = () => {
     pdf.setTextColor(0, 0, 0);
 
     // ── Page 2: Map image ───────────────────────────────────────────────────
-    pdf.addPage();
-    pdf.setFontSize(16);
-    pdf.text('GPS Spur (Lagekarte)', 105, 15, { align: 'center' });
+    if (dataUrl) {
+      pdf.addPage();
+      pdf.setFontSize(16);
+      pdf.text('GPS Spur (Lagekarte)', 105, 15, { align: 'center' });
 
-    // A4 portrait usable width = 190mm, height of image (1200×750 ratio)
-    const pdfWidth = 190;
-    const pdfHeight = (750 * pdfWidth) / 1200; // ≈ 118.75 mm
-    pdf.addImage(dataUrl, 'JPEG', 10, 22, pdfWidth, pdfHeight);
+      // A4 portrait usable width = 190mm, height of image (1200×750 ratio)
+      const pdfWidth = 190;
+      const pdfHeight = (750 * pdfWidth) / 1200; // ≈ 118.75 mm
+      pdf.addImage(dataUrl, 'JPEG', 10, 22, pdfWidth, pdfHeight);
 
-    // Attribution note below map
-    pdf.setFontSize(7);
-    pdf.setTextColor(120, 120, 120);
-    pdf.text('Kartenmaterial: © OpenStreetMap contributors (openstreetmap.org/copyright)', 10, 22 + pdfHeight + 4);
-    pdf.setTextColor(0, 0, 0);
+      // Attribution note below map
+      pdf.setFontSize(7);
+      pdf.setTextColor(120, 120, 120);
+      pdf.text('Kartenmaterial: © OpenStreetMap contributors (openstreetmap.org/copyright)', 10, 22 + pdfHeight + 4);
+      pdf.setTextColor(0, 0, 0);
+    }
 
-    pdf.save(`TrackingTest_${activeTrackingTest.userName.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`);
+    const filename = `TrackingTest_${activeTrackingTest.userName.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
+    await saveFile({
+      filename,
+      mimeType: 'application/pdf',
+      data: pdf,
+    });
   };
 
   if (!activeTrackingTest) return null;
@@ -221,38 +219,64 @@ export const TrackingTestOverlay: React.FC = () => {
                 </div>
 
                 {/* Status message */}
-                <div className="flex items-center justify-center gap-3 py-3">
+                <div className="flex flex-col items-center justify-center gap-3 py-2">
                   {status === 'loading-map' && (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
-                      <span className="text-sm text-slate-300 font-mono">Lagekarte wird erstellt…</span>
-                    </>
+                    <div className="flex items-center gap-2 text-blue-400">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span className="text-sm font-mono">Lagekarte wird vorbereitet…</span>
+                    </div>
                   )}
                   {status === 'generating-pdf' && (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
-                      <span className="text-sm text-slate-300 font-mono">Protokoll (PDF) wird gespeichert…</span>
-                    </>
+                    <div className="flex items-center gap-2 text-emerald-400">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span className="text-sm font-mono">Protokoll (PDF) wird in Downloads gespeichert…</span>
+                    </div>
                   )}
                   {status === 'done' && (
-                    <>
-                      <FileText className="w-5 h-5 text-emerald-400" />
-                      <span className="text-sm text-emerald-300 font-mono font-bold">
-                        Protokoll gespeichert — Abmeldung…
+                    <div className="flex items-center gap-2 text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-4 py-2 rounded-xl">
+                      <Check className="w-5 h-5 text-emerald-400" />
+                      <span className="text-sm font-semibold">
+                        PDF-Prüfprotokoll erfolgreich im Download-Ordner gespeichert!
                       </span>
-                    </>
+                    </div>
                   )}
                   {status === 'error' && (
-                    <span className="text-sm text-amber-400 font-mono">
-                      PDF konnte nicht erstellt werden — Abmeldung trotzdem…
-                    </span>
+                    <div className="flex items-center gap-2 text-amber-300 bg-amber-950/60 border border-amber-500/30 px-4 py-2 rounded-xl">
+                      <FileText className="w-5 h-5 text-amber-400" />
+                      <span className="text-sm">
+                        PDF konnte nicht automatisch gespeichert werden.
+                      </span>
+                    </div>
                   )}
                   {status === 'idle' && (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
-                      <span className="text-sm text-slate-400 font-mono">Wird vorbereitet…</span>
-                    </>
+                    <div className="flex items-center gap-2 text-slate-400">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span className="text-sm font-mono">Wird vorbereitet…</span>
+                    </div>
                   )}
+
+                  {/* Actions */}
+                  <div className="flex flex-wrap items-center justify-center gap-3 mt-3 w-full">
+                    {(status === 'done' || status === 'error') && (
+                      <button
+                        type="button"
+                        onClick={() => handleAutoComplete()}
+                        className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold border border-slate-600 transition flex items-center gap-2 cursor-pointer active:scale-95"
+                      >
+                        <Download className="w-4 h-4 text-blue-400" />
+                        <span>PDF erneut speichern</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={status === 'loading-map' || status === 'generating-pdf'}
+                      onClick={() => saveTrackingTestResult(true)}
+                      className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-bold shadow-lg shadow-emerald-900/40 border border-emerald-400/30 transition flex items-center gap-2 cursor-pointer active:scale-95"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Fertig & Test beenden</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>
