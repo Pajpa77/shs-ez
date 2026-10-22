@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { isUserAdmin, isUserEL, isFirstAdmin, SearchOperation } from '../types';
 import { getOpTheme } from './Navbar';
+import { AppUpdateModal } from './AppUpdateModal';
 import {
   Shield,
   Key,
@@ -32,6 +33,8 @@ import {
   ExternalLink,
   RotateCcw,
   Trash2,
+  Smartphone,
+  Download,
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -89,6 +92,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     deleteOperation,
     showConfirmModal,
   } = useRescue();
+
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
   const isAdmin = isUserAdmin(currentUser);
   const isEL = isUserEL(currentUser);
@@ -568,7 +573,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Anfahrt */}
           <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700 flex items-center justify-between">
             <div>
@@ -726,10 +731,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <Database className="w-4 h-4 text-emerald-400" />
             <span>Technik- &amp; Synchronisations-Status</span>
           </div>
-          <span className="text-[10px] text-slate-400 font-normal">Release v6.4</span>
+          <span className="text-[10px] text-slate-400 font-normal">Release v6.5</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Cloud Sync Status */}
           <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700 flex items-center justify-between">
             <div>
@@ -799,8 +804,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {showDroneFeed ? 'Aktiv' : 'Öffnen'}
             </button>
           </div>
+
+          {/* APK & App-Updates via Firebase Storage */}
+          <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">APK-UPDATES (FIREBASE)</span>
+              <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
+                <span>shs-ea Bucket</span>
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsUpdateModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase border transition cursor-pointer shrink-0 bg-emerald-950 text-emerald-300 border-emerald-600 hover:bg-emerald-900 flex items-center gap-1"
+              title="Aktuelle APK herunterladen oder Versions-Informationen prüfen"
+            >
+              <Download className="w-3 h-3" />
+              <span>APK</span>
+            </button>
+          </div>
         </div>
       </div>
+      <AppUpdateModal isOpen={isUpdateModalOpen} onClose={() => setIsUpdateModalOpen(false)} />
     </div>
   );
 };

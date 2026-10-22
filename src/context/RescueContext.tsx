@@ -1143,38 +1143,20 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const userCallSign = currentUser.callSign;
     const userRole = currentUser.role;
 
-    // Guard: During active or paused operations, BOTH the last Admin AND the last Einsatzleitung must remain logged in
+    // Guard: During active or paused operations, at least ONE Einsatzleitung mit Adminrechten (Admin oder EL mit Adminrechten) must remain logged in
     const isOpRunning = currentOperation && (currentOperation.status === 'active' || currentOperation.status === 'paused');
     if (isOpRunning) {
-      const isLeadAdmin = currentUser.role === 'admin' || currentUser.isAdmin;
-      const isLeadEL = currentUser.role === 'einsatzleitung' || currentUser.canLeadOperations;
-
-      if (isLeadAdmin) {
-        const otherActiveAdmins = allUsers.filter(
-          (u) => (u.role === 'admin' || u.isAdmin) && u.isActive && u.id !== userId
+      const hasAdminRights = isUserAdmin(currentUser);
+      if (hasAdminRights) {
+        const otherActiveAdminELs = allUsers.filter(
+          (u) => isUserAdmin(u) && u.isActive && u.id !== userId
         ).length;
-        if (otherActiveAdmins === 0) {
+        if (otherActiveAdminELs === 0) {
           setIsLogoutConfirmOpen(false);
           playAlertSound('alert');
           setActiveAlertNotification({
-            title: '⚠️ Abmeldung verweigert (Letzter Administrator)',
-            message: 'Während eines laufenden oder pausierten Einsatzes muss stets mindestens ein Administrator aktiv eingeloggt bleiben! Bitte ernennen Sie eine andere Einsatzkraft zum Admin oder beenden Sie den Einsatz.',
-            timestamp: new Date().toLocaleTimeString(),
-          });
-          return;
-        }
-      }
-
-      if (isLeadEL) {
-        const otherActiveELs = allUsers.filter(
-          (u) => (u.role === 'einsatzleitung' || u.canLeadOperations) && u.isActive && u.id !== userId
-        ).length;
-        if (otherActiveELs === 0) {
-          setIsLogoutConfirmOpen(false);
-          playAlertSound('alert');
-          setActiveAlertNotification({
-            title: '⚠️ Abmeldung verweigert (Letzte Einsatzleitung)',
-            message: 'Während eines laufenden oder pausierten Einsatzes muss stets mindestens eine Einsatzleitung aktiv eingeloggt bleiben! Bitte übergeben Sie die Einsatzleitung oder beenden Sie den Einsatz.',
+            title: '⚠️ Abmeldung verweigert (Letzte Leitung mit Adminrechten)',
+            message: 'Während eines laufenden oder pausierten Einsatzes muss stets mindestens eine Einsatzleitung mit Administrationsrechten aktiv eingeloggt bleiben! Bitte übergeben Sie die Administrationsrechte oder beenden Sie den Einsatz.',
             timestamp: new Date().toLocaleTimeString(),
           });
           return;
@@ -1209,7 +1191,6 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     try {
       localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
-      localStorage.removeItem('rescue_app_remembered_device_user_id_slk_v4');
     } catch {
       // ignore
     }
@@ -1369,7 +1350,6 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setIsLogoutConfirmOpen(false);
       try {
         localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
-        localStorage.removeItem('rescue_app_remembered_device_user_id_slk_v4');
       } catch {}
       
       playAlertSound('alert');
@@ -5889,7 +5869,6 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     setIsLogoutConfirmOpen(false);
     try {
       localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
-      localStorage.removeItem('rescue_app_remembered_device_user_id_slk_v4');
     } catch {}
   }, [updateUser, syncLocationToCloud]);
 

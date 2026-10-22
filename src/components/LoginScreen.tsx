@@ -3,6 +3,8 @@ import { useRescue } from '../context/RescueContext';
 import { User, EquipmentType, UserRole, isUserAdmin, isUserEL, isUserAdminOrEL, isFirstAdmin } from '../types';
 import { getOpTheme } from './Navbar';
 import { SniffingDogAnimation } from './SniffingDogAnimation';
+import { AppUpdateModal } from './AppUpdateModal';
+import { useAppUpdateCheck } from '../lib/appUpdateService';
 import { db, isFirebaseConfigured } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import {
@@ -184,16 +186,17 @@ export const LoginScreen: React.FC = () => {
 
   const [showTestDuration, setShowTestDuration] = useState(false);
   const [testDuration, setTestDuration] = useState<10 | 20 | 30>(10);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const { hasUpdate, latestInfo } = useAppUpdateCheck();
 
   // 2-step flow: pendingSessionMode is set when user picks role (leadership/active/observer) but there are
   // multiple active operations → user must then pick which operation to join.
   const [pendingSessionMode, setPendingSessionMode] = useState<'leadership' | 'active' | 'observer' | null>(null);
   const [pendingOperationalRole, setPendingOperationalRole] = useState<'ez_command' | 'searcher' | null>(null);
 
-  // Initialize selectedUser if in device unlock mode
+  // Initialize username if in device unlock mode
   useEffect(() => {
     if (loginMode === 'device_unlock' && rememberedUser) {
-      setSelectedUser(rememberedUser);
       setUsername(rememberedUser.username);
     }
   }, [loginMode, rememberedUser]);
@@ -273,9 +276,10 @@ export const LoginScreen: React.FC = () => {
 
     const success = login(user.username, password, finalOpId || undefined, opRole);
 
-    if (success && rememberThisDevice) {
+    if (success && (rememberThisDevice || loginMode === 'device_unlock')) {
       try {
         localStorage.setItem(STORAGE_KEY_REMEMBERED_DEVICE, user.id);
+        setRememberedUserId(user.id);
       } catch {}
     }
 
@@ -320,7 +324,7 @@ export const LoginScreen: React.FC = () => {
       return;
     }
 
-    const targetUser = username.trim();
+    const targetUser = username.trim() || (loginMode === 'device_unlock' && rememberedUser ? rememberedUser.username : (selectedUser ? selectedUser.username : ''));
     if (!targetUser) {
       setErrorMsg('Bitte einen Benutzernamen, Funkrufnamen oder Ihr Profil angeben.');
       return;
@@ -331,13 +335,15 @@ export const LoginScreen: React.FC = () => {
       return;
     }
 
-    let foundUser = allUsers.find(
-      (u) =>
-        u.username.toLowerCase() === targetUser.toLowerCase() ||
-        (u.callSign && u.callSign.toLowerCase() === targetUser.toLowerCase()) ||
-        u.name.toLowerCase() === targetUser.toLowerCase() ||
-        u.id.toLowerCase() === targetUser.toLowerCase()
-    );
+    let foundUser = (loginMode === 'device_unlock' && rememberedUser)
+      ? rememberedUser
+      : selectedUser || allUsers.find(
+          (u) =>
+            u.username.toLowerCase() === targetUser.toLowerCase() ||
+            (u.callSign && u.callSign.toLowerCase() === targetUser.toLowerCase()) ||
+            u.name.toLowerCase() === targetUser.toLowerCase() ||
+            u.id.toLowerCase() === targetUser.toLowerCase()
+        );
 
     if (!foundUser) {
       handleFailedAttempt();
@@ -575,23 +581,22 @@ export const LoginScreen: React.FC = () => {
 
           <div className="pt-6 mt-6 border-t border-blue-700/60 flex flex-wrap items-center justify-between gap-2 text-[11px] text-blue-200 font-mono">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-cyan-300">v6.4</span>
+              <span className="font-bold text-cyan-300">v6.5</span>
               <button
                 type="button"
-                onClick={() => {
-                  if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()));
-                  }
-                  if ('caches' in window) {
-                    caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
-                  }
-                  localStorage.removeItem('shs_ez_cache_version');
-                  window.location.reload();
-                }}
-                className="px-2 py-0.5 rounded bg-blue-900/90 hover:bg-blue-800 text-cyan-300 border border-cyan-400/50 text-[10px] font-bold transition cursor-pointer flex items-center gap-1 shadow-sm"
-                title="Erzwingt das sofortige Leeren aller alten Caches und holt die neuste Version vom Server"
+                onClick={() => setIsUpdateModalOpen(true)}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold transition cursor-pointer flex items-center gap-1 shadow-sm ${
+                  hasUpdate
+                    ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 border border-amber-200 animate-pulse'
+                    : 'bg-blue-900/90 hover:bg-blue-800 text-cyan-300 border border-cyan-400/50'
+                }`}
+                title="App aktualisieren oder neueste APK über Firebase herunterladen"
               >
-                <span>🔄 App-Update erzwingen</span>
+                {hasUpdate ? (
+                  <span>🔔 Update verfügbar (v{latestInfo?.version})</span>
+                ) : (
+                  <span>🔄 App aktualisieren</span>
+                )}
               </button>
             </div>
             <span className="text-emerald-300 font-bold flex items-center gap-1.5">
@@ -1140,7 +1145,7 @@ export const LoginScreen: React.FC = () => {
               /* PRIMARY CREDENTIAL INPUT VIEW */
               <div className="space-y-4">
                 {/* 1. Dedicated Device Unlock View */}
-                {loginMode === 'device_unlock' && rememberedUser && !selectedUser ? (
+                {loginMode === 'device_unlock' && rememberedUser ? (
                   <div className="space-y-3 font-mono">
                     <div className="p-4 rounded-2xl bg-[#000E66] border-2 border-[#2B42F2] space-y-3">
                       <div className="flex items-center justify-between">
@@ -1328,6 +1333,24 @@ export const LoginScreen: React.FC = () => {
                 ) : (
                   /* 3. General Login Hub (Direct Login) */
                   <div className="space-y-4 font-mono">
+                    {rememberedUser && (
+                      <div className="pb-2 border-b border-[#2B42F2]/50 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLoginMode('device_unlock');
+                            setSelectedUser(null);
+                            setUsername(rememberedUser.username);
+                            setPassword('');
+                            setErrorMsg('');
+                          }}
+                          className="text-xs text-cyan-300 hover:text-white underline cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Smartphone className="w-3.5 h-3.5" />
+                          <span>Zurück zu Einsatzgerät von {rememberedUser.name}</span>
+                        </button>
+                      </div>
+                    )}
                     {/* DIRECT SECURE LOGIN FORM */}
                     <form onSubmit={handleVerifyCredentials} className="space-y-3.5 pt-1">
                       <div className="space-y-1">
@@ -1400,6 +1423,7 @@ export const LoginScreen: React.FC = () => {
           </div>
         </div>
       </div>
+      <AppUpdateModal isOpen={isUpdateModalOpen} onClose={() => setIsUpdateModalOpen(false)} />
       <SniffingDogAnimation />
     </div>
   );

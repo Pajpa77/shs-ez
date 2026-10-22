@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore, setLogLevel } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { SearchOperation, SearchSector, SearchTeam, Finding, OperationLogEntry, UserLocationState, GpsPoint, ChatMessage, User, ArchivedSearchTrack } from '../types';
 import { VEREINSBUERO_LOCATION } from '../mockData';
@@ -18,6 +19,9 @@ export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfi
 export const db = firebaseConfig.firestoreDatabaseId
   ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
   : getFirestore(app);
+
+// Initialize Firebase Storage
+export const storage = firebaseConfig.storageBucket ? getStorage(app) : null;
 
 export const isFirebaseConfigured = Boolean(firebaseConfig.projectId && firebaseConfig.apiKey);
 

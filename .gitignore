@@ -8,3 +8,5 @@ coverage/
 
 dist/
 .firebase/
+backups/
+*.apk
