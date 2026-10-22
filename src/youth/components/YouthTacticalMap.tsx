@@ -17,7 +17,10 @@ import {
   Moon,
   Sun,
   ChevronDown,
+  ChevronUp,
   GripVertical,
+  RotateCcw,
+  Trash2,
 } from 'lucide-react';
 import { TacticalWeatherOverlay } from '../../components/TacticalWeatherOverlay';
 
@@ -49,6 +52,23 @@ const YOUTH_TILE_LAYERS: Record<'osm' | 'hybrid' | 'satellite' | 'topo', { name:
     maxZoom: 19,
   },
 };
+
+// Calculate geodesic area in hectares for a polygon
+function calculatePolygonHectares(coords: [number, number][]): number {
+  if (coords.length < 3) return 0;
+  const R = 6378137; // meters
+  let area = 0;
+  for (let i = 0; i < coords.length; i++) {
+    const j = (i + 1) % coords.length;
+    const lat1 = (coords[i][0] * Math.PI) / 180;
+    const lat2 = (coords[j][0] * Math.PI) / 180;
+    const lon1 = (coords[i][1] * Math.PI) / 180;
+    const lon2 = (coords[j][1] * Math.PI) / 180;
+    area += (lon2 - lon1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+  }
+  area = (Math.abs(area) * R * R) / 2.0;
+  return Number((area / 10000).toFixed(1)); // m^2 to hectares
+}
 
 interface YouthTacticalMapProps {
   onOpenFindingModal: () => void;
@@ -105,8 +125,16 @@ export const YouthTacticalMap: React.FC<YouthTacticalMapProps> = ({
 
   // Sector drawing state
   const [drawingPoints, setDrawingPoints] = useState<[number, number][]>([]);
+  const [isDrawingCollapsed, setIsDrawingCollapsed] = useState(false);
   const drawingPointsRef = useRef<[number, number][]>([]);
   drawingPointsRef.current = drawingPoints;
+
+  // Auto-collapse drawing toolbar on mobile screens so map is free for drawing
+  useEffect(() => {
+    if (drawingSectorData && typeof window !== 'undefined' && window.innerWidth < 768) {
+      setIsDrawingCollapsed(true);
+    }
+  }, [drawingSectorData]);
 
   // Initialize Map
   useEffect(() => {
@@ -220,6 +248,13 @@ export const YouthTacticalMap: React.FC<YouthTacticalMapProps> = ({
     }
   }, [showAero]);
 
+  // Reset drawing points when sector drawing mode starts or stops
+  useEffect(() => {
+    if (!drawingSectorData) {
+      setDrawingPoints([]);
+    }
+  }, [drawingSectorData]);
+
   // Handle map click during drawing mode
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -237,7 +272,7 @@ export const YouthTacticalMap: React.FC<YouthTacticalMapProps> = ({
     };
   }, [drawingSectorData]);
 
-  // Render in-progress drawing points & line
+  // Render in-progress drawing points & line/polygon with interactive vertex handles
   useEffect(() => {
     const drawingGroup = drawingLayerRef.current;
     if (!drawingGroup) return;
@@ -246,36 +281,160 @@ export const YouthTacticalMap: React.FC<YouthTacticalMapProps> = ({
 
     if (!drawingSectorData || drawingPoints.length === 0) return;
 
-    // Draw vertex markers
-    drawingPoints.forEach((pt, index) => {
-      const circle = L.circleMarker(pt, {
-        radius: 6,
-        color: '#f59e0b',
-        fillColor: '#fef08a',
-        fillOpacity: 0.9,
-        weight: 2,
-      });
-      circle.bindTooltip(`Punkt ${index + 1}`, { permanent: false, direction: 'top' });
-      circle.addTo(drawingGroup);
-    });
+    const strokeColor =
+      drawingSectorData.targetTeam === 'erwachsene'
+        ? '#3b82f6'
+        : drawingSectorData.targetTeam === 'all'
+        ? '#a855f7'
+        : '#f59e0b';
+    const fillColor = strokeColor;
 
-    // Draw polyline or polygon
-    if (drawingPoints.length > 2) {
-      const poly = L.polygon(drawingPoints, {
-        color: '#f59e0b',
-        fillColor: '#f59e0b',
+    // 1. Polygon / Polyline preview (render first so vertex handles sit on top)
+    let polyPreview: L.Polygon | L.Polyline | null = null;
+    if (drawingPoints.length >= 3) {
+      polyPreview = L.polygon(drawingPoints, {
+        color: strokeColor,
+        fillColor: fillColor,
         fillOpacity: 0.25,
         weight: 3,
         dashArray: '6, 6',
       });
-      poly.addTo(drawingGroup);
+      polyPreview.addTo(drawingGroup);
+
+      // Centroid area label
+      const ha = calculatePolygonHectares(drawingPoints);
+      const center = (polyPreview as L.Polygon).getBounds().getCenter();
+      const areaLabel = L.marker(center, {
+        icon: L.divIcon({
+          className: 'custom-area-label',
+          html: `<div style="background:#0F172A;color:${fillColor};border:1px solid ${strokeColor};padding:2px 8px;border-radius:6px;font-size:11px;font-weight:bold;font-family:monospace;white-space:nowrap;box-shadow:0 4px 10px rgba(0,0,0,0.5);">📐 ca. ${ha} ha</div>`,
+          iconSize: [80, 24],
+          iconAnchor: [40, 12],
+        }),
+      });
+      areaLabel.addTo(drawingGroup);
     } else if (drawingPoints.length === 2) {
-      const line = L.polyline(drawingPoints, {
-        color: '#f59e0b',
+      polyPreview = L.polyline(drawingPoints, {
+        color: strokeColor,
         weight: 3,
         dashArray: '6, 6',
       });
-      line.addTo(drawingGroup);
+      polyPreview.addTo(drawingGroup);
+    }
+
+    // 2. Interactive vertex markers (numbered, draggable, clickable to delete)
+    const liveClickPts: [number, number][] = drawingPoints.map((p) => [p[0], p[1]]);
+
+    drawingPoints.forEach((pt, idx) => {
+      const vertexIcon = L.divIcon({
+        className: 'custom-draw-vertex-handle',
+        html: `<div style="width:22px;height:22px;border-radius:50%;background:${strokeColor};border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;color:#ffffff;font-size:10px;font-weight:900;font-family:monospace;cursor:grab;" title="Punkt ${idx + 1}: Ziehen zum Verschieben, Klick zum Löschen">${idx + 1}</div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+      });
+
+      const vertexMarker = L.marker(pt, {
+        icon: vertexIcon,
+        draggable: true,
+        zIndexOffset: 1600,
+      });
+
+      vertexMarker.bindTooltip(
+        `Punkt ${idx + 1}: Ziehen zum Verschieben | Klick/Rechtsklick zum Löschen`,
+        { direction: 'top', offset: [0, -10] }
+      );
+
+      let wasDragged = false;
+
+      vertexMarker.on('mousedown', (e) => {
+        L.DomEvent.stopPropagation(e);
+      });
+      vertexMarker.on('touchstart', (e) => {
+        L.DomEvent.stopPropagation(e);
+      });
+
+      vertexMarker.on('dragstart', () => {
+        wasDragged = true;
+      });
+
+      vertexMarker.on('drag', (e: L.LeafletEvent) => {
+        const m = e.target as L.Marker;
+        const latlng = m.getLatLng();
+        const curPt: [number, number] = [Number(latlng.lat.toFixed(6)), Number(latlng.lng.toFixed(6))];
+        liveClickPts[idx] = curPt;
+        if (polyPreview) {
+          polyPreview.setLatLngs(liveClickPts);
+        }
+      });
+
+      vertexMarker.on('dragend', (e: L.LeafletEvent) => {
+        const m = e.target as L.Marker;
+        const raw = m.getLatLng();
+        const finalPt: [number, number] = [Number(raw.lat.toFixed(6)), Number(raw.lng.toFixed(6))];
+
+        setDrawingPoints((prev) => {
+          return prev.map((oldPt, i) => (i === idx ? finalPt : oldPt));
+        });
+
+        setTimeout(() => {
+          wasDragged = false;
+        }, 100);
+      });
+
+      // Click to delete vertex
+      vertexMarker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        if (wasDragged) return;
+        setDrawingPoints((prev) => prev.filter((_, i) => i !== idx));
+      });
+
+      // Right-click / Contextmenu to delete vertex
+      vertexMarker.on('contextmenu', (e) => {
+        L.DomEvent.stopPropagation(e);
+        setDrawingPoints((prev) => prev.filter((_, i) => i !== idx));
+      });
+
+      vertexMarker.addTo(drawingGroup);
+    });
+
+    // 3. Midpoint '+' handles between adjacent vertices to insert intermediate points
+    if (drawingPoints.length >= 2) {
+      const isClosed = drawingPoints.length >= 3;
+      const segmentCount = isClosed ? drawingPoints.length : drawingPoints.length - 1;
+      for (let idx = 0; idx < segmentCount; idx++) {
+        const pt = drawingPoints[idx];
+        const nextPt = drawingPoints[(idx + 1) % drawingPoints.length];
+        const midLat = Number(((pt[0] + nextPt[0]) / 2).toFixed(6));
+        const midLng = Number(((pt[1] + nextPt[1]) / 2).toFixed(6));
+
+        const midIcon = L.divIcon({
+          className: 'custom-click-midpoint-handle',
+          html: `<div style="width:16px;height:16px;border-radius:50%;background:#0f172a;border:1.5px solid ${strokeColor};color:${strokeColor};font-size:11px;line-height:13px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.6);" title="Zwischenpunkt einfügen">+</div>`,
+          iconSize: [16, 16],
+          iconAnchor: [8, 8],
+        });
+
+        const midMarker = L.marker([midLat, midLng], {
+          icon: midIcon,
+          zIndexOffset: 1450,
+        });
+
+        midMarker.bindTooltip('Klick: Neuen Punkt hier einfügen', { direction: 'top' });
+
+        midMarker.on('mousedown', (e) => L.DomEvent.stopPropagation(e));
+        midMarker.on('touchstart', (e) => L.DomEvent.stopPropagation(e));
+
+        midMarker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          setDrawingPoints((prev) => {
+            const copy = [...prev];
+            copy.splice(idx + 1, 0, [midLat, midLng]);
+            return copy;
+          });
+        });
+
+        midMarker.addTo(drawingGroup);
+      }
     }
   }, [drawingPoints, drawingSectorData]);
 
@@ -634,47 +793,173 @@ export const YouthTacticalMap: React.FC<YouthTacticalMapProps> = ({
 
       {/* Drawing Toolbar Overlay */}
       {drawingSectorData && (
-        <div className="absolute top-4 left-4 right-4 z-[600] p-3.5 rounded-2xl bg-[#000E66]/95 border-2 border-amber-400 text-white shadow-2xl backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
-          <div>
-            <div className="flex items-center gap-2">
-              <PenTool className="w-4 h-4 text-amber-300 animate-pulse" />
-              <span className="font-bold text-xs uppercase font-mono text-amber-300">
-                Sektor-Zeichenmodus aktiv: {drawingSectorData.name}
+        isDrawingCollapsed ? (
+          /* Slim Collapsed Pill */
+          <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-[600] w-[95%] max-w-xl bg-[#000E66]/95 text-slate-100 px-3 py-2 rounded-xl shadow-2xl border-2 border-amber-400 backdrop-blur-md flex items-center justify-between gap-2 font-sans animate-fadeIn">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="p-1 rounded bg-amber-500/20 text-amber-300 text-xs shrink-0">
+                ✏️
+              </span>
+              <span className="text-xs font-bold font-mono truncate text-white">
+                {drawingSectorData.name}: {drawingPoints.length} Pkt.
+                {drawingPoints.length >= 3 ? ` (${calculatePolygonHectares(drawingPoints)} ha)` : ''}
               </span>
             </div>
-            <p className="text-[11px] text-slate-300 mt-0.5">
-              Klicke auf die Karte, um die Eckpunkte des Sektors zu setzen ({drawingPoints.length} Punkte gesetzt).
-            </p>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={drawingPoints.length < 3}
-              onClick={() => {
-                if (onFinishDrawingSector && drawingPoints.length >= 3) {
-                  onFinishDrawingSector(drawingPoints);
+            <div className="flex items-center gap-1.5 shrink-0 font-mono text-xs">
+              {drawingPoints.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setDrawingPoints((prev) => prev.slice(0, -1))}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 cursor-pointer"
+                  title="Letzten Punkt zurücknehmen"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
                   setDrawingPoints([]);
-                }
-              }}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold font-mono text-xs uppercase flex items-center gap-1.5 transition cursor-pointer shadow-lg"
-            >
-              <Check className="w-4 h-4" />
-              <span>Sektor speichern ({drawingPoints.length})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setDrawingPoints([]);
-                if (onCancelDrawingSector) onCancelDrawingSector();
-              }}
-              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs uppercase flex items-center gap-1 transition cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-              <span>Abbrechen</span>
-            </button>
+                  if (onCancelDrawingSector) onCancelDrawingSector();
+                }}
+                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 cursor-pointer text-[11px]"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                disabled={drawingPoints.length < 3}
+                onClick={() => {
+                  if (onFinishDrawingSector && drawingPoints.length >= 3) {
+                    onFinishDrawingSector(drawingPoints);
+                    setDrawingPoints([]);
+                  }
+                }}
+                className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold cursor-pointer text-[11px] shadow"
+              >
+                Speichern
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDrawingCollapsed(false)}
+                className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-400/50 text-[10px] flex items-center gap-1 cursor-pointer"
+                title="Toolbar ausklappen"
+              >
+                <span>Voll</span>
+                <ChevronDown className="w-3 h-3" />
+              </button>
+            </div>
           </div>
+        ) : (
+          /* Full Expanded Banner */
+          <div className="absolute top-4 left-4 right-4 z-[600] p-3.5 rounded-2xl bg-[#000E66]/95 border-2 border-amber-400 text-white shadow-2xl backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-3 animate-fadeIn">
+            <div>
+              <div className="flex items-center gap-2">
+                <PenTool className="w-4 h-4 text-amber-300 animate-pulse" />
+                <span className="font-bold text-xs uppercase font-mono text-amber-300">
+                  Sektor-Zeichenmodus aktiv: {drawingSectorData.name}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 mt-0.5">
+                Klicke auf die Karte für Eckpunkte. Punkte verschieben (ziehen), löschen (Klick) oder per (+) Zwischenpunkte einfügen.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {drawingPoints.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setDrawingPoints((prev) => prev.slice(0, -1))}
+                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs flex items-center gap-1 transition cursor-pointer border border-slate-700"
+                    title="Letzten gesetzten Punkt zurücknehmen"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Rückgängig</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDrawingPoints([])}
+                    className="px-3 py-1.5 rounded-xl bg-red-950/70 hover:bg-red-900 text-red-200 font-mono text-xs flex items-center gap-1 transition cursor-pointer border border-red-700/50"
+                    title="Alle Punkte verwerfen"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                    <span>Leeren</span>
+                  </button>
+                </>
+              )}
+
+              <button
+                type="button"
+                disabled={drawingPoints.length < 3}
+                onClick={() => {
+                  if (onFinishDrawingSector && drawingPoints.length >= 3) {
+                    onFinishDrawingSector(drawingPoints);
+                    setDrawingPoints([]);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold font-mono text-xs uppercase flex items-center gap-1.5 transition cursor-pointer shadow-lg"
+              >
+                <Check className="w-4 h-4" />
+                <span>
+                  Sektor speichern ({drawingPoints.length} Pkt.
+                  {drawingPoints.length >= 3 ? ` • ca. ${calculatePolygonHectares(drawingPoints)} ha` : ''})
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setDrawingPoints([]);
+                  if (onCancelDrawingSector) onCancelDrawingSector();
+                }}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs uppercase flex items-center gap-1 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+                <span>Abbrechen</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsDrawingCollapsed(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black border-2 border-white text-xs transition cursor-pointer shadow-lg"
+                title="Toolbar minimieren für maximal freie Karte"
+              >
+                <ChevronDown className="w-4 h-4" />
+                <span>Karte freigeben</span>
+              </button>
+            </div>
+          </div>
+        )
+      )}
+
+      {/* Prominenter Umschalter in der unteren rechten Ecke (Jugendgruppe) */}
+      {drawingSectorData && (
+        <div className="fixed sm:absolute bottom-6 sm:bottom-8 right-3 sm:right-6 z-[1200] pointer-events-auto flex flex-col items-end gap-1.5 animate-fadeIn">
+          <button
+            type="button"
+            onClick={() => setIsDrawingCollapsed((prev) => !prev)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl shadow-2xl font-mono text-xs font-black uppercase tracking-wider transition-all transform active:scale-95 cursor-pointer border-2 ${
+              isDrawingCollapsed
+                ? 'bg-[#000E66]/95 hover:bg-blue-900 text-amber-300 border-amber-400 shadow-amber-500/20'
+                : 'bg-amber-400 hover:bg-amber-300 text-slate-950 border-white shadow-xl ring-4 ring-amber-400/30'
+            }`}
+            title={isDrawingCollapsed ? 'Werkzeuge & Optionen einblenden' : 'Fenster minimieren (Karte freigeben zum Zeichnen)'}
+          >
+            {isDrawingCollapsed ? (
+              <>
+                <ChevronUp className="w-4 h-4 text-amber-400 animate-pulse" />
+                <span>⚙️ Optionen / Werkzeuge</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4 text-slate-950 font-black animate-bounce" />
+                <span>🗺️ Karte freigeben (Minimieren)</span>
+              </>
+            )}
+          </button>
         </div>
       )}
 
@@ -922,7 +1207,11 @@ export const YouthTacticalMap: React.FC<YouthTacticalMapProps> = ({
             <TacticalWeatherOverlay
               lat={currentYouthOperation?.headquartersLocation?.lat || 51.798}
               lng={currentYouthOperation?.headquartersLocation?.lng || 11.74}
-              locationTitle={currentYouthOperation?.locationName || 'Übungsgelände'}
+              locationTitle={
+                currentYouthOperation?.headquartersLocation?.address
+                  ? `Standort der EZ (${currentYouthOperation.headquartersLocation.address})`
+                  : `Standort der EZ (${currentYouthOperation?.locationName || 'Treffpunkt'})`
+              }
               onClose={() => setShowWeatherOverlay(false)}
             />
           </div>

@@ -260,7 +260,7 @@ interface RescueContextType {
   stopTrackingTest: () => void;
   saveTrackingTestResult: (save: boolean) => void;
 
-  // Youth Group Module (v7.0)
+  // Youth Group Module (v7.1)
   isYouthModuleActive: boolean;
   setYouthModuleActive: (active: boolean) => void;
 }
@@ -1353,9 +1353,8 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Keep mobile screen awake via Screen Wake Lock API during active GPS recording (Status Grün) or Tracking Test
   const isTrackingWakeLockActive = Boolean(
-    (isRealGpsActive &&
-      (currentUser?.arrivalStatus === 'ready' ||
-        (currentUser?.id && userArrivalStatuses[currentUser.id] === 'ready'))) ||
+    currentUser?.arrivalStatus === 'ready' ||
+      (currentUser?.id && userArrivalStatuses[currentUser.id] === 'ready') ||
       activeTrackingTest?.isActive
   );
   useWakeLock(isTrackingWakeLockActive);
@@ -3737,6 +3736,11 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       return next;
     });
 
+    // Ensure GPS tracking is active for current user
+    if (userId === currentUserId || userId === currentUser?.id) {
+      setIsRealGpsActive(true);
+    }
+
     // 2. Initialize or preserve track history
     setUserLocations((prev) => {
       const existing = prev[userId];
@@ -5153,11 +5157,18 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
     hectares?: number,
     notes?: string
   ) => {
-    if (!currentOperation) return;
+    let op = currentOperation;
+    if (!op) {
+      op = createOperation({
+        title: `Einsatz ${new Date().toLocaleDateString('de-DE')} ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`,
+        type: 'live_search',
+        status: 'planned',
+      });
+    }
 
     const logEntry: OperationLogEntry = {
       id: `log-${Date.now()}`,
-      operationId: currentOperation.id,
+      operationId: op.id,
       timestamp: new Date().toISOString(),
       authorName: currentUser?.name || 'Einsatzleitung',
       authorRole: currentUser?.role || 'admin',
@@ -5165,12 +5176,12 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       text: `Haupt-Suchgebiet aktualisiert (${polygon.length} Punkte${hectares ? `, ${hectares.toFixed(1)} ha` : ''})`,
     };
 
-    updateOperation(currentOperation.id, {
+    updateOperation(op.id, {
       searchAreaPolygon: polygon,
-      searchAreaName: name || currentOperation.searchAreaName || 'Haupt-Suchgebiet',
-      searchAreaHectares: hectares !== undefined ? hectares : currentOperation.searchAreaHectares,
-      searchAreaNotes: notes !== undefined ? notes : currentOperation.searchAreaNotes,
-      logs: [logEntry, ...currentOperation.logs],
+      searchAreaName: name || op.searchAreaName || 'Haupt-Suchgebiet',
+      searchAreaHectares: hectares !== undefined ? hectares : op.searchAreaHectares,
+      searchAreaNotes: notes !== undefined ? notes : op.searchAreaNotes,
+      logs: [logEntry, ...(op.logs || [])],
     });
   };
 
@@ -5196,13 +5207,20 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   };
 
   const addSector = (sectorData: Omit<SearchSector, 'id' | 'operationId'> & { id?: string }): SearchSector => {
-    if (!currentOperation) throw new Error('Kein aktiver Einsatz gewählt');
+    let op = currentOperation;
+    if (!op) {
+      op = createOperation({
+        title: `Einsatz ${new Date().toLocaleDateString('de-DE')} ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`,
+        type: 'live_search',
+        status: 'planned',
+      });
+    }
     const newId = sectorData.id || `sec-${Date.now()}`;
     const assignedUserIds = sectorData.assignedUserIds || [];
     const newSector: SearchSector = {
       ...sectorData,
       id: newId,
-      operationId: currentOperation.id,
+      operationId: op.id,
       status: sectorData.status || 'open',
       priority: sectorData.priority || 'medium',
       assignedUserIds,
@@ -5211,7 +5229,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
     const logEntry: OperationLogEntry = {
       id: `log-${Date.now()}`,
-      operationId: currentOperation.id,
+      operationId: op.id,
       timestamp: new Date().toISOString(),
       authorName: currentUser?.name || 'Einsatzleitung',
       authorRole: currentUser?.role || 'admin',
@@ -5219,7 +5237,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       text: `Neuer Suchsektor angelegt: "${newSector.name}" (${newSector.priority.toUpperCase()})`,
     };
 
-    updateOperation(currentOperation.id, (prevOp) => ({
+    updateOperation(op.id, (prevOp) => ({
       sectors: [...(prevOp.sectors || []), newSector],
       logs: [logEntry, ...(prevOp.logs || [])],
     }));
@@ -5247,12 +5265,20 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
   };
 
   const addMultipleSectors = (sectorsData: Omit<SearchSector, 'id' | 'operationId'>[]): SearchSector[] => {
-    if (!currentOperation || sectorsData.length === 0) return [];
+    if (sectorsData.length === 0) return [];
+    let op = currentOperation;
+    if (!op) {
+      op = createOperation({
+        title: `Einsatz ${new Date().toLocaleDateString('de-DE')} ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`,
+        type: 'live_search',
+        status: 'planned',
+      });
+    }
     const now = Date.now();
     const createdSectors: SearchSector[] = sectorsData.map((s, idx) => ({
       ...s,
       id: `sec-${now}-${idx}`,
-      operationId: currentOperation.id,
+      operationId: op.id,
       status: s.status || 'open',
       priority: s.priority || 'medium',
       assignedUserIds: s.assignedUserIds || [],
@@ -5261,7 +5287,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
 
     const logEntry: OperationLogEntry = {
       id: `log-${now}`,
-      operationId: currentOperation.id,
+      operationId: op.id,
       timestamp: new Date().toISOString(),
       authorName: currentUser?.name || 'Einsatzleitung',
       authorRole: currentUser?.role || 'admin',

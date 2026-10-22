@@ -127,7 +127,7 @@ export const YouthMemberCardModal: React.FC<YouthMemberCardModalProps> = ({
           {/* Bottom badge */}
           <div className="mt-3 flex items-center justify-between text-[8px] font-mono text-blue-200/80">
             <span>Gültig für Übungsbetrieb</span>
-            <span>SHS-EZ Version 7.0</span>
+            <span>SHS-EZ Version 7.1</span>
           </div>
         </div>
 

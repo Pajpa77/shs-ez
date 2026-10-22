@@ -263,13 +263,30 @@ const MainApp: React.FC = () => {
   const [isUserListPdfOpen, setIsUserListPdfOpen] = useState(false);
   const [directChatTarget, setDirectChatTarget] = useState<User | null>(null);
 
-  // Youth Group Module (v7.0) - Completely isolated sub-system
-  if (isYouthModuleActive && !activeTrackingTest?.isActive) {
+  // Tracking test origin flag to ensure clean return to youth group upon completion
+  const [isTrackingTestFromYouth, setIsTrackingTestFromYouth] = useState(false);
+
+  // Tracking Test is ongoing if it is currently active OR completed waiting for PDF download & user dismissal
+  const isTrackingTestActiveOrCompleted = Boolean(
+    activeTrackingTest && (activeTrackingTest.isActive || activeTrackingTest.isCompleted)
+  );
+
+  // When tracking test is closed/dismissed, return to Youth Group if it was started from there
+  useEffect(() => {
+    if (!activeTrackingTest && isTrackingTestFromYouth) {
+      setYouthModuleActive(true);
+      setIsTrackingTestFromYouth(false);
+    }
+  }, [activeTrackingTest, isTrackingTestFromYouth, setYouthModuleActive]);
+
+  // Youth Group Module (v7.1) - Completely isolated sub-system
+  if (isYouthModuleActive && !isTrackingTestActiveOrCompleted) {
     return (
       <YouthAppRoot
         adultUsers={allUsers}
         onExitYouthModule={() => setYouthModuleActive(false)}
         onStartTrackingTest={(user, duration) => {
+          setIsTrackingTestFromYouth(true);
           setYouthModuleActive(false);
           startTrackingTest(user, duration);
         }}
@@ -277,8 +294,8 @@ const MainApp: React.FC = () => {
     );
   }
 
-  // If not authenticated and no tracking test is running, show login
-  if (!currentUser && !activeTrackingTest?.isActive) {
+  // If not authenticated and no tracking test is running or completing, show login
+  if (!currentUser && !isTrackingTestActiveOrCompleted) {
     return (
       <div className="fixed inset-0 w-full h-full overflow-y-auto bg-reflex-blue z-[9999]" style={{ backgroundColor: '#001489', WebkitOverflowScrolling: 'touch' }}>
         <LoginScreen />
@@ -554,7 +571,7 @@ const MainApp: React.FC = () => {
       )}
 
       {/* UI Zoom Controls & Map Controls - Draggable Floating Bar */}
-      {activeTab === 'map' && (
+      {activeTab === 'map' && !isDrawingSector && (
         <FloatingMapControlsBar
           uiScale={uiScale}
           setUiScale={setUiScale}
@@ -905,7 +922,10 @@ const MainApp: React.FC = () => {
         sector={sectorToEdit}
         isOpen={isSectorEditorOpen}
         pendingPolygon={pendingPolygon}
-        onStartDrawing={() => {
+        onStartDrawing={(draft) => {
+          if (draft) {
+            setSectorToEdit(draft);
+          }
           setIsSectorEditorOpen(false);
           setActiveTab('map');
           setIsDrawingSector(true);

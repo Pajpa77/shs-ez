@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useYouth } from '../YouthContext';
 import { YouthSquad, YouthScenarioMode } from '../types';
 import {

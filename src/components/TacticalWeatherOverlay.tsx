@@ -39,11 +39,11 @@ export const TacticalWeatherOverlay: React.FC<TacticalWeatherOverlayProps> = ({
   const [expanded, setExpanded] = useState<boolean>(!isCompact);
   const [activeTab, setActiveTab] = useState<'current' | 'k9' | 'forecast'>('current');
 
-  const loadWeather = useCallback(async () => {
+  const loadWeather = useCallback(async (forceRefresh = false) => {
     if (!lat || !lng) return;
     setLoading(true);
     try {
-      const data = await fetchRescueWeather(lat, lng, locationTitle);
+      const data = await fetchRescueWeather(lat, lng, locationTitle, forceRefresh);
       setWeatherReport(data);
     } catch (err) {
       console.error('Failed to load rescue weather:', err);
@@ -108,7 +108,7 @@ export const TacticalWeatherOverlay: React.FC<TacticalWeatherOverlayProps> = ({
         <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
-            onClick={loadWeather}
+            onClick={() => loadWeather(true)}
             disabled={loading}
             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer border border-slate-700"
             title="Wetterdaten aktualisieren"

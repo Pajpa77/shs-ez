@@ -12,6 +12,9 @@ import {
 import { INITIAL_YOUTH_USERS, INITIAL_YOUTH_OPERATIONS } from './mockData';
 import { User, GpsPoint, isUserAdmin } from '../types';
 import { startCapacitorBackgroundGps, stopCapacitorBackgroundGps } from '../lib/capacitorGps';
+import { useWakeLock } from '../hooks/useWakeLock';
+import { db } from '../lib/firebase';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 interface YouthLocationState {
   currentPosition?: GpsPoint;
@@ -79,6 +82,7 @@ const STORAGE_OPS = 'rescue_youth_operations_v7';
 const STORAGE_ACTIVE_USER = 'rescue_youth_active_user_v7';
 const STORAGE_CURRENT_OP_ID = 'rescue_youth_current_op_id_v7';
 const STORAGE_CHAT = 'rescue_youth_chat_v7';
+const STORAGE_LOCATIONS = 'rescue_youth_locations_v7';
 
 // Distance calculation between GPS coordinates
 function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -98,22 +102,69 @@ export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: Us
   children,
   adultUsers,
 }) => {
-  // ── 1. Load Youth Users ────────────────────────────────────────────────────
+  // ── 1. Load Youth Users (Cloud Firestore & LocalStorage Sync) ─────────────
   const [allYouthUsers, setAllYouthUsers] = useState<YouthUser[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_USERS);
+      const isInitialized = localStorage.getItem('rescue_youth_users_initialized_v7');
       if (saved) return JSON.parse(saved);
+      if (isInitialized) return []; // User previously modified accounts, don't resurrect mock data
     } catch {}
     return INITIAL_YOUTH_USERS;
   });
 
+  const isInitialUsersLoadRef = useRef(true);
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_USERS, JSON.stringify(allYouthUsers));
+      localStorage.setItem('rescue_youth_users_initialized_v7', 'true');
     } catch {}
+
+    if (isInitialUsersLoadRef.current) {
+      isInitialUsersLoadRef.current = false;
+      return;
+    }
+
+    try {
+      setDoc(
+        doc(db, 'settings', 'youth_users'),
+        {
+          users: allYouthUsers,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      ).catch((err) => console.warn('Firestore youth_users sync error:', err));
+    } catch (err) {
+      console.warn('Could not sync youth_users to Firestore:', err);
+    }
   }, [allYouthUsers]);
 
-  // ── 2. Load Youth Operations ───────────────────────────────────────────────
+  // Realtime Cloud Firestore listener for youth users
+  useEffect(() => {
+    try {
+      const unsub = onSnapshot(
+        doc(db, 'settings', 'youth_users'),
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data && Array.isArray(data.users)) {
+              setAllYouthUsers(data.users);
+              try {
+                localStorage.setItem(STORAGE_USERS, JSON.stringify(data.users));
+                localStorage.setItem('rescue_youth_users_initialized_v7', 'true');
+              } catch {}
+            }
+          }
+        },
+        (err) => {
+          console.warn('Firestore youth_users listener error:', err);
+        }
+      );
+      return () => unsub();
+    } catch {}
+  }, []);
+
+  // ── 2. Load Youth Operations (Cloud Firestore & LocalStorage Sync) ──────────
   const [allYouthOperations, setAllYouthOperations] = useState<YouthOperation[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_OPS);
@@ -122,11 +173,54 @@ export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: Us
     return INITIAL_YOUTH_OPERATIONS;
   });
 
+  const isInitialOpsLoadRef = useRef(true);
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_OPS, JSON.stringify(allYouthOperations));
     } catch {}
+
+    if (isInitialOpsLoadRef.current) {
+      isInitialOpsLoadRef.current = false;
+      return;
+    }
+
+    try {
+      setDoc(
+        doc(db, 'settings', 'youth_operations'),
+        {
+          operations: allYouthOperations,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      ).catch((err) => console.warn('Firestore youth_operations sync error:', err));
+    } catch (err) {
+      console.warn('Could not sync youth_operations to Firestore:', err);
+    }
   }, [allYouthOperations]);
+
+  // Realtime Cloud Firestore listener for youth operations
+  useEffect(() => {
+    try {
+      const unsub = onSnapshot(
+        doc(db, 'settings', 'youth_operations'),
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data && Array.isArray(data.operations)) {
+              setAllYouthOperations(data.operations);
+              try {
+                localStorage.setItem(STORAGE_OPS, JSON.stringify(data.operations));
+              } catch {}
+            }
+          }
+        },
+        (err) => {
+          console.warn('Firestore youth_operations listener error:', err);
+        }
+      );
+      return () => unsub();
+    } catch {}
+  }, []);
 
   // ── 3. Active User & Current Operation ────────────────────────────────────
   // Startet immer ohne automatischen Login, um versehentliches Reingehen ohne PIN zu verhindern
@@ -194,7 +288,37 @@ export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: Us
   }, [chatMessages]);
 
   // ── 5. Tracking / GPS Locations (Identisch zur Haupt-App) ───────────────────
-  const [youthLocations, setYouthLocations] = useState<Record<string, YouthLocationState>>({});
+  const [youthLocations, setYouthLocations] = useState<Record<string, YouthLocationState>>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_LOCATIONS);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_LOCATIONS, JSON.stringify(youthLocations));
+    } catch {}
+  }, [youthLocations]);
+
+  // Keep mobile screen awake and background audio heartbeat alive when user is ready (Status Grün) or exercise is active/paused
+  const isWakeLockActive = Boolean(
+    currentYouthUser?.isActive &&
+      (isExerciseActive || isExercisePaused || currentYouthUser?.arrivalStatus === 'ready')
+  );
+  useWakeLock(isWakeLockActive);
+
+  // Sync currentYouthUser whenever allYouthUsers changes (e.g. admin or barcode scan sets ready)
+  useEffect(() => {
+    if (!currentYouthUser) return;
+    const target = allYouthUsers.find((u) => u.id === currentYouthUser.id);
+    if (target && target.arrivalStatus !== currentYouthUser.arrivalStatus) {
+      setCurrentYouthUser((prev) => (prev ? { ...prev, arrivalStatus: target.arrivalStatus } : null));
+    }
+  }, [allYouthUsers, currentYouthUser?.id]);
+
   const watchIdRef = useRef<number | null>(null);
   const nativeWatcherIdRef = useRef<string | null>(null);
   const latestPositionRef = useRef<GpsPoint | null>(null);
@@ -401,7 +525,11 @@ export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: Us
   const logoutYouth = useCallback(() => {
     if (currentYouthUser) {
       setAllYouthUsers((prev) =>
-        prev.map((u) => (u.id === currentYouthUser.id ? { ...u, isActive: false, lastSeen: 'Abgemeldet' } : u))
+        prev.map((u) =>
+          u.id === currentYouthUser.id
+            ? { ...u, isActive: false, arrivalStatus: 'in_transit', lastSeen: 'Abgemeldet' }
+            : u
+        )
       );
     }
     setCurrentYouthUser(null);
@@ -418,29 +546,91 @@ export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: Us
         memberCardCode: data.memberCardCode || `SHS-Y-${Math.floor(100 + Math.random() * 900)}`,
         trackColor: data.trackColor || '#38bdf8',
       };
-      setAllYouthUsers((prev) => [newUser, ...prev]);
+      setAllYouthUsers((prev) => {
+        const next = [newUser, ...prev];
+        try {
+          localStorage.setItem(STORAGE_USERS, JSON.stringify(next));
+          localStorage.setItem('rescue_youth_users_initialized_v7', 'true');
+          setDoc(
+            doc(db, 'settings', 'youth_users'),
+            { users: next, updatedAt: new Date().toISOString() },
+            { merge: true }
+          ).catch(() => {});
+        } catch {}
+        return next;
+      });
       return newUser;
     },
     []
   );
 
   const updateYouthUser = useCallback((id: string, updates: Partial<YouthUser>) => {
-    setAllYouthUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...updates } : u)));
+    setAllYouthUsers((prev) => {
+      const next = prev.map((u) => (u.id === id ? { ...u, ...updates } : u));
+      try {
+        localStorage.setItem(STORAGE_USERS, JSON.stringify(next));
+        localStorage.setItem('rescue_youth_users_initialized_v7', 'true');
+        setDoc(
+          doc(db, 'settings', 'youth_users'),
+          { users: next, updatedAt: new Date().toISOString() },
+          { merge: true }
+        ).catch(() => {});
+      } catch {}
+      return next;
+    });
     setCurrentYouthUser((prev) => (prev?.id === id ? { ...prev, ...updates } : prev));
   }, []);
 
   const deleteYouthUser = useCallback((id: string) => {
-    setAllYouthUsers((prev) => prev.filter((u) => u.id !== id));
+    setAllYouthUsers((prev) => {
+      const next = prev.filter((u) => u.id !== id);
+      try {
+        localStorage.setItem(STORAGE_USERS, JSON.stringify(next));
+        localStorage.setItem('rescue_youth_users_initialized_v7', 'true');
+        setDoc(
+          doc(db, 'settings', 'youth_users'),
+          { users: next, updatedAt: new Date().toISOString() },
+          { merge: true }
+        ).catch(() => {});
+      } catch {}
+      return next;
+    });
     setCurrentYouthUser((prev) => (prev?.id === id ? null : prev));
   }, []);
 
-  const setUserReady = useCallback((id: string, status: 'in_transit' | 'ez_reached' | 'ready') => {
-    setAllYouthUsers((prev) => prev.map((u) => (u.id === id ? { ...u, arrivalStatus: status } : u)));
-    setCurrentYouthUser((prev) => (prev?.id === id ? { ...prev, arrivalStatus: status } : prev));
-  }, []);
+  const setUserReady = useCallback(
+    (id: string, status: 'in_transit' | 'ez_reached' | 'ready') => {
+      // Rule: Kids can ONLY be set to ready if an exercise is active AND they are logged in / online
+      if (status === 'ready') {
+        const isOpActive = activeYouthOperation?.status === 'active';
+        if (!isOpActive) {
+          console.warn('Bereitstellen abgelehnt: Keine aktive Übung gestartet!');
+          return;
+        }
+        const target = allYouthUsers.find((u) => u.id === id);
+        if (!target?.isActive) {
+          console.warn(`Bereitstellen abgelehnt: ${target?.name || id} ist offline / nicht eingeloggt!`);
+          return;
+        }
+      }
+
+      setAllYouthUsers((prev) => prev.map((u) => (u.id === id ? { ...u, arrivalStatus: status } : u)));
+      setCurrentYouthUser((prev) => (prev?.id === id ? { ...prev, arrivalStatus: status } : prev));
+    },
+    [activeYouthOperation, allYouthUsers]
+  );
 
   const scanBarcodeReady = useCallback(
     (code: string): { success: boolean; user?: YouthUser; message: string } => {
+      // 1. Guard: Active exercise required
+      const isOpActive = activeYouthOperation?.status === 'active';
+      if (!isOpActive) {
+        return {
+          success: false,
+          message: 'Keine aktive Übung! Das Bereitstellen ist erst nach offiziellem Übungsstart möglich.',
+        };
+      }
+
       const cleanCode = code.trim().toLowerCase();
       const found = allYouthUsers.find(
         (u) =>
@@ -453,6 +643,15 @@ export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: Us
         return { success: false, message: `Kein Jugend-Mitglied mit Code "${code}" gefunden.` };
       }
 
+      // 2. Guard: Member must be logged in / online
+      if (!found.isActive) {
+        return {
+          success: false,
+          user: found,
+          message: `${found.name} ist offline / nicht eingeloggt! Erst in der App anmelden, dann bereitstellen.`,
+        };
+      }
+
       setUserReady(found.id, 'ready');
       return {
         success: true,
@@ -460,7 +659,7 @@ export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: Us
         message: `${found.name} (${found.callSign}) erfolgreich auf BEREIT gesetzt! Suchspur-Tracking aktiv.`,
       };
     },
-    [allYouthUsers, setUserReady]
+    [activeYouthOperation, allYouthUsers, setUserReady]
   );
 
   // ── 8. Exercise / Operation Management ────────────────────────────────────
@@ -532,7 +731,18 @@ export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: Us
         participantIds: allYouthUsers.map((u) => u.id),
       };
 
-      setAllYouthOperations((prev) => [newOp, ...prev]);
+      setAllYouthOperations((prev) => {
+        const next = [newOp, ...prev];
+        try {
+          localStorage.setItem(STORAGE_OPS, JSON.stringify(next));
+          setDoc(
+            doc(db, 'settings', 'youth_operations'),
+            { operations: next, updatedAt: new Date().toISOString() },
+            { merge: true }
+          ).catch(() => {});
+        } catch {}
+        return next;
+      });
       setCurrentOpId(id);
       return newOp;
     },
@@ -540,7 +750,18 @@ export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: Us
   );
 
   const updateYouthOperation = useCallback((id: string, updates: Partial<YouthOperation>) => {
-    setAllYouthOperations((prev) => prev.map((op) => (op.id === id ? { ...op, ...updates } : op)));
+    setAllYouthOperations((prev) => {
+      const next = prev.map((op) => (op.id === id ? { ...op, ...updates } : op));
+      try {
+        localStorage.setItem(STORAGE_OPS, JSON.stringify(next));
+        setDoc(
+          doc(db, 'settings', 'youth_operations'),
+          { operations: next, updatedAt: new Date().toISOString() },
+          { merge: true }
+        ).catch(() => {});
+      } catch {}
+      return next;
+    });
   }, []);
 
   const startYouthOperation = useCallback(
@@ -647,12 +868,31 @@ export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: Us
           return op;
         })
       );
+
+      // Reset arrival status of all members to in_transit when exercise concludes
+      setAllYouthUsers((prev) =>
+        prev.map((u) => ({
+          ...u,
+          arrivalStatus: 'in_transit',
+        }))
+      );
     },
     [currentYouthUser?.name]
   );
 
   const deleteYouthOperation = useCallback((id: string) => {
-    setAllYouthOperations((prev) => prev.filter((op) => op.id !== id));
+    setAllYouthOperations((prev) => {
+      const next = prev.filter((op) => op.id !== id);
+      try {
+        localStorage.setItem(STORAGE_OPS, JSON.stringify(next));
+        setDoc(
+          doc(db, 'settings', 'youth_operations'),
+          { operations: next, updatedAt: new Date().toISOString() },
+          { merge: true }
+        ).catch(() => {});
+      } catch {}
+      return next;
+    });
   }, []);
 
   // ── 9. In-Exercise Actions ────────────────────────────────────────────────

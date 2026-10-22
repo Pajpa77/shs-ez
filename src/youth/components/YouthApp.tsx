@@ -200,7 +200,7 @@ export const YouthApp: React.FC<YouthAppProps> = ({ onExitYouthModule }) => {
       </header>
 
       {/* ── MAIN CONTENT VIEW ── */}
-      <main className="flex-1 relative overflow-hidden flex flex-col">
+      <main className="flex-1 relative overflow-hidden flex flex-col min-h-0">
         {/* TAB 1: TACTICAL MAP */}
         {activeTab === 'map' && (
           <YouthTacticalMap

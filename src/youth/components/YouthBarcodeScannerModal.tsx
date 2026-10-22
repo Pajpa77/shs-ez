@@ -432,18 +432,33 @@ export const YouthBarcodeScannerModal: React.FC<YouthBarcodeScannerModalProps> =
                     <button
                       type="button"
                       onClick={() => handleToggleReady(u.id, u.arrivalStatus)}
-                      className={`px-2 py-1 rounded-lg font-bold font-mono text-[10px] uppercase transition cursor-pointer flex items-center gap-1 ${
+                      disabled={!isReady && (!isExerciseActive || !u.isActive)}
+                      className={`px-2 py-1 rounded-lg font-bold font-mono text-[10px] uppercase transition flex items-center gap-1 ${
                         isReady
-                          ? 'bg-emerald-600 hover:bg-rose-700 text-white'
-                          : 'bg-blue-950 hover:bg-emerald-600 text-cyan-300 hover:text-white border border-blue-800'
+                          ? 'bg-emerald-700 hover:bg-rose-700 text-white border-2 border-emerald-300 shadow cursor-pointer'
+                          : !isExerciseActive || !u.isActive
+                          ? 'bg-slate-900 text-slate-500 border border-slate-800 opacity-60 cursor-not-allowed'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400 cursor-pointer shadow-sm'
                       }`}
-                      title={isReady ? 'Klicken zum Zurücknehmen' : 'Klicken zum Bereitstellen'}
+                      title={
+                        isReady
+                          ? 'Klicken zum Zurücknehmen'
+                          : !isExerciseActive
+                          ? 'Erst nach Start der Übung möglich'
+                          : !u.isActive
+                          ? 'Kind ist offline (nicht eingeloggt)'
+                          : 'Klicken zum Bereitstellen'
+                      }
                     >
                       {isReady ? (
                         <>
                           <CheckCircle2 className="w-3 h-3" />
                           <span>✓ Bereit (Umschalten)</span>
                         </>
+                      ) : !isExerciseActive ? (
+                        <span>⚠️ Übung inaktiv</span>
+                      ) : !u.isActive ? (
+                        <span>⚪ Offline</span>
                       ) : (
                         <span>🟢 Bereit</span>
                       )}

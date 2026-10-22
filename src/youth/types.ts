@@ -1,4 +1,4 @@
-import { GpsPoint } from '../types';
+﻿import { GpsPoint } from '../types';
 
 export type YouthUserRole = 'youth_member' | 'youth_admin' | 'adult_participant';
 export type YouthTeam = 'jugend' | 'erwachsene' | 'leitung';

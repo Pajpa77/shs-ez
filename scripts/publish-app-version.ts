@@ -8,10 +8,10 @@ async function main() {
 
   const docRef = doc(db, 'system_config', 'app_version');
   const releaseData = {
-    version: '7.0.0',
+    version: '7.1.0',
     apkUrl: 'https://shs-ea.web.app/shs-ez-latest.apk',
-    releaseDate: '2026-10-22',
-    releaseNotes: 'v7.0.0: Meilenstein Release mit vollständigem U18-Jugendgruppen-Modul, separatem Trackingtest, sicherem externen Browser-Aufruf für dipul/Zonen und neuem UI.',
+    releaseDate: '2026-10-23',
+    releaseNotes: 'v7.1.0: Interaktives Punkt-für-Punkt Sektorzeichnen in Hauptapp & Jugendgruppe (Verschieben, Löschen, Zwischenpunkte, Flächenberechnung), Trackingtest lokale PDF-Sicherung, WakeLock/GPS-Aktivierung bei Bereit & Admin-Übersicht für angemeldete Jugendmitglieder.',
     fileSizeMb: 'ca. 11 MB',
     updatedAt: new Date().toISOString()
   };

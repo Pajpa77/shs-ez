@@ -74,7 +74,21 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
   operationToEdit,
   onStartDrawingSector,
 }) => {
-  const { createOperation, updateOperation, deleteOperation, currentOperation, currentUser, allUsers, getUserArrivalStatus, playAlertSound } = useRescue();
+  const {
+    createOperation,
+    updateOperation,
+    deleteOperation,
+    currentOperation,
+    currentUser,
+    allUsers,
+    getUserArrivalStatus,
+    playAlertSound,
+    userLocations,
+    myLocation,
+  } = useRescue();
+
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const [activeHqPreset, setActiveHqPreset] = useState<'office' | 'pls' | 'home' | 'gps' | 'custom'>('pls');
 
   const [ezAdminIds, setEzAdminIds] = useState<string[]>([]);
 
@@ -247,10 +261,11 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
         setLastSeenLat(VEREINSBUERO_LOCATION.lat);
         setLastSeenLng(VEREINSBUERO_LOCATION.lng);
         setLastSeenDesc('');
-        setHqAddress(VEREINSBUERO_LOCATION.address);
+        setHqAddress('Treffpunkt / Einsatzort');
         setHqLat(VEREINSBUERO_LOCATION.lat);
         setHqLng(VEREINSBUERO_LOCATION.lng);
-        setHqDescription('EZ / Bereitstellungsraum');
+        setHqDescription('EZ am Treffpunkt / Bereitstellungsraum');
+        setActiveHqPreset('pls');
 
         const activeUsers = allUsers.filter((u) => u.isActive);
         setSelectedResponders(activeUsers.length > 0 ? activeUsers.map((u) => u.id) : allUsers.map((u) => u.id));
@@ -334,14 +349,12 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
           setLastSeenLat(Number(lat.toFixed(6)));
           setLastSeenLng(Number(lon.toFixed(6)));
           setPlsGeocodeStatus('success');
-          // If creating a new operation and EZ is still at default Vereinsbüro Aschersleben:
-          if (mode !== 'edit') {
-            if (hqAddress === VEREINSBUERO_LOCATION.address || !hqAddress.trim()) {
-              setHqAddress(lastSeenAddress.trim() || item.display_name.split(',').slice(0, 3).join(', ').trim());
-              setHqLat(Number(lat.toFixed(6)));
-              setHqLng(Number(lon.toFixed(6)));
-              setHqDescription('EZ am Einsatzort (PLS / Bereitstellungsraum)');
-            }
+          // If EZ is set to Treffpunkt/PLS or creating a new operation:
+          if (activeHqPreset === 'pls' || mode !== 'edit' || !hqAddress.trim() || hqAddress === VEREINSBUERO_LOCATION.address) {
+            setHqAddress(lastSeenAddress.trim() || item.display_name.split(',').slice(0, 3).join(', ').trim());
+            setHqLat(Number(lat.toFixed(6)));
+            setHqLng(Number(lon.toFixed(6)));
+            setHqDescription('EZ am Treffpunkt / Einsatzort');
           }
         } else {
           setHqLat(Number(lat.toFixed(6)));
@@ -363,6 +376,33 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
       else if (target === 'pls') setIsGeocodingPLS(false);
       else setIsGeocodingHQ(false);
     }
+  };
+
+  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        { headers: { 'Accept-Language': 'de' } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.address) {
+          const a = data.address;
+          const street = a.road || a.pedestrian || a.footway || a.path || a.cycleway || '';
+          const num = a.house_number || '';
+          const city = a.city || a.town || a.village || a.municipality || a.suburb || '';
+          const postcode = a.postcode || '';
+          const parts = [
+            [street, num].filter(Boolean).join(' '),
+            [postcode, city].filter(Boolean).join(' ')
+          ].filter(Boolean);
+          return parts.join(', ') || data.display_name || '';
+        }
+      }
+    } catch (err) {
+      console.warn('Reverse geocode failed:', err);
+    }
+    return '';
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -441,14 +481,23 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
     const latVal = typeof lastSeenLat === 'number' ? lastSeenLat : VEREINSBUERO_LOCATION.lat;
     const lngVal = typeof lastSeenLng === 'number' ? lastSeenLng : VEREINSBUERO_LOCATION.lng;
 
-    const hqLatVal = typeof hqLat === 'number' ? hqLat : VEREINSBUERO_LOCATION.lat;
-    const hqLngVal = typeof hqLng === 'number' ? hqLng : VEREINSBUERO_LOCATION.lng;
+    // Rule: EZ immer an den Treffpunkt legen, sofern nicht ausdrücklich Vereinshaus gewählt
+    const shouldPlaceAtTreffpunkt =
+      activeHqPreset === 'pls' ||
+      (activeHqPreset !== 'office' &&
+        (!hqAddress || hqAddress.trim() === VEREINSBUERO_LOCATION.address || hqAddress.trim() === 'Treffpunkt / Einsatzort'));
+
+    const hqLatVal = shouldPlaceAtTreffpunkt ? latVal : (typeof hqLat === 'number' ? hqLat : latVal);
+    const hqLngVal = shouldPlaceAtTreffpunkt ? lngVal : (typeof hqLng === 'number' ? hqLng : lngVal);
+    const hqAddressVal = shouldPlaceAtTreffpunkt
+      ? (lastSeenAddress.trim() || 'Treffpunkt / Einsatzort')
+      : (hqAddress.trim() || VEREINSBUERO_LOCATION.address);
 
     const headquartersLocation = {
       lat: hqLatVal,
       lng: hqLngVal,
-      address: hqAddress.trim() || VEREINSBUERO_LOCATION.address,
-      description: hqDescription.trim() || undefined,
+      address: hqAddressVal,
+      description: hqDescription.trim() || 'EZ am Treffpunkt',
     };
 
     const missingPerson: MissingPerson = {
@@ -530,6 +579,118 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
     onClose();
   };
 
+  const handleSaveAndDrawSector = () => {
+    setFormError('');
+    if (!canManage) {
+      setFormError('Aktion verweigert: Nur Einsatzleiter und Administratoren dürfen Einsätze anlegen.');
+      return;
+    }
+
+    const finalTitle = title.trim() || `Einsatz ${new Date().toLocaleDateString('de-DE')} ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+    const finalPersonName = personName.trim() || 'Vermisste Person';
+
+    const latVal = typeof lastSeenLat === 'number' ? lastSeenLat : VEREINSBUERO_LOCATION.lat;
+    const lngVal = typeof lastSeenLng === 'number' ? lastSeenLng : VEREINSBUERO_LOCATION.lng;
+
+    // Rule: EZ immer an den Treffpunkt legen, sofern nicht ausdrücklich Vereinshaus gewählt
+    const shouldPlaceAtTreffpunkt =
+      activeHqPreset === 'pls' ||
+      (activeHqPreset !== 'office' &&
+        (!hqAddress || hqAddress.trim() === VEREINSBUERO_LOCATION.address || hqAddress.trim() === 'Treffpunkt / Einsatzort'));
+
+    const hqLatVal = shouldPlaceAtTreffpunkt ? latVal : (typeof hqLat === 'number' ? hqLat : latVal);
+    const hqLngVal = shouldPlaceAtTreffpunkt ? lngVal : (typeof hqLng === 'number' ? hqLng : lngVal);
+    const hqAddressVal = shouldPlaceAtTreffpunkt
+      ? (lastSeenAddress.trim() || 'Treffpunkt / Einsatzort')
+      : (hqAddress.trim() || VEREINSBUERO_LOCATION.address);
+
+    const headquartersLocation = {
+      lat: hqLatVal,
+      lng: hqLngVal,
+      address: hqAddressVal,
+      description: hqDescription.trim() || 'EZ am Treffpunkt',
+    };
+
+    const missingPerson: MissingPerson = {
+      name: finalPersonName,
+      age: typeof personAge === 'number' ? personAge : 0,
+      gender,
+      clothing: clothing.trim(),
+      description: description.trim(),
+      medicalConditions: medicalConditions
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+      lastSeenLocation: {
+        lat: latVal,
+        lng: lngVal,
+        address: lastSeenAddress.trim() || 'Einsatzgebiet',
+        description: lastSeenDesc.trim() || undefined,
+      },
+      homeAddress: homeAddress.trim()
+        ? {
+            address: homeAddress.trim(),
+            lat: typeof homeLat === 'number' ? homeLat : undefined,
+            lng: typeof homeLng === 'number' ? homeLng : undefined,
+            notes: homeNotes.trim() || undefined,
+          }
+        : undefined,
+      lastSeenTime: lastSeenTime.trim() || 'Unbekannt',
+      photoUrl,
+      policeCaseId: policeCaseId.trim(),
+    };
+
+    let finalEzAdminIds = [...ezAdminIds];
+    if (finalEzAdminIds.length === 0) {
+      const availableAdmins = allUsers.filter((u) => u.role === 'admin' || u.role === 'einsatzleitung').map((u) => u.id);
+      if (availableAdmins.length > 0) {
+        finalEzAdminIds = availableAdmins;
+      } else if (currentUser?.id) {
+        finalEzAdminIds = [currentUser.id];
+      }
+    }
+
+    const finalVolunteersCount = typeof externalVolunteersCount === 'number' ? externalVolunteersCount : 0;
+    const finalParticipantIds = Array.from(new Set(selectedResponders));
+
+    const extraFields = {
+      participantIds: finalParticipantIds,
+      externalVolunteersCount: finalVolunteersCount,
+      externalVolunteersNotes: externalVolunteersNotes.trim(),
+      selectedEquipment,
+      customEquipmentNotes: customEquipmentNotes.trim(),
+      weatherConditions: weatherConditions.trim(),
+      ezAdminIds: finalEzAdminIds,
+    };
+
+    if (mode === 'edit' && targetOp) {
+      updateOperation(targetOp.id, {
+        title: finalTitle,
+        type,
+        commander: commander.trim() || currentUser?.name || 'Einsatzleitung',
+        missingPerson,
+        headquartersLocation,
+        ...extraFields,
+      });
+    } else {
+      createOperation({
+        title: finalTitle,
+        type,
+        status: 'planned', // Clean planned state (white, safe for preparation)
+        commander: commander.trim() || currentUser?.name || 'Einsatzleitung',
+        missingPerson,
+        headquartersLocation,
+        ...extraFields,
+      });
+    }
+
+    playAlertSound('success');
+    onClose();
+    if (onStartDrawingSector) {
+      onStartDrawingSector();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[5000] flex items-center justify-center p-2 sm:p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md font-sans">
       <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92dvh] flex flex-col text-black dark:text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -561,35 +722,35 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={(e) => {
-                // Trigger form submission programmatically
-                const form = (e.currentTarget.closest('.animate-in') as HTMLElement)?.querySelector('form');
-                if (form) {
-                  form.requestSubmit();
+              onClick={() => {
+                if (mode === 'create') {
+                  setSubmitAction('active');
                 }
+                formRef.current?.requestSubmit();
               }}
               className={`px-3.5 py-1.5 rounded-xl text-white font-bold transition cursor-pointer flex items-center gap-1.5 shadow font-mono text-xs ${
                 mode === 'edit'
                   ? 'bg-blue-600 hover:bg-blue-500'
                   : 'bg-red-600 hover:bg-red-500'
               }`}
-              title={mode === 'edit' ? 'Änderungen sofort speichern' : 'Einsatz starten'}
+              title={mode === 'edit' ? 'Änderungen sofort speichern' : 'Einsatz speichern und starten'}
             >
-              {mode === 'edit' ? <Save className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+              <Save className="w-3.5 h-3.5" />
               <span>Speichern</span>
             </button>
             <button
               onClick={onClose}
-              className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 flex items-center justify-center transition cursor-pointer"
+              className="h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center transition cursor-pointer"
             >
-              <X className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+              <X className="w-4 h-4 text-slate-400" />
             </button>
           </div>
         </div>
 
         <form
+          ref={formRef}
           onSubmit={handleSubmit}
-          className="p-4 sm:p-5 space-y-4 overflow-y-auto overscroll-contain flex-1 min-h-0 text-xs touch-pan-y"
+          className="p-4 sm:p-5 space-y-4 overflow-y-auto overscroll-contain flex-1 min-h-0 text-xs touch-pan-y pb-10"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {formError && (
@@ -1018,73 +1179,147 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
             </div>
 
             {/* Schnellauswahl Vorlagen */}
-            <div className="flex flex-wrap gap-1.5 pt-1">
+            <div className="flex flex-wrap gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => {
+                  setActiveHqPreset('office');
                   const savedHq = getSavedVereinsbueroLocation();
                   setHqAddress(savedHq.address);
                   setHqLat(savedHq.lat);
                   setHqLng(savedHq.lng);
                   setHqDescription('Vereinshaus Aschersleben');
+                  setHqSaveSuccess('🏢 Vereinshaus Aschersleben als EZ ausgewählt');
+                  setTimeout(() => setHqSaveSuccess(''), 3500);
                 }}
-                className="px-2.5 py-1 rounded-lg bg-indigo-950/70 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 text-[11px] font-mono transition cursor-pointer flex items-center gap-1.5"
+                className={`px-3 py-2 rounded-xl text-xs font-mono transition cursor-pointer flex items-center gap-1.5 font-bold ${
+                  activeHqPreset === 'office'
+                    ? 'bg-indigo-600 text-white shadow-lg ring-2 ring-indigo-400'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                }`}
               >
                 <span>🏢 Vereinshaus Aschersleben</span>
+                {activeHqPreset === 'office' && <Check className="w-3.5 h-3.5 text-indigo-200" />}
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  if (lastSeenAddress) setHqAddress(lastSeenAddress);
+                  setActiveHqPreset('pls');
+                  const addr = lastSeenAddress.trim() || 'Letzter Sichtort (PLS)';
+                  setHqAddress(addr);
                   if (typeof lastSeenLat === 'number') setHqLat(lastSeenLat);
                   if (typeof lastSeenLng === 'number') setHqLng(lastSeenLng);
                   setHqDescription('EZ am letzten Sichtungsort (PLS)');
+                  setHqSaveSuccess('📍 PLS-Standort als EZ übernommen');
+                  setTimeout(() => setHqSaveSuccess(''), 3500);
                 }}
-                className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-[11px] font-mono transition cursor-pointer flex items-center gap-1.5"
+                className={`px-3 py-2 rounded-xl text-xs font-mono transition cursor-pointer flex items-center gap-1.5 font-bold ${
+                  activeHqPreset === 'pls'
+                    ? 'bg-indigo-600 text-white shadow-lg ring-2 ring-indigo-400'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                }`}
               >
                 <span>📍 Wie letzter Sichtort (PLS)</span>
+                {activeHqPreset === 'pls' && <Check className="w-3.5 h-3.5 text-indigo-200" />}
               </button>
               {homeAddress && (
                 <button
                   type="button"
                   onClick={() => {
+                    setActiveHqPreset('home');
                     setHqAddress(homeAddress);
                     if (typeof homeLat === 'number') setHqLat(homeLat);
                     if (typeof homeLng === 'number') setHqLng(homeLng);
                     setHqDescription('EZ an Wohnanschrift');
+                    setHqSaveSuccess('🏠 Wohnanschrift als EZ übernommen');
+                    setTimeout(() => setHqSaveSuccess(''), 3500);
                   }}
-                  className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-[11px] font-mono transition cursor-pointer flex items-center gap-1.5"
+                  className={`px-3 py-2 rounded-xl text-xs font-mono transition cursor-pointer flex items-center gap-1.5 font-bold ${
+                    activeHqPreset === 'home'
+                      ? 'bg-indigo-600 text-white shadow-lg ring-2 ring-indigo-400'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                  }`}
                 >
                   <span>🏠 Wie Wohnadresse</span>
+                  {activeHqPreset === 'home' && <Check className="w-3.5 h-3.5 text-indigo-200" />}
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => {
-                  if (navigator.geolocation) {
+                  setActiveHqPreset('gps');
+                  const myPos = (myLocation && typeof myLocation.lat === 'number')
+                    ? myLocation
+                    : (currentUser?.id && userLocations[currentUser.id]?.currentPosition)
+                      ? userLocations[currentUser.id]?.currentPosition
+                      : null;
+
+                  if (myPos && typeof myPos.lat === 'number' && typeof myPos.lng === 'number') {
+                    const lat = Number(myPos.lat.toFixed(6));
+                    const lng = Number(myPos.lng.toFixed(6));
+                    setHqLat(lat);
+                    setHqLng(lng);
+                    setHqAddress('Aktueller GPS-Standort (Einsatzleitung)');
+                    setHqDescription('EZ vor Ort (Aktuelles GPS)');
+                    setHqSaveSuccess('🧭 Eigener GPS-Standort als EZ übernommen');
+                    setTimeout(() => setHqSaveSuccess(''), 3500);
+                    reverseGeocode(lat, lng).then((addr) => {
+                      if (addr) setHqAddress(addr);
+                    }).catch(() => {});
+                  } else if (navigator.geolocation) {
+                    setIsGeocodingHQ(true);
                     navigator.geolocation.getCurrentPosition(
-                      (pos) => {
-                        setHqLat(Number(pos.coords.latitude.toFixed(6)));
-                        setHqLng(Number(pos.coords.longitude.toFixed(6)));
+                      async (pos) => {
+                        setIsGeocodingHQ(false);
+                        const lat = Number(pos.coords.latitude.toFixed(6));
+                        const lng = Number(pos.coords.longitude.toFixed(6));
+                        setHqLat(lat);
+                        setHqLng(lng);
+                        setHqAddress('Aktueller GPS-Standort (Einsatzleitung)');
                         setHqDescription('EZ vor Ort (Aktuelles GPS)');
+                        setHqSaveSuccess('🧭 Eigener GPS-Standort als EZ übernommen');
+                        setTimeout(() => setHqSaveSuccess(''), 3500);
+                        try {
+                          const addr = await reverseGeocode(lat, lng);
+                          if (addr) setHqAddress(addr);
+                        } catch {}
                       },
                       (err) => {
+                        setIsGeocodingHQ(false);
                         console.warn(`GPS-Abfrage fehlgeschlagen: ${err.message}`);
                         setFormError(`GPS-Abfrage nicht möglich: ${err.message}`);
                       },
                       {
                         enableHighAccuracy: true,
-                        maximumAge: 0,
+                        maximumAge: 5000,
                         timeout: 8000,
                       }
                     );
+                  } else {
+                    setFormError('GPS auf diesem Gerät nicht verfügbar');
                   }
                 }}
-                className="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 text-[11px] font-mono transition cursor-pointer flex items-center gap-1.5"
+                className={`px-3 py-2 rounded-xl text-xs font-mono transition cursor-pointer flex items-center gap-1.5 font-bold ${
+                  activeHqPreset === 'gps'
+                    ? 'bg-indigo-600 text-white shadow-lg ring-2 ring-indigo-400'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                }`}
               >
                 <span>🧭 Eigener GPS-Standort</span>
+                {isGeocodingHQ ? (
+                  <Sparkles className="w-3.5 h-3.5 animate-spin text-amber-300" />
+                ) : activeHqPreset === 'gps' ? (
+                  <Check className="w-3.5 h-3.5 text-indigo-200" />
+                ) : null}
               </button>
             </div>
+
+            {hqSaveSuccess && (
+              <div className="p-2.5 rounded-xl bg-emerald-950/90 border border-emerald-500 text-emerald-200 text-xs font-mono font-bold flex items-center gap-2 animate-in fade-in">
+                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{hqSaveSuccess}</span>
+              </div>
+            )}
 
             {/* Warning if EZ is still in Aschersleben while PLS is far away */}
             {typeof lastSeenLat === 'number' && typeof hqLat === 'number' && (
@@ -1524,58 +1759,62 @@ export const OperationCreatorModal: React.FC<OperationCreatorModalProps> = ({
 
 
           </div>
+        </form>
 
-          {/* Sticky Actions Footer */}
-          <div className="pt-3 pb-1 border-t border-slate-300 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 bg-[#1E293B] sticky bottom-0 z-20">
-            <div className="flex items-center gap-2">
-              {onStartDrawingSector && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onStartDrawingSector();
-                  }}
-                  className="px-3 py-2 rounded-xl bg-purple-950/50 hover:bg-purple-900/70 text-purple-200 border border-purple-700/60 transition cursor-pointer flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider"
-                  title="Suchgebiet / Sektor auf Karte einzeichnen"
-                >
-                  <span>📐 Suchgebiet zeichnen</span>
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
+        {/* Dedicated Fixed Footer (Outside form so inputs are never covered!) */}
+        <div className="shrink-0 p-3 sm:p-4 bg-slate-900 border-t border-slate-700 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pb-[max(env(safe-area-inset-bottom),0.75rem)] z-30">
+          <div className="flex items-center gap-2">
+            {onStartDrawingSector && (
               <button
                 type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 uppercase tracking-wider font-mono text-xs"
+                onClick={handleSaveAndDrawSector}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-purple-900 hover:bg-purple-800 active:bg-purple-950 text-purple-100 border border-purple-500/80 transition cursor-pointer flex items-center justify-center gap-2 font-mono text-xs font-bold uppercase tracking-wider shadow-lg"
+                title="Einsatzdaten jetzt speichern & sofort Suchgebiet auf der Karte einzeichnen"
               >
-                Abbrechen
+                <PenTool className="w-4 h-4 text-purple-300" />
+                <span>📐 Suchgebiet auf Karte zeichnen</span>
               </button>
-              {mode === 'create' && (
-                <button
-                  type="submit"
-                  onClick={() => setSubmitAction('planned')}
-                  className="px-5 py-2.5 rounded-xl text-white font-bold transition cursor-pointer flex items-center gap-2 shadow-lg uppercase tracking-wider font-mono text-xs bg-slate-700 hover:bg-slate-600 border border-white/60 ring-2 ring-white/30"
-                >
-                  <span>⚪</span>
-                  <span>Nur anlegen (Weiß / Vorbereitung)</span>
-                </button>
-              )}
-              <button
-                type="submit"
-                onClick={() => setSubmitAction('active')}
-                className={`px-6 py-2.5 rounded-xl text-white font-bold transition cursor-pointer flex items-center gap-2 shadow-lg uppercase tracking-wider font-mono text-xs ${
-                  mode === 'edit'
-                    ? 'bg-blue-600 hover:bg-blue-500 ring-2 ring-blue-400/40'
-                    : 'bg-red-600 hover:bg-red-500 ring-2 ring-red-400/40'
-                }`}
-              >
-                {mode === 'edit' ? <Save className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-                <span>{mode === 'edit' ? 'Änderungen speichern' : 'Anlegen & Sofort starten'}</span>
-              </button>
-            </div>
+            )}
           </div>
-        </form>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition cursor-pointer border border-slate-700 uppercase tracking-wider font-mono text-xs text-center"
+            >
+              Abbrechen
+            </button>
+            {mode === 'create' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSubmitAction('planned');
+                  formRef.current?.requestSubmit();
+                }}
+                className="px-4 py-2.5 rounded-xl text-white font-bold transition cursor-pointer flex items-center justify-center gap-2 shadow-lg uppercase tracking-wider font-mono text-xs bg-slate-700 hover:bg-slate-600 border border-white/60 ring-1 ring-white/30 text-center"
+              >
+                <span>⚪</span>
+                <span>Nur anlegen (Vorbereitung)</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setSubmitAction('active');
+                formRef.current?.requestSubmit();
+              }}
+              className={`px-5 py-2.5 rounded-xl text-white font-bold transition cursor-pointer flex items-center justify-center gap-2 shadow-lg uppercase tracking-wider font-mono text-xs text-center ${
+                mode === 'edit'
+                  ? 'bg-blue-600 hover:bg-blue-500 ring-2 ring-blue-400/40'
+                  : 'bg-red-600 hover:bg-red-500 ring-2 ring-red-400/40'
+              }`}
+            >
+              {mode === 'edit' ? <Save className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+              <span>{mode === 'edit' ? 'Änderungen speichern' : 'Anlegen & Sofort starten'}</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

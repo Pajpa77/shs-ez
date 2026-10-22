@@ -54,7 +54,7 @@ Diese Regeln gelten **ausnahmslos** für alle Änderungen am Projekt **SHS-EZ (S
 ## 4. Karten-Bedienoberfläche (`src/components/TacticalMap.tsx` & `src/components/FloatingMapControlsBar.tsx`)
 - Die Buttons für **Karten-Darkmode (Mond/Sonne)** und **Drohnen-Stream (Funkantenne `RadioTower`)** befinden sich gesammelt im oberen rechten Bedienfenster (**Wetter / GPS / Ebenen** in `src/components/TacticalMap.tsx`), nicht verstreut in der unteren Zoom-Leiste.
 
-## 5. Jugendgruppe (U18 – Version 7.0)
+## 5. Jugendgruppe (U18 – Version 7.1)
 - **Vollständige Kapselung & Zero-Regression**:
   - Die Jugendgruppe ist als **vollständig eigenständiges Modul** (`src/youth/`) realisiert – analog zum Trackingtest.
   - Die Haupt-App und die Realeinsatz-Logik der Erwachsenen bleiben zu 100 % geschützt und unberührt.

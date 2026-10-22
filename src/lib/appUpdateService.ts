@@ -39,7 +39,7 @@ if (typeof window !== 'undefined') {
   (window as any).openExternalUrl = openExternalUrl;
 }
 
-export const CURRENT_APP_VERSION = '7.0.0';
+export const CURRENT_APP_VERSION = '7.1.0';
 export const DEFAULT_STORAGE_APK_PATH = 'apk/shs-ez-latest.apk';
 
 export interface AppReleaseInfo {

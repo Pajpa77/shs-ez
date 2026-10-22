@@ -382,6 +382,14 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
   const [drawnPoints, setDrawnPoints] = useState<[number, number][]>([]);
   const [drawMode, setDrawMode] = useState<'pen' | 'click'>('pen');
   const [drawTarget, setDrawTarget] = useState<'sector' | 'searchArea'>('sector');
+  const [isDrawBannerCollapsed, setIsDrawBannerCollapsed] = useState(false);
+
+  // Auto-collapse drawing banner on mobile screens so map is 100% free for drawing
+  useEffect(() => {
+    if (isDrawingSector && typeof window !== 'undefined' && window.innerWidth < 768) {
+      setIsDrawBannerCollapsed(true);
+    }
+  }, [isDrawingSector]);
   const [strokeHistory, setStrokeHistory] = useState<[number, number][][]>([]);
   const [snapIndicator, setSnapIndicator] = useState<[number, number] | null>(null);
   const [isPartitionModalOpen, setIsPartitionModalOpen] = useState(false);
@@ -881,20 +889,22 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     }
   };
 
-  // Target coordinates for weather monitoring (Prioritizes PLS / Last Seen -> EZ -> first Sector -> Vereinsbüro)
+  // Target coordinates for weather monitoring: ALWAYS at EZ location (Standort der Einsatzzentrale)
   const weatherTarget = useMemo(() => {
+    if (currentOperation?.headquartersLocation?.lat && currentOperation?.headquartersLocation?.lng) {
+      return {
+        lat: currentOperation.headquartersLocation.lat,
+        lng: currentOperation.headquartersLocation.lng,
+        title: currentOperation.headquartersLocation.address
+          ? `EZ: ${currentOperation.headquartersLocation.address}`
+          : 'Standort der EZ',
+      };
+    }
     if (currentOperation?.missingPerson?.lastSeenLocation?.lat && currentOperation?.missingPerson?.lastSeenLocation?.lng) {
       return {
         lat: currentOperation.missingPerson.lastSeenLocation.lat,
         lng: currentOperation.missingPerson.lastSeenLocation.lng,
         title: currentOperation.missingPerson.lastSeenLocation.address || `Einsatzort (${currentOperation.title})`,
-      };
-    }
-    if (currentOperation?.headquartersLocation?.lat && currentOperation?.headquartersLocation?.lng) {
-      return {
-        lat: currentOperation.headquartersLocation.lat,
-        lng: currentOperation.headquartersLocation.lng,
-        title: currentOperation.headquartersLocation.address || 'Einsatzzentrale',
       };
     }
     if (currentOperation?.sectors && currentOperation.sectors.length > 0 && currentOperation.sectors[0].polygon.length > 0) {
@@ -908,9 +918,9 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     return {
       lat: VEREINSBUERO_LOCATION.lat,
       lng: VEREINSBUERO_LOCATION.lng,
-      title: 'Vereinsbüro Aschersleben',
+      title: 'Standort der EZ (Vereinsbüro)',
     };
-  }, [currentOperation]);
+  }, [currentOperation?.headquartersLocation, currentOperation?.missingPerson?.lastSeenLocation, currentOperation?.sectors, currentOperation?.title]);
 
   // Bounding box for offline tile caching
   const operationSearchBounds = useMemo(() => {
@@ -1698,19 +1708,163 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
     const strokeColor = drawTarget === 'searchArea' ? '#a855f7' : '#3b82f6';
     const fillColor = drawTarget === 'searchArea' ? '#c084fc' : '#60a5fa';
 
-    // Draw vertex points only in click mode or for start/end
-    if (drawMode === 'click') {
-      drawnPoints.forEach((pt, idx) => {
-        const marker = L.circleMarker(pt, {
-          radius: 5,
-          color: strokeColor,
-          fillColor: fillColor,
-          fillOpacity: 1,
-          weight: 2,
-        });
-        marker.bindTooltip(`Punkt ${idx + 1}`, { permanent: false });
-        drawLayerRef.current?.addLayer(marker);
+    // 1. Draw line or polygon preview first so it sits beneath vertex drag handles
+    let polyPreview: L.Polygon | null = null;
+    if (drawnPoints.length > 1) {
+      polyPreview = L.polygon(drawnPoints, {
+        color: strokeColor,
+        dashArray: drawMode === 'click' || drawTarget === 'searchArea' ? '6, 6' : undefined,
+        fillColor: strokeColor,
+        fillOpacity: 0.25,
+        weight: 3.5,
       });
+      drawLayerRef.current.addLayer(polyPreview);
+
+      // Centroid area label
+      if (drawnPoints.length >= 3) {
+        const ha = calculatePolygonHectares(drawnPoints);
+        const center = polyPreview.getBounds().getCenter();
+        const areaLabel = L.marker(center, {
+          icon: L.divIcon({
+            className: 'custom-area-label',
+            html: `<div style="background:#0F172A;color:${fillColor};border:1px solid ${strokeColor};padding:2px 8px;border-radius:6px;font-size:11px;font-weight:bold;font-family:monospace;white-space:nowrap;box-shadow:0 4px 10px rgba(0,0,0,0.5);">📐 ca. ${ha} ha</div>`,
+            iconSize: [80, 24],
+            iconAnchor: [40, 12],
+          }),
+        });
+        drawLayerRef.current.addLayer(areaLabel);
+      }
+    }
+
+    // 2. Vertex Points
+    if (drawMode === 'click') {
+      const liveClickPts: [number, number][] = drawnPoints.map((p) => [p[0], p[1]]);
+
+      drawnPoints.forEach((pt, idx) => {
+        const vertexIcon = L.divIcon({
+          className: 'custom-draw-vertex-handle',
+          html: `<div style="width:22px;height:22px;border-radius:50%;background:${strokeColor};border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;color:#ffffff;font-size:10px;font-weight:900;font-family:monospace;cursor:grab;" title="Punkt ${idx + 1}: Ziehen zum Verschieben, Klick zum Löschen">${idx + 1}</div>`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
+        });
+
+        const vertexMarker = L.marker(pt, {
+          icon: vertexIcon,
+          draggable: true,
+          zIndexOffset: 1600,
+        });
+
+        vertexMarker.bindTooltip(
+          `Punkt ${idx + 1}: Ziehen zum Verschieben | Klick/Rechtsklick zum Löschen`,
+          { direction: 'top', offset: [0, -10] }
+        );
+
+        let wasDragged = false;
+
+        vertexMarker.on('mousedown', (e) => {
+          L.DomEvent.stopPropagation(e);
+        });
+
+        vertexMarker.on('dragstart', () => {
+          wasDragged = true;
+        });
+
+        vertexMarker.on('drag', (e: L.LeafletEvent) => {
+          const m = e.target as L.Marker;
+          const map = mapInstanceRef.current;
+          if (!map) return;
+          const res = snapLatLngToExistingSectors(map, m.getLatLng());
+          if (res.snapped) {
+            m.setLatLng(res.point);
+          }
+          liveClickPts[idx] = res.point;
+          if (polyPreview) {
+            polyPreview.setLatLngs(liveClickPts);
+          }
+        });
+
+        vertexMarker.on('dragend', (e: L.LeafletEvent) => {
+          const m = e.target as L.Marker;
+          const map = mapInstanceRef.current;
+          const raw = m.getLatLng();
+          const finalPt = map
+            ? snapLatLngToExistingSectors(map, raw).point
+            : ([Number(raw.lat.toFixed(6)), Number(raw.lng.toFixed(6))] as [number, number]);
+
+          setDrawnPoints((prev) => {
+            const next = prev.map((oldPt, i) => (i === idx ? finalPt : oldPt));
+            setStrokeHistory((h) => [...h, next]);
+            return next;
+          });
+
+          setTimeout(() => {
+            wasDragged = false;
+          }, 100);
+        });
+
+        // Click to delete vertex
+        vertexMarker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          if (wasDragged) return;
+          setDrawnPoints((prev) => {
+            const next = prev.filter((_, i) => i !== idx);
+            setStrokeHistory((h) => [...h, next]);
+            return next;
+          });
+        });
+
+        // Right-click / Contextmenu to delete vertex
+        vertexMarker.on('contextmenu', (e) => {
+          L.DomEvent.stopPropagation(e);
+          setDrawnPoints((prev) => {
+            const next = prev.filter((_, i) => i !== idx);
+            setStrokeHistory((h) => [...h, next]);
+            return next;
+          });
+        });
+
+        drawLayerRef.current?.addLayer(vertexMarker);
+      });
+
+      // Insert Midpoint '+' handles between adjacent vertices to add intermediate points
+      if (drawnPoints.length >= 2) {
+        const isClosed = drawnPoints.length >= 3;
+        const segmentCount = isClosed ? drawnPoints.length : drawnPoints.length - 1;
+        for (let idx = 0; idx < segmentCount; idx++) {
+          const pt = drawnPoints[idx];
+          const nextPt = drawnPoints[(idx + 1) % drawnPoints.length];
+          const midLat = Number(((pt[0] + nextPt[0]) / 2).toFixed(6));
+          const midLng = Number(((pt[1] + nextPt[1]) / 2).toFixed(6));
+
+          const midIcon = L.divIcon({
+            className: 'custom-click-midpoint-handle',
+            html: `<div style="width:16px;height:16px;border-radius:50%;background:#0f172a;border:1.5px solid ${strokeColor};color:${strokeColor};font-size:11px;line-height:13px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.6);" title="Zwischenpunkt einfügen">+</div>`,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8],
+          });
+
+          const midMarker = L.marker([midLat, midLng], {
+            icon: midIcon,
+            zIndexOffset: 1450,
+          });
+
+          midMarker.bindTooltip('Klick: Neuen Punkt hier einfügen', { direction: 'top' });
+
+          midMarker.on('mousedown', (e) => L.DomEvent.stopPropagation(e));
+
+          midMarker.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+            setDrawnPoints((prev) => {
+              const copy = [...prev];
+              copy.splice(idx + 1, 0, [midLat, midLng]);
+              setStrokeHistory((h) => [...h, copy]);
+              return copy;
+            });
+          });
+
+          drawLayerRef.current?.addLayer(midMarker);
+        }
+      }
     } else {
       // Start marker for pen
       if (drawnPoints.length > 0) {
@@ -1722,33 +1876,6 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
           weight: 2,
         });
         drawLayerRef.current.addLayer(startMarker);
-      }
-    }
-
-    if (drawnPoints.length > 1) {
-      // Draw line or polygon preview
-      const poly = L.polygon(drawnPoints, {
-        color: strokeColor,
-        dashArray: drawMode === 'click' || drawTarget === 'searchArea' ? '6, 6' : undefined,
-        fillColor: strokeColor,
-        fillOpacity: 0.25,
-        weight: 3.5,
-      });
-      drawLayerRef.current.addLayer(poly);
-
-      // Centroid area label
-      if (drawnPoints.length >= 3) {
-        const ha = calculatePolygonHectares(drawnPoints);
-        const center = poly.getBounds().getCenter();
-        const areaLabel = L.marker(center, {
-          icon: L.divIcon({
-            className: 'custom-area-label',
-            html: `<div style="background:#0F172A;color:${fillColor};border:1px solid ${strokeColor};padding:2px 8px;border-radius:6px;font-size:11px;font-weight:bold;font-family:monospace;white-space:nowrap;box-shadow:0 4px 10px rgba(0,0,0,0.5);">📐 ca. ${ha} ha</div>`,
-            iconSize: [80, 24],
-            iconAnchor: [40, 12],
-          }),
-        });
-        drawLayerRef.current.addLayer(areaLabel);
       }
     }
   }, [drawnPoints, drawMode, drawTarget, snapIndicator, isDrawingSector, editingBoundarySectorId, editingBoundaryPoints, snapLatLngToExistingSectors]);
@@ -3398,119 +3525,23 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
 
       {/* Drawing Mode Banner Overlay */}
       {isDrawingSector && (
-        <div
-          className={`absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] w-[95%] max-w-2xl bg-[#1E293B]/95 text-slate-100 p-3 sm:p-4 rounded-2xl shadow-2xl border backdrop-blur-md flex flex-col gap-3 font-sans ${
-            drawTarget === 'searchArea' ? 'border-purple-500/80' : 'border-blue-500/80'
-          }`}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-700">
-            <div className="flex items-center gap-2">
-              <span
-                className={`p-1.5 rounded-lg border ${
-                  drawTarget === 'searchArea'
-                    ? 'bg-purple-600/20 text-purple-400 border-purple-500/30'
-                    : 'bg-blue-600/20 text-blue-400 border-blue-500/30'
-                }`}
-              >
-                <PenTool className="w-4 h-4" />
+        isDrawBannerCollapsed ? (
+          /* Slim Collapsed Pill (Frees up 95%+ of screen space for drawing!) */
+          <div
+            className={`absolute top-3 left-1/2 transform -translate-x-1/2 z-[1000] w-[95%] max-w-xl bg-[#1E293B]/95 text-slate-100 px-3 py-2 rounded-xl shadow-2xl border backdrop-blur-md flex items-center justify-between gap-2 font-sans ${
+              drawTarget === 'searchArea' ? 'border-purple-500/80 ring-1 ring-purple-500/30' : 'border-blue-500/80 ring-1 ring-blue-500/30'
+            }`}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="p-1 rounded bg-slate-800 text-xs shrink-0">
+                {drawTarget === 'searchArea' ? '🗺️' : '🎯'}
               </span>
-              <div>
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex flex-wrap items-center gap-2">
-                  <span>{drawTarget === 'searchArea' ? '🗺️ Gesamt-Suchgebiet zeichnen' : '🎯 Sektor zeichnen'}</span>
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded border font-normal ${
-                      drawTarget === 'searchArea'
-                        ? 'bg-purple-500/20 text-purple-300 border-purple-400'
-                        : 'bg-blue-500/20 text-blue-300 border-blue-400'
-                    }`}
-                  >
-                    {drawMode === 'pen' ? '🖊️ Freihand / Stift' : '📐 Eckpunkte (Klick)'}
-                  </span>
-                </h3>
-                <p className="text-[10px] text-slate-400 font-mono">
-                  {drawMode === 'pen'
-                    ? '🧲 Rastet an Nachbarn ein • 🔍 2-Finger-Zoom aktiv • Kontur wird automatisch geglättet'
-                    : '🧲 Auf Karte tippen für Eckpunkte (rastet automatisch an bestehenden Sektorgrenzen ein)'}
-                </p>
-              </div>
-            </div>
-
-            {/* Target Mode Switcher (🗺️ Suchgebiet vs 🎯 Sektor) & Live Stats Badge */}
-            <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-              <div className="flex items-center p-0.5 rounded-xl bg-slate-900 border border-slate-700 text-[11px]">
-                <button
-                  type="button"
-                  onClick={() => setDrawTarget('searchArea')}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
-                    drawTarget === 'searchArea'
-                      ? 'bg-purple-600 text-white shadow'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                  }`}
-                  title="Gesamt-Suchgebiet zeichnen und anschließend automatisch in Teilsektoren aufteilen"
-                >
-                  🗺️ Suchgebiet
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDrawTarget('sector')}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
-                    drawTarget === 'sector'
-                      ? 'bg-blue-600 text-white shadow'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                  }`}
-                  title="Einzelnen Suchsektor zeichnen"
-                >
-                  🎯 Sektor
-                </button>
-              </div>
-
-              <span className="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300">
-                📍 {drawnPoints.length} Pkt.
+              <span className="text-xs font-bold font-mono truncate text-white">
+                {drawnPoints.length} Pkt.{drawnPoints.length >= 3 ? ` (${calculatePolygonHectares(drawnPoints)} ha)` : ''}
               </span>
-              {drawnPoints.length >= 3 && (
-                <span className="px-2.5 py-1 rounded-lg bg-emerald-950 border border-emerald-600 text-emerald-300 font-bold">
-                  📏 {calculatePolygonHectares(drawnPoints)} ha
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Controls Bar: Mode Switcher + Action Buttons */}
-          <div className="flex flex-wrap items-center justify-between gap-2 font-mono">
-            {/* Draw Mode Switcher */}
-            <div className="flex items-center p-0.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px]">
-              <button
-                type="button"
-                onClick={() => setDrawMode('pen')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
-                  drawMode === 'pen'
-                    ? drawTarget === 'searchArea'
-                      ? 'bg-purple-600 text-white shadow'
-                      : 'bg-blue-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
-              >
-                <PenTool className="w-3.5 h-3.5" />
-                Freihand / Stift
-              </button>
-              <button
-                type="button"
-                onClick={() => setDrawMode('click')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
-                  drawMode === 'click'
-                    ? drawTarget === 'searchArea'
-                      ? 'bg-purple-600 text-white shadow'
-                      : 'bg-blue-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`}
-              >
-                <MousePointer className="w-3.5 h-3.5" />
-                Eckpunkte (Klick)
-              </button>
             </div>
 
-            {/* Actions: Undo, Clear, Cancel, Save */}
-            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <div className="flex items-center gap-1.5 shrink-0 font-mono text-xs">
               <button
                 type="button"
                 onClick={() => {
@@ -3524,27 +3555,11 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   }
                 }}
                 disabled={drawnPoints.length === 0}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40 border border-slate-700 transition cursor-pointer text-[11px]"
-                title="Letzten Schritt rückgängig machen"
+                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-40 border border-slate-700 cursor-pointer"
+                title="Letzten Punkt / Strich rückgängig machen"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                Rückgängig
               </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setDrawnPoints([]);
-                  setStrokeHistory([]);
-                }}
-                disabled={drawnPoints.length === 0}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40 border border-slate-700 transition cursor-pointer text-[11px]"
-                title="Zeichnung leeren"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Löschen
-              </button>
-
               <button
                 type="button"
                 onClick={() => {
@@ -3552,11 +3567,10 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   setStrokeHistory([]);
                   if (onCancelDrawing) onCancelDrawing();
                 }}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer text-[11px] font-bold"
+                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 cursor-pointer text-[11px]"
               >
                 Abbrechen
               </button>
-
               <button
                 type="button"
                 onClick={() => {
@@ -3577,17 +3591,255 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
                   }
                 }}
                 disabled={drawnPoints.length < 3}
-                className={`flex items-center gap-1.5 px-4 py-1.5 disabled:opacity-40 text-white rounded-lg font-bold transition cursor-pointer shadow text-[11px] uppercase tracking-wider ${
-                  drawTarget === 'searchArea'
-                    ? 'bg-purple-600 hover:bg-purple-500'
-                    : 'bg-blue-600 hover:bg-blue-500'
+                className={`flex items-center gap-1 px-3 py-1.5 text-white rounded-lg font-bold transition cursor-pointer shadow text-[11px] disabled:opacity-40 uppercase tracking-wider ${
+                  drawTarget === 'searchArea' ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500'
                 }`}
               >
                 <Check className="w-3.5 h-3.5" />
-                {drawTarget === 'searchArea' ? '🗺️ Suchgebiet aufteilen' : '🎯 Sektor übernehmen'}
+                <span>{drawTarget === 'searchArea' ? 'Aufteilen' : 'Übernehmen'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDrawBannerCollapsed(false)}
+                className="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] flex items-center gap-1 cursor-pointer"
+                title="Vollständige Werkzeugleiste ausklappen"
+              >
+                <span>Voll</span>
+                <ChevronDown className="w-3 h-3" />
               </button>
             </div>
           </div>
+        ) : (
+          /* Full Expanded Banner with Collapse Toggle */
+          <div
+            className={`absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] w-[95%] max-w-2xl bg-[#1E293B]/95 text-slate-100 p-3 sm:p-4 rounded-2xl shadow-2xl border backdrop-blur-md flex flex-col gap-3 font-sans ${
+              drawTarget === 'searchArea' ? 'border-purple-500/80 ring-1 ring-purple-500/30' : 'border-blue-500/80 ring-1 ring-blue-500/30'
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-700">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`p-1.5 rounded-lg border ${
+                    drawTarget === 'searchArea'
+                      ? 'bg-purple-600/20 text-purple-400 border-purple-500/30'
+                      : 'bg-blue-600/20 text-blue-400 border-blue-500/30'
+                  }`}
+                >
+                  <PenTool className="w-4 h-4" />
+                </span>
+                <div>
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex flex-wrap items-center gap-2">
+                    <span>{drawTarget === 'searchArea' ? '🗺️ Gesamt-Suchgebiet zeichnen' : '🎯 Sektor zeichnen'}</span>
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded border font-normal ${
+                        drawTarget === 'searchArea'
+                          ? 'bg-purple-500/20 text-purple-300 border-purple-400'
+                          : 'bg-blue-500/20 text-blue-300 border-blue-400'
+                      }`}
+                    >
+                      {drawMode === 'pen' ? '🖊️ Freihand / Stift' : '📐 Eckpunkte (Klick)'}
+                    </span>
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-mono">
+                    {drawMode === 'pen'
+                      ? '🧲 Rastet an Nachbarn ein • 🔍 2-Finger-Zoom aktiv • Kontur wird automatisch geglättet'
+                      : '🧲 Auf Karte tippen für Eckpunkte (rastet automatisch an bestehenden Sektorgrenzen ein)'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Target Mode Switcher & Collapse Toggle */}
+              <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+                <div className="flex items-center p-0.5 rounded-xl bg-slate-900 border border-slate-700 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setDrawTarget('searchArea')}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
+                      drawTarget === 'searchArea'
+                        ? 'bg-purple-600 text-white shadow'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                    title="Gesamt-Suchgebiet zeichnen und anschließend automatisch in Teilsektoren aufteilen"
+                  >
+                    🗺️ Suchgebiet
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDrawTarget('sector')}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition cursor-pointer ${
+                      drawTarget === 'sector'
+                        ? 'bg-blue-600 text-white shadow'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                    title="Einzelnen Suchsektor zeichnen"
+                  >
+                    🎯 Sektor
+                  </button>
+                </div>
+
+                <span className="px-2 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300">
+                  📍 {drawnPoints.length} Pkt.
+                </span>
+                {drawnPoints.length >= 3 && (
+                  <span className="px-2 py-1 rounded-lg bg-emerald-950 border border-emerald-600 text-emerald-300 font-bold">
+                    📏 {calculatePolygonHectares(drawnPoints)} ha
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsDrawBannerCollapsed(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black border-2 border-white text-xs transition cursor-pointer shadow-lg"
+                  title="Leiste minimieren für maximal freie Karte"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                  <span>Karte freigeben</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Controls Bar: Mode Switcher + Action Buttons */}
+            <div className="flex flex-wrap items-center justify-between gap-2 font-mono">
+              {/* Draw Mode Switcher */}
+              <div className="flex items-center p-0.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setDrawMode('pen')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
+                    drawMode === 'pen'
+                      ? drawTarget === 'searchArea'
+                        ? 'bg-purple-600 text-white shadow'
+                        : 'bg-blue-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <PenTool className="w-3.5 h-3.5" />
+                  Freihand / Stift
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDrawMode('click')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
+                    drawMode === 'click'
+                      ? drawTarget === 'searchArea'
+                        ? 'bg-purple-600 text-white shadow'
+                        : 'bg-blue-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <MousePointer className="w-3.5 h-3.5" />
+                  Eckpunkte (Klick)
+                </button>
+              </div>
+
+              {/* Actions: Undo, Clear, Cancel, Save */}
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (strokeHistory.length > 1) {
+                      const nextH = strokeHistory.slice(0, -1);
+                      setStrokeHistory(nextH);
+                      setDrawnPoints(nextH[nextH.length - 1] || []);
+                    } else {
+                      setStrokeHistory([]);
+                      setDrawnPoints([]);
+                    }
+                  }}
+                  disabled={drawnPoints.length === 0}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40 border border-slate-700 transition cursor-pointer text-[11px]"
+                  title="Letzten Schritt rückgängig machen"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Rückgängig
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawnPoints([]);
+                    setStrokeHistory([]);
+                  }}
+                  disabled={drawnPoints.length === 0}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 disabled:opacity-40 border border-slate-700 transition cursor-pointer text-[11px]"
+                  title="Zeichnung leeren"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Löschen
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawnPoints([]);
+                    setStrokeHistory([]);
+                    if (onCancelDrawing) onCancelDrawing();
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer text-[11px] font-bold"
+                >
+                  Abbrechen
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (drawnPoints.length < 3) return;
+                    const finalCoords = simplifyDrawnPolygon(drawnPoints, drawMode);
+                    const ha = calculatePolygonHectares(finalCoords);
+                    if (drawTarget === 'searchArea') {
+                      updateSearchArea(finalCoords, 'Haupt-Suchgebiet', ha);
+                      setPartitionModalPolygon(finalCoords);
+                      setIsPartitionModalOpen(true);
+                      setDrawnPoints([]);
+                      setStrokeHistory([]);
+                      if (onCancelDrawing) onCancelDrawing();
+                    } else if (onFinishDrawing) {
+                      onFinishDrawing(finalCoords);
+                      setDrawnPoints([]);
+                      setStrokeHistory([]);
+                    }
+                  }}
+                  disabled={drawnPoints.length < 3}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 disabled:opacity-40 text-white rounded-lg font-bold transition cursor-pointer shadow text-[11px] uppercase tracking-wider ${
+                    drawTarget === 'searchArea'
+                      ? 'bg-purple-600 hover:bg-purple-500'
+                      : 'bg-blue-600 hover:bg-blue-500'
+                  }`}
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  {drawTarget === 'searchArea' ? '🗺️ Suchgebiet aufteilen' : '🎯 Sektor übernehmen'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      )}
+
+      {/* Prominenter Umschalter in der unteren rechten Ecke (Karte freigeben / Optionen) */}
+      {isDrawingSector && (
+        <div className="fixed sm:absolute bottom-6 sm:bottom-8 right-3 sm:right-6 z-[1200] pointer-events-auto flex flex-col items-end gap-1.5 animate-fadeIn">
+          <button
+            type="button"
+            onClick={() => setIsDrawBannerCollapsed((prev) => !prev)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl shadow-2xl font-mono text-xs font-black uppercase tracking-wider transition-all transform active:scale-95 cursor-pointer border-2 ${
+              isDrawBannerCollapsed
+                ? 'bg-[#1E293B]/95 hover:bg-slate-800 text-amber-300 border-amber-400 shadow-amber-500/20'
+                : 'bg-amber-400 hover:bg-amber-300 text-slate-950 border-white shadow-xl ring-4 ring-amber-400/30'
+            }`}
+            title={isDrawBannerCollapsed ? 'Werkzeuge & Optionen einblenden' : 'Fenster minimieren (Karte freigeben zum Zeichnen)'}
+          >
+            {isDrawBannerCollapsed ? (
+              <>
+                <ChevronUp className="w-4 h-4 text-amber-400 animate-pulse" />
+                <span>⚙️ Optionen / Werkzeuge</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4 text-slate-950 font-black animate-bounce" />
+                <span>🗺️ Karte freigeben (Minimieren)</span>
+              </>
+            )}
+          </button>
         </div>
       )}
 
@@ -4173,7 +4425,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       )}
 
       {/* DESKTOP / TABLET COLLAPSED TOGGLE */}
-      {!isMobileScreen && isDesktopSidebarCollapsed && (
+      {!isDrawingSector && !isMobileScreen && isDesktopSidebarCollapsed && (
         <div className="hidden md:flex absolute top-4 left-4 z-[900]">
           <button
             onClick={() => setIsDesktopSidebarCollapsed(false)}
@@ -4188,7 +4440,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       )}
 
       {/* DESKTOP / TABLET FLOATING TACTICAL SIDEBAR */}
-      {!isMobileScreen && !isDesktopSidebarCollapsed && (
+      {!isDrawingSector && !isMobileScreen && !isDesktopSidebarCollapsed && (
         <div
           ref={sidebarDragRef}
           style={sidebarPos ? { position: 'fixed', left: `${sidebarPos.x}px`, top: `${sidebarPos.y}px`, zIndex: 950 } : undefined}
@@ -4763,7 +5015,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       )}
 
       {/* Floating Sector Details Card (When a sector is clicked) */}
-      {selectedSector && (
+      {!isDrawingSector && selectedSector && (
         <div
           ref={sectorCardDragRef}
           style={sectorCardPos ? { position: 'fixed', left: `${sectorCardPos.x}px`, top: `${sectorCardPos.y}px`, zIndex: 1100 } : undefined}
@@ -4931,7 +5183,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       )}
 
       {/* Floating Tactical User / Responder Card (When a responder pin is clicked) */}
-      {selectedUser && (
+      {!isDrawingSector && selectedUser && (
         <div
           ref={userCardDragRef}
           style={userCardPos ? { position: 'fixed', left: `${userCardPos.x}px`, top: `${userCardPos.y}px`, zIndex: 1100 } : undefined}
@@ -5781,7 +6033,7 @@ export const TacticalMap: React.FC<TacticalMapProps> = ({
       )}
       
       {/* DESKTOP / TABLET FLOATING WEATHER OVERLAY (Top-Right of Map, Draggable) */}
-      {!isMobileScreen && showWeatherOverlay && (
+      {!isDrawingSector && !isMobileScreen && showWeatherOverlay && (
         <div
           ref={weatherDragRef}
           {...weatherDragProps}

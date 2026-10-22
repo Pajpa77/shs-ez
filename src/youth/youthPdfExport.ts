@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf';
+﻿import { jsPDF } from 'jspdf';
 import { YouthUser, YouthOperation } from './types';
 import { saveFile } from '../lib/fileDownloadHelper';
 

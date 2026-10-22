@@ -1,4 +1,4 @@
-import { YouthUser, YouthOperation } from './types';
+﻿import { YouthUser, YouthOperation } from './types';
 import { VEREINSBUERO_LOCATION } from '../mockData';
 
 export const INITIAL_YOUTH_USERS: YouthUser[] = [

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRescue } from '../context/RescueContext';
 import { SearchSector, SectorPriority, SectorStatus, EquipmentType, User, isUserAdminOrEL } from '../types';
 import { VEREINSBUERO_LOCATION } from '../mockData';
@@ -21,7 +21,7 @@ interface SectorEditorModalProps {
   sector: SearchSector | null;
   isOpen: boolean;
   onClose: () => void;
-  onStartDrawing?: () => void;
+  onStartDrawing?: (draft?: SearchSector) => void;
   pendingPolygon?: [number, number][];
 }
 
@@ -68,6 +68,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
   pendingPolygon,
 }) => {
   const { currentOperation, allUsers, addSector, updateSector, deleteSector, setSectorStatus, currentUser, updateOperation } = useRescue();
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const [name, setName] = useState('');
   const [priority, setPriority] = useState<SectorPriority>('high');
@@ -239,32 +240,43 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-3 sm:p-4 bg-slate-100 dark:bg-slate-950/80 backdrop-blur-md overflow-y-auto font-sans">
-      <div className="bg-[#1E293B] border border-slate-300 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl text-black dark:text-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-md font-sans">
+      <div className="bg-[#1E293B] border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92dvh] flex flex-col text-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-white dark:bg-slate-900/90 p-4 border-b border-slate-300 dark:border-slate-700 flex items-center justify-between">
+        <div className="bg-slate-900 p-3.5 sm:p-4 border-b border-slate-700 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-blue-400 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-xl">
+            <div className="h-10 w-10 rounded-xl bg-blue-950 text-blue-400 border border-blue-700 flex items-center justify-center font-bold text-xl">
               <Layers className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-white uppercase tracking-wide">
                 {sector ? `Sektor bearbeiten: ${sector.name}` : 'Neuen Suchsektor anlegen'}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+              <p className="text-[10px] sm:text-xs text-slate-400 font-mono">
                 Suchgebiet aufteilen, Kräfte zuteilen und Status verwalten
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="h-8 w-8 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-700 flex items-center justify-center transition cursor-pointer"
-          >
-            <X className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => formRef.current?.requestSubmit()}
+              className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold transition cursor-pointer flex items-center gap-1.5 shadow font-mono text-xs"
+              title="Sektor sofort speichern"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>Speichern</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center transition cursor-pointer"
+            >
+              <X className="w-4 h-4 text-slate-400" />
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSave} className="p-5 space-y-4 max-h-[calc(100vh-6rem)] sm:overflow-y-auto flex-1 text-xs">
+        <form ref={formRef} onSubmit={handleSave} className="p-4 sm:p-5 space-y-4 overflow-y-auto overscroll-contain flex-1 min-h-0 text-xs pb-10" style={{ WebkitOverflowScrolling: 'touch' }}>
           {errorMsg && (
             <div className="p-3 rounded-xl bg-red-950/90 border border-red-600 text-red-300 text-xs font-mono flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />
@@ -532,8 +544,22 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  onClose();
-                  onStartDrawing();
+                  if (onStartDrawing) {
+                    const draftSector: SearchSector = {
+                      id: sector ? sector.id : `sector-${Date.now()}`,
+                      operationId: currentOperation?.id || '',
+                      name: name.trim() || 'Neuer Sektor',
+                      polygon: pendingPolygon || sector?.polygon || [],
+                      status,
+                      priority,
+                      assignedGroupName: assignedGroupName.trim() || undefined,
+                      assignedUserIds,
+                      assignedEquipment,
+                      notes: notes.trim(),
+                      areaHectares,
+                    };
+                    onStartDrawing(draftSector);
+                  }
                 }}
                 className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 font-mono uppercase shadow shrink-0"
               >
@@ -542,10 +568,12 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
               </button>
             </div>
           )}
+        </form>
 
-          {/* Action Footer */}
-          <div className="pt-3 border-t border-slate-300 dark:border-slate-700 flex items-center justify-between">
-            {sector ? (
+        {/* Dedicated Fixed Footer (Outside form so it is ALWAYS visible and reachable) */}
+        <div className="shrink-0 p-3 sm:p-4 bg-slate-900 border-t border-slate-700 flex items-center justify-between gap-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] z-30">
+          <div>
+            {sector && (
               showDeleteConfirm ? (
                 <div className="flex items-center gap-2 bg-red-950/90 border border-red-600/80 p-2 rounded-xl text-xs animate-in fade-in duration-150">
                   <span className="text-[11px] font-bold text-red-300 font-mono">
@@ -562,7 +590,7 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowDeleteConfirm(false)}
-                    className="px-2.5 py-1 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold transition cursor-pointer font-mono border border-slate-300 dark:border-slate-700"
+                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition cursor-pointer font-mono border border-slate-700"
                   >
                     Abbrechen
                   </button>
@@ -574,41 +602,40 @@ export const SectorEditorModal: React.FC<SectorEditorModalProps> = ({
                   className="text-red-400 hover:text-red-300 flex items-center gap-1 font-semibold text-xs transition cursor-pointer p-1 font-mono uppercase"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  Sektor löschen
+                  <span className="hidden sm:inline">Sektor löschen</span>
                 </button>
               )
-            ) : (
-              <div />
             )}
-            <div className="flex gap-2">
-              {sector && (
-                <button
-                  type="button"
-                  onClick={() => exportSectorAsKml(sector)}
-                  className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 uppercase tracking-wider font-mono text-xs flex items-center gap-1.5"
-                  title="Drohnen-Export (KML)"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  KML
-                </button>
-              )}
+          </div>
+          <div className="flex items-center gap-2">
+            {sector && (
               <button
                 type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold transition cursor-pointer border border-slate-300 dark:border-slate-700 uppercase tracking-wider font-mono text-xs"
+                onClick={() => exportSectorAsKml(sector)}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold transition cursor-pointer border border-slate-700 uppercase tracking-wider font-mono text-xs flex items-center gap-1.5"
+                title="Drohnen-Export (KML)"
               >
-                Abbrechen
+                <Download className="w-3.5 h-3.5" />
+                <span>KML</span>
               </button>
-              <button
-                type="submit"
-                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition cursor-pointer flex items-center gap-1.5 shadow uppercase tracking-wider font-mono text-xs"
-              >
-                <Save className="w-3.5 h-3.5" />
-                Sektor speichern
-              </button>
-            </div>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition cursor-pointer border border-slate-700 uppercase tracking-wider font-mono text-xs"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              onClick={() => formRef.current?.requestSubmit()}
+              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition cursor-pointer flex items-center gap-1.5 shadow uppercase tracking-wider font-mono text-xs"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>Sektor speichern</span>
+            </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

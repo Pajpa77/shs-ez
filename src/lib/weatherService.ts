@@ -167,12 +167,13 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 export async function fetchRescueWeather(
   lat: number,
   lng: number,
-  locationName: string = 'Einsatzgebiet'
+  locationName: string = 'Einsatzgebiet',
+  forceRefresh: boolean = false
 ): Promise<OperationalWeatherReport> {
   const cacheKey = `${lat.toFixed(3)},${lng.toFixed(3)}`;
   const cached = weatherCache.get(cacheKey);
 
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+  if (!forceRefresh && cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     return cached.data;
   }
 
