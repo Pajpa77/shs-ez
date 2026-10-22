@@ -30,6 +30,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose 
   const [releaseInfo, setReleaseInfo] = useState<AppReleaseInfo | null>(null);
   const [downloadStarted, setDownloadStarted] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
+  const [statusMessage, setStatusMessage] = useState<string>('');
 
   const isNative = isNativeApp();
 
@@ -62,8 +63,6 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({ isOpen, onClose 
   }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const [statusMessage, setStatusMessage] = useState<string>('');
 
   const handleDownloadClick = async () => {
     if (!releaseInfo?.apkUrl) return;

@@ -19,6 +19,7 @@ import {
   TrackingTestSession,
   isFirstAdmin,
   isOwner,
+  isUserAdmin,
   getUserTrackColor,
   TACTICAL_TRACK_COLORS,
   isUserAdminOrEL,
@@ -3342,7 +3343,7 @@ function calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2:
       if (!uid) return;
 
       try {
-        if (db && isFirebaseConfigured()) {
+        if (db && isFirebaseConfigured) {
           const userDoc = doc(db, 'users', uid);
           setDoc(userDoc, { isActive: false, lastSeen: `Abgemeldet (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` }, { merge: true });
           const locDoc = doc(db, 'locations', uid);
