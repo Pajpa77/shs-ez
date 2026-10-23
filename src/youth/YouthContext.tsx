@@ -98,6 +98,11 @@ function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2:
   return R * c;
 }
 
+// Helper to strip undefined values so Firestore does not reject writes
+function cleanForFirestore<T>(data: T): T {
+  return JSON.parse(JSON.stringify(data));
+}
+
 export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: User[] }> = ({
   children,
   adultUsers,
@@ -128,10 +133,10 @@ export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: Us
     try {
       setDoc(
         doc(db, 'settings', 'youth_users'),
-        {
+        cleanForFirestore({
           users: allYouthUsers,
           updatedAt: new Date().toISOString(),
-        },
+        }),
         { merge: true }
       ).catch((err) => console.warn('Firestore youth_users sync error:', err));
     } catch (err) {
@@ -154,6 +159,23 @@ export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: Us
                 localStorage.setItem('rescue_youth_users_initialized_v7', 'true');
               } catch {}
             }
+          } else {
+            // Document does not exist in Firestore yet: If local storage already has users, seed them to Firestore
+            try {
+              const saved = localStorage.getItem(STORAGE_USERS);
+              const isInit = localStorage.getItem('rescue_youth_users_initialized_v7');
+              if (saved || isInit) {
+                const existingUsers = saved ? JSON.parse(saved) : [];
+                setDoc(
+                  doc(db, 'settings', 'youth_users'),
+                  cleanForFirestore({
+                    users: existingUsers,
+                    updatedAt: new Date().toISOString(),
+                  }),
+                  { merge: true }
+                ).catch(() => {});
+              }
+            } catch {}
           }
         },
         (err) => {
@@ -187,10 +209,10 @@ export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: Us
     try {
       setDoc(
         doc(db, 'settings', 'youth_operations'),
-        {
+        cleanForFirestore({
           operations: allYouthOperations,
           updatedAt: new Date().toISOString(),
-        },
+        }),
         { merge: true }
       ).catch((err) => console.warn('Firestore youth_operations sync error:', err));
     } catch (err) {
@@ -212,6 +234,22 @@ export const YouthProvider: React.FC<{ children: React.ReactNode; adultUsers: Us
                 localStorage.setItem(STORAGE_OPS, JSON.stringify(data.operations));
               } catch {}
             }
+          } else {
+            // Seed operations if document does not exist yet
+            try {
+              const saved = localStorage.getItem(STORAGE_OPS);
+              if (saved) {
+                const existingOps = JSON.parse(saved);
+                setDoc(
+                  doc(db, 'settings', 'youth_operations'),
+                  cleanForFirestore({
+                    operations: existingOps,
+                    updatedAt: new Date().toISOString(),
+                  }),
+                  { merge: true }
+                ).catch(() => {});
+              }
+            } catch {}
           }
         },
         (err) => {
